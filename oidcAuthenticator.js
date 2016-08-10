@@ -1,16 +1,18 @@
+'use strict';
+
 var request = require('request');
 var q = require('q');
 
 var CREATE_TOKEN_URL = '/token';
 
-var getToken = function (baseUrl, client_id, client_secret) {
+var getToken = function (baseUrl, clientId, clientSecret) {
 
   var options = {
     method: 'post',
     form: {
-      grant_type: 'client_credentials',
-      client_id: client_id,
-      client_secret: client_secret
+      'grant_type': 'client_credentials',
+      'client_id': clientId,
+      'client_secret': clientSecret
     },
     url: baseUrl + CREATE_TOKEN_URL,
   };
@@ -21,11 +23,11 @@ var getToken = function (baseUrl, client_id, client_secret) {
     if (err) {
       deferred.reject(new Error(err));
     } else if (res.statusCode < 200 || res.statusCode >= 300) {
-      deferred.reject(new Error("Status code: " + res.statusCode + "\n" + body));
+      deferred.reject(new Error('Status code: ' + res.statusCode + '\n' + body));
     } else {
       try {
-        var access_token = JSON.parse(body).access_token;
-        deferred.resolve(access_token);
+        var accessToken = JSON.parse(body)['access_token'];
+        deferred.resolve(accessToken);
       } catch (e) {
         deferred.reject(new Error(body));
       }
@@ -37,8 +39,8 @@ var getToken = function (baseUrl, client_id, client_secret) {
 
 module.exports = function (baseUrl) {
   return {
-    getToken: function (client_id, client_secret) {
-      return getToken(baseUrl, client_id, client_secret);
+    getToken: function (clientId, clientSecret) {
+      return getToken(baseUrl, clientId, clientSecret);
     }
   };
 };

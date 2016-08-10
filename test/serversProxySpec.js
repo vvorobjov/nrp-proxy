@@ -1,7 +1,9 @@
+'use strict';
+
 var _ = require('lodash');
 var nock = require('nock');
 var chai = require('chai');
-var chaiAsPromised = require("chai-as-promised");
+var chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 var expect = chai.expect;
 var should = chai.should();
@@ -34,14 +36,14 @@ describe('serversProxy', function () {
       config.servers[server] = {
         gzweb: {
           assets: BASE_URL + '/' + server,
-          "nrp-services": BASE_URL + '/' + server
+          'nrp-services': BASE_URL + '/' + server
         }
       };
     });
 
     experimentsConf = {
-      experiment1: { experimentConfiguration: "experimentConf1" },
-      experiment2: { experimentConfiguration: "experimentConf2" }
+      experiment1: { experimentConfiguration: 'experimentConf1' },
+      experiment2: { experimentConfiguration: 'experimentConf2' }
     };
 
     serverExperiments = {
@@ -53,7 +55,10 @@ describe('serversProxy', function () {
 
     serveserverSimulations = {
       geneva1: [_.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment1)],
-      geneva2: [_.merge({ state: SIMULATION_STATES.FAILED }, experimentsConf.experiment1), _.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)],
+      geneva2: [
+        _.merge({ state: SIMULATION_STATES.FAILED }, experimentsConf.experiment1),
+        _.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
+      ],
       geneva3: [_.merge({ state: SIMULATION_STATES.INITIALIZED }, experimentsConf.experiment1)],
       geneva4: [_.merge({ contextId: CTX_ID, state: SIMULATION_STATES.CREATED }, experimentsConf.experiment2)],
     };
@@ -72,11 +77,11 @@ describe('serversProxy', function () {
     _.forOwn(serverExperiments, function (exp, server) {
       nock(BASE_URL + '/' + server)
         .get('/experiment')
-        .reply(200, { "data": serverExperiments[server] });
+        .reply(200, { 'data': serverExperiments[server] });
 
       nock(BASE_URL + '/' + server)
         .get('/health/errors')
-        .reply(200, { "state": serversStatus[server] });
+        .reply(200, { 'state': serversStatus[server] });
 
       nock(BASE_URL + '/' + server)
         .get('/simulation')
@@ -93,10 +98,10 @@ describe('serversProxy', function () {
         configuration: { experimentConfiguration: 'experimentConf1' },
         joinableServers: [{
           runningSimulation: {
-            experimentConfiguration: "experimentConf1",
-            state: "initialized"
+            experimentConfiguration: 'experimentConf1',
+            state: 'initialized'
           },
-          server: "geneva3"
+          server: 'geneva3'
         }]
       },
       experiment2: {
@@ -104,11 +109,11 @@ describe('serversProxy', function () {
         configuration: { experimentConfiguration: 'experimentConf2' },
         joinableServers: [{
           runningSimulation: {
-            contextId: "ctxId",
-            experimentConfiguration: "experimentConf2",
-            state: "created"
+            contextId: 'ctxId',
+            experimentConfiguration: 'experimentConf2',
+            state: 'created'
           },
-          server: "geneva4"
+          server: 'geneva4'
         }]
       }
     }
