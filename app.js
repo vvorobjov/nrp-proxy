@@ -16,7 +16,7 @@ var oidcToken;
 var app = express();
 var experimentList = {};
 
-var updateRate = 10 * 1000; // 10s
+var updateInterval = 5 * 1000; // interval in ms
 function readConfigFile() {
   try {
     return JSON.parse(fs.readFileSync(CONFIG_FILE));
@@ -46,18 +46,21 @@ fs.watchFile(CONFIG_FILE, function (curr, prev) {
 function updateExperimentList() {
   if (!configuration.auth.deactivate) {
     oidcToken = oidcAuthenticator(configuration.auth.url)
-     .getToken(configuration.auth.clientId, configuration.auth.clientSecret)
-     .then(serversProxy.setToken);
+      .getToken(configuration.auth.clientId, configuration.auth.clientSecret)
+      .then(serversProxy.setToken);
   } else {
-      oidcToken = q(false);
+    oidcToken = q(false);
   }
   oidcToken.then(_.partial(serversProxy.getExperiments, configuration))
-  .then(function (experiments) {
-    experimentList = experiments;
-  })
-  .fail(function (err) {
-    console.error('Failed to get experiments: ', err);
-  });
+    .then(function (experiments) {
+      experimentList = experiments;
+    })
+    .fail(function (err) {
+      console.error('Failed to get experiments: ', err);
+    })
+    .finally(function () {
+      setTimeout(updateExperimentList, updateInterval);
+    });
 }
 
 function startServer(port) {
@@ -85,18 +88,20 @@ app.use(function (req, res, next) {
 });
 
 app.get('/experimentImage/:experiments', function (req, res) {
-  if (req.params.experiments) {
-    var experiments = req.params.experiments.split(',');
-    q.all(experiments.map(function (exp) {
-      return serversProxy.getExperimentImage(exp, experimentList, configuration);
-    }))
-      .then(_.fromPairs)
-      .then(function (images) {
-        res.send(images);
-      }).catch(function (err) {
-        console.error('Failed to get experiments images: ', err);
-      });
+  if (!req.params.experiments) {
+    res.send({});
   }
+  var experiments = req.params.experiments.split(',');
+  q.all(experiments.map(function (exp) {
+    return serversProxy.getExperimentImage(exp, experimentList, configuration);
+  }))
+    .then(_.fromPairs)
+    .then(function (images) {
+      res.send(images);
+    }).catch(function (err) {
+      console.error('Failed to get experiments images: ', err);
+    });
+
 });
 
 app.get('/experiments', function (req, res) {
@@ -120,5 +125,5 @@ app.get('/server/:serverId', function (req, res) {
 });
 
 startServer(port);
+
 updateExperimentList();
-setInterval(updateExperimentList, updateRate);
