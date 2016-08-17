@@ -1,6 +1,7 @@
 'use strict';
 
 var fs = require('fs');
+var path = require('path');
 var express = require('express');
 var _ = require('lodash');
 var q = require('q');
@@ -8,7 +9,9 @@ var q = require('q');
 var oidcAuthenticator = require('./oidcAuthenticator.js');
 var serversProxy = require('./serversProxy.js');
 
-var CONFIG_FILE = './config.json';
+// path.resolve is required because the current directory is recreated regularly by puppet
+// and when that happens fs.readFileSync fails if using a relative path
+var CONFIG_FILE = path.resolve('./config.json');
 
 var configuration;
 var oidcToken;
