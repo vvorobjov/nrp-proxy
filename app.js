@@ -26,7 +26,6 @@ function readConfigFile() {
       console.log('config.json not found! Please create a config.json from config.json.sample and run again!');
     }
     console.error(err);
-    process.exit();
   }
 }
 
