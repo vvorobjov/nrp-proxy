@@ -1,87 +1,29 @@
 'use strict';
 
 var fs = require('fs');
-var path = require('path');
 var express = require('express');
-var _ = require('lodash');
-var q = require('q');
 
-var oidcAuthenticator = require('./oidcAuthenticator.js');
-var serversProxy = require('./serversProxy.js');
-
-// path.resolve is required because the current directory is recreated regularly by puppet
-// and when that happens fs.readFileSync fails if using a relative path
-var CONFIG_FILE = path.resolve('./config.json');
-
-var configuration;
-var oidcToken;
+var requestHandler = require('./requestHandler.js');
 
 var app = express();
-var experimentList = {};
 
 var updateInterval = 5 * 1000; // interval in ms
-function readConfigFile() {
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_FILE));
-  }
-  catch (err) {
-    if (err.code === 'ENOENT' && typeof configuration === 'undefined') {
-      console.log('config.json not found! Please create a config.json from config.json.sample and run again!');
-    }
-    console.error(err);
-  }
-}
-
-configuration = readConfigFile();
-var port = configuration.port;
 
 // watcher for config file to re-parse if the file has been edited
-fs.watchFile(CONFIG_FILE, function (curr, prev) {
+fs.watchFile(requestHandler.CONFIG_FILE, function (curr, prev) {
   if (!curr.isFile()) {
     console.log('config.json has been deleted! Continuing with the previously-parsed version.');
     return;
   }
   console.log('Received change for configuration file. Reparsing.');
-  configuration = readConfigFile();
+  requestHandler.reloadConfigFile();
 });
 
-function updateExperimentList() {
-  if (!configuration.auth.deactivate) {
-    oidcToken = oidcAuthenticator(configuration.auth.url)
-      .getToken(configuration.auth.clientId, configuration.auth.clientSecret)
-      .then(serversProxy.setToken);
-  } else {
-    oidcToken = q(false);
-  }
-  oidcToken.then(_.partial(serversProxy.getExperiments, configuration))
-    .then(function (experiments) {
-      experimentList = experiments;
-    })
-    .fail(function (err) {
-      console.error('Failed to get experiments: ', err);
-    })
-    .finally(function () {
-      setTimeout(updateExperimentList, updateInterval);
-    });
-}
-
-function startServer(port) {
-  app.listen(port, function () {
-    console.log('Listening on port: ' + port);
+function startServer() {
+  app.listen(requestHandler.configuration.port, function () {
+    console.log('Listening on port:', requestHandler.configuration.port);
   });
 }
-
-var filterJoinableExperimentByContext = function (experiments, contextId) {
-  return _.mapValues(experiments, function (originalExperiment) {
-    var exp = _.cloneDeep(originalExperiment);
-    if (exp && exp.joinableServers) {
-      exp.joinableServers = exp.joinableServers.filter(function (joinable) {
-        return joinable.runningSimulation.contextID === contextId;
-      });
-    }
-    return exp;
-  });
-};
 
 app.use(function (req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -90,42 +32,55 @@ app.use(function (req, res, next) {
 });
 
 app.get('/experimentImage/:experiments', function (req, res) {
-  if (!req.params.experiments) {
-    res.send({});
-  }
-  var experiments = req.params.experiments.split(',');
-  q.all(experiments.map(function (exp) {
-    return serversProxy.getExperimentImage(exp, experimentList, configuration);
-  }))
-    .then(_.fromPairs)
-    .then(function (images) {
-      res.send(images);
-    }).catch(function (err) {
-      console.error('Failed to get experiments images: ', err);
-    });
-
+  requestHandler.getExperimentImage(req.params.experiments)
+  .then(function (response) {
+    res.send(response);
+  })
+  .catch(function (response) {
+    res.status(500).send(response);
+  });
 });
 
 app.get('/experiments', function (req, res) {
-  if (req.query.experimentId) {
-    if (!req.query.contextId) {
-      res.status(500).send('\'contextId\' query string missing');
-    } else {
-      res.send(filterJoinableExperimentByContext(_.pick(experimentList, req.query.experimentId), req.query.contextId));
-    }
-  } else {
-    res.send(filterJoinableExperimentByContext(experimentList, null));
-  }
+  requestHandler.getExperiments(req.query.experimentId, req.query.contextId)
+    .then(function (response) {
+      res.send(response);
+    })
+    .catch(function (response) {
+      res.status(500).send(response);
+    });
 });
 
-app.get('/server/:serverId', function (req, res) {
-  if (req.params.serverId) {
-    res.send(configuration.servers[req.params.serverId]);
-  } else {
-    res.status(500).send('\'serverId\' query string missing');
-  }
+app.get('/server/:serverId', function(req, res) {
+  requestHandler.getServer(req.params.serverId)
+    .then(function (response) {
+      res.send(response);
+    })
+    .catch(function (response) {
+      res.status(500).send(response);
+    });
 });
 
-startServer(port);
+app.get('/availableServers/:experimentId', function(req, res) {
+  requestHandler.getAvailableServers(req.params.experimentId)
+    .then(function (response) {
+      res.send(response);
+    })
+    .catch(function (response) {
+      res.status(500).send(response);
+    });
+});
 
-updateExperimentList();
+app.get('/joinableServers/:experimentId', function(req, res) {
+  requestHandler.getJoinableServers(req.params.experimentId)
+    .then(function (response) {
+      res.send(response);
+    })
+    .catch(function (response) {
+      res.status(500).send(response);
+    });
+});
+
+startServer();
+console.log('Polling Backend Servers for Experiments, Health & Running Simulations every', updateInterval, 'ms.');
+requestHandler.updateExperimentList(updateInterval);

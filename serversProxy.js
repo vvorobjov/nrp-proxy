@@ -3,6 +3,7 @@
 var request = require('request');
 var q = require('q');
 var _ = require('lodash');
+require('log-prefix')(function() { return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ' ') + '%s'; });
 
 var SERVER_URLS = {
   EXPERIMENT: '/experiment',
@@ -52,7 +53,7 @@ var executeServerRequest = function (url) {
     var queryServerError = new Error(err);
     function requestFailed(error) {
       console.error('Failed to execute request ' + options.url + '. ERROR: ' + error);
-      deferred.resolve(queryServerError);
+      deferred.reject(queryServerError);
     }
     if (err) {
       requestFailed(queryServerError);
@@ -67,7 +68,6 @@ var executeServerRequest = function (url) {
       }
     }
   });
-
   return deferred.promise;
 };
 
@@ -132,8 +132,6 @@ var mergeData = function (responsesData) {
       return HEALTH_STATUS_PRIORITY[data.health[server] && data.health[server].state] || 9;
     });
   });
-
-
   return mergedData;
 };
 
@@ -149,6 +147,7 @@ var getExperiments = function (configuration) {
 var getExperimentImage = _.memoize(function (experimentId, experiments, configuration) {
   var exp = experiments[experimentId];
   if (!exp) {
+    console.error('[GET] Experiment Image: Experiment ID \"' + experimentId + '\" does not exist!');
     return q.when([experimentId, null]);
   }
 
@@ -162,6 +161,7 @@ var getExperimentImage = _.memoize(function (experimentId, experiments, configur
     experimentId,
     executeServerRequest(url + SERVER_URLS.EXPERIMENT + '/' + experimentId + '/preview', '')
       .then(function (image) {
+        console.log('Image obtained for ExperimentID: \'' + experimentId + '\'');
         return image['image_as_base64'];
       })
       .catch(function (err) {

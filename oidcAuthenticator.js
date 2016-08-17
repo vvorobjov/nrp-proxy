@@ -33,7 +33,6 @@ var getToken = function (baseUrl, clientId, clientSecret) {
       }
     }
   });
-
   return deferred.promise;
 };
 

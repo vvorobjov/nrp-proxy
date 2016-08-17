@@ -1,123 +1,63 @@
 'use strict';
 
-var _ = require('lodash');
-var nock = require('nock');
 var chai = require('chai');
 var chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
-var expect = chai.expect;
 var should = chai.should();
+var nock = require('nock');
+var rewire = require('rewire');
 
-var serversProxy = require('../serversProxy.js');
+var serversProxy = rewire('../serversProxy.js');
+var testConf = require('../utils/testConf.js');
 
 describe('serversProxy', function () {
-  var SIMULATION_STATES = {
-    CREATED: 'created',
-    STARTED: 'started',
-    PAUSED: 'paused',
-    INITIALIZED: 'initialized',
-    HALTED: 'halted',
-    FAILED: 'failed',
-    STOPPED: 'stopped'
-  };
-
-  var CTX_ID = 'ctxId',
-    BASE_URL = 'http://localhost';
-
-  var config, serveserverSimulations, serversStatus,
-    serverExperiments, experimentsConf;
-
   beforeEach(function () {
-    var SERVERS = ['geneva1', 'geneva2', 'geneva3', 'geneva4'];
+    nock.cleanAll();
+    serversProxy.__set__('console', testConf.consoleMock);
+  });
 
-    config = { servers: {} };
-    //build server config
-    SERVERS.forEach(function (server) {
-      config.servers[server] = {
-        gzweb: {
-          assets: BASE_URL + '/' + server,
-          'nrp-services': BASE_URL + '/' + server
-        }
-      };
-    });
-
-    experimentsConf = {
-      experiment1: { experimentConfiguration: 'experimentConf1' },
-      experiment2: { experimentConfiguration: 'experimentConf2' }
-    };
-
-    serverExperiments = {
-      geneva1: { experiment1: experimentsConf.experiment1 },
-      geneva2: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2 },
-      geneva3: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2 },
-      geneva4: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2 }
-    };
-
-    serveserverSimulations = {
-      geneva1: [_.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment1)],
-      geneva2: [
-        _.merge({ state: SIMULATION_STATES.FAILED }, experimentsConf.experiment1),
-        _.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
-      ],
-      geneva3: [_.merge({ state: SIMULATION_STATES.INITIALIZED }, experimentsConf.experiment1)],
-      geneva4: [_.merge({ contextId: CTX_ID, state: SIMULATION_STATES.CREATED }, experimentsConf.experiment2)],
-    };
-
-    serversStatus = {
-      geneva1: 'OK',
-      geneva2: 'OK',
-      geneva3: 'OK'
-    };
-
+  it('should set authToken', function () {
+    serversProxy.setToken('testToken');
+    (serversProxy.__get__('authToken')).should.deep.equal('testToken');
   });
 
   it('should return the correct list of experiments', function () {
+    testConf.mockResponses();
+    var experiments = serversProxy.getExperiments(testConf.config);
+    return experiments.should.eventually.deep.equal(testConf.experimentList);
+  });
 
-    //mock http responses
-    _.forOwn(serverExperiments, function (exp, server) {
-      nock(BASE_URL + '/' + server)
-        .get('/experiment')
-        .reply(200, { 'data': serverExperiments[server] });
+   it('should fail to return experiments due a non-JSON response', function () {
+    testConf.mockNonJsonResponses();
+    var exp = serversProxy.getExperiments(testConf.config);
+    return exp.should.be.rejected;
+  });
 
-      nock(BASE_URL + '/' + server)
-        .get('/health/errors')
-        .reply(200, { 'state': serversStatus[server] });
+  it('should fail to return experiments due to a failed response', function () {
+    testConf.mockFailedResponses();
+    var exp = serversProxy.getExperiments(testConf.config);
+    return exp.should.be.rejected;
+  });
 
-      nock(BASE_URL + '/' + server)
-        .get('/simulation')
-        .reply(200, serveserverSimulations[server]);
-    });
+  it('should fail to get experiment image because experiment has neither available nor joinable servers', function () {
+    return serversProxy.getExperimentImage('experiment3', testConf.experimentList, testConf.config)
+      .should.eventually.deep.equal(['experiment3', null]);
+  });
 
-    var experiments = serversProxy.getExperiments(config);
+  it('should fail to get experimentImage because experiment doesn\'t exist in the list of experiments', function () {
+    return serversProxy.getExperimentImage('nonExistentExperiment', testConf.experimentList, testConf.config)
+      .should.eventually.deep.equal(['nonExistentExperiment', null]);
+  });
 
-    nock.isDone();
+  it('should return experiment image', function () {
+    testConf.mockImageResponses();
+    return serversProxy.getExperimentImage('experiment1', testConf.experimentList, testConf.config)
+      .should.eventually.deep.equal(['experiment1', 'image']);
+  });
 
-    return experiments.should.eventually.deep.equal({
-      experiment1: {
-        availableServers: ['geneva1', 'geneva2'],
-        configuration: { experimentConfiguration: 'experimentConf1' },
-        joinableServers: [{
-          runningSimulation: {
-            experimentConfiguration: 'experimentConf1',
-            state: 'initialized'
-          },
-          server: 'geneva3'
-        }]
-      },
-      experiment2: {
-        availableServers: ['geneva2'],
-        configuration: { experimentConfiguration: 'experimentConf2' },
-        joinableServers: [{
-          runningSimulation: {
-            contextId: 'ctxId',
-            experimentConfiguration: 'experimentConf2',
-            state: 'created'
-          },
-          server: 'geneva4'
-        }]
-      }
-    }
-    );
+  it('should fail to return the experiment image', function () {
+    testConf.mockFailedImageResponse();
+    return serversProxy.getExperimentImage('experiment2', testConf.experimentList, testConf.config)
+      .should.eventually.deep.equal(['experiment2', null]);
   });
 });
-
