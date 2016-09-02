@@ -30,28 +30,15 @@ describe('requestHandler', function () {
     revert();
   });
 
-  it('should return an error regarding the missing contextId', function (done) {
-    requestHandler.getExperiments(null, Object.keys(testConf.experimentsConf)[0], null)
-      .catch(function (data) {
-        expect(data).to.equal('\'contextId\' query string missing\n');
-        done();
-      });
-  });
-
   it('should return a complete list of experiments', function () {
     revert = requestHandler.__set__('experimentList', testConf.experimentListNoCTXID);
-    return requestHandler.getExperiments(null, undefined, undefined)
+    return requestHandler.getExperiments(null)
       .should.eventually.deep.equal(testConf.experimentListNoCTXID);
   });
 
-  it('should return a list of experiments based on a given contextId', function () {
-    revert = requestHandler.__set__('experimentList', testConf.experimentList);
-    return requestHandler.getExperiments(null, 'experiment2', testConf.CTX_ID)
-      .should.eventually.deep.equal({'experiment2': testConf.experimentList['experiment2']});
-  });
 
   it('should return an empty experiment list', function() {
-    return requestHandler.getExperiments(null, undefined, undefined)
+    return requestHandler.getExperiments(null)
       .should.eventually.deep.equal({});
   });
 
@@ -63,10 +50,14 @@ describe('requestHandler', function () {
       });
   });
 
-  it('should return joinable servers for a given experiment', function () {
-    revert = requestHandler.__set__('experimentList', testConf.experimentList);
-    return requestHandler.getJoinableServers(null, 'experiment1')
-      .should.eventually.deep.equal(testConf.experimentList['experiment1'].joinableServers);
+  it('should return joinable servers for a given contextid', function () {
+    revert = requestHandler.__set__('simulationList', testConf.serveserverSimulations);
+    var myobj = [{
+      server: 'geneva4',
+      runningSimulation: testConf.serveserverSimulations['geneva4'][0]
+    }];
+    return expect(requestHandler.getJoinableServers(null, testConf.CTX_ID))
+      .to.eventually.deep.equal(myobj);
   });
 
   it('should return available servers for a given experiment', function () {
@@ -77,14 +68,6 @@ describe('requestHandler', function () {
 
   it('should fail to get availableServers due to wrong experimentId', function(done) {
     requestHandler.getAvailableServers(null, 'NonExistentExperiment')
-      .catch(function (data) {
-        expect(data).to.equal('experimentId: \'NonExistentExperiment\' not found\n');
-        done();
-      });
-  });
-
- it('should fail to get joinableServers due to wrong experimentId', function(done) {
-    requestHandler.getJoinableServers(null, 'NonExistentExperiment')
       .catch(function (data) {
         expect(data).to.equal('experimentId: \'NonExistentExperiment\' not found\n');
         done();

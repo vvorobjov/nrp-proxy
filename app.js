@@ -42,7 +42,7 @@ app.get('/experimentImage/:experiments', function (req, res) {
 });
 
 app.get('/experiments', function (req, res) {
-  requestHandler.getExperiments(req.connection.remoteAddress, req.query.experimentId, req.query.contextId)
+  requestHandler.getExperiments(req.connection.remoteAddress)
     .then(function (response) {
       res.send(response);
     })
@@ -71,8 +71,8 @@ app.get('/availableServers/:experimentId', function(req, res) {
     });
 });
 
-app.get('/joinableServers/:experimentId', function(req, res) {
-  requestHandler.getJoinableServers(req.connection.remoteAddress, req.params.experimentId)
+app.get('/joinableServers/:contextId', function(req, res) {
+  requestHandler.getJoinableServers(req.connection.remoteAddress, req.params.contextId)
     .then(function (response) {
       res.send(response);
     })

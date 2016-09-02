@@ -135,13 +135,15 @@ var mergeData = function (responsesData) {
   return mergedData;
 };
 
-var getExperiments = function (configuration) {
+var getExperimentsAndSimulations = function (configuration) {
   return q.all([
     executeRequestForAllServers(configuration, SERVER_URLS.EXPERIMENT),
     executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
     executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
   ])
-    .then(mergeData);
+    .then(function(response) {
+      return [mergeData(response), _.fromPairs(response[2])];
+    });
 };
 
 var getExperimentImage = _.memoize(function (experimentId, experiments, configuration) {
@@ -175,6 +177,7 @@ var getExperimentImage = _.memoize(function (experimentId, experiments, configur
 
 module.exports = {
   setToken: setToken,
-  getExperiments: getExperiments,
-  getExperimentImage: getExperimentImage
+  getExperimentsAndSimulations: getExperimentsAndSimulations,
+  getExperimentImage: getExperimentImage,
+  RUNNING_SIMULATION_STATES: RUNNING_SIMULATION_STATES,
 };

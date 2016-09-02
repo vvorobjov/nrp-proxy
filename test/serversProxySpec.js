@@ -4,8 +4,10 @@ var chai = require('chai');
 var chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 var should = chai.should();
+var expect = chai.expect;
 var nock = require('nock');
 var rewire = require('rewire');
+var _ = require('underscore');
 
 var serversProxy = rewire('../serversProxy.js');
 var testConf = require('../utils/testConf.js');
@@ -23,19 +25,22 @@ describe('serversProxy', function () {
 
   it('should return the correct list of experiments', function () {
     testConf.mockResponses();
-    var experiments = serversProxy.getExperiments(testConf.config);
-    return experiments.should.eventually.deep.equal(testConf.experimentList);
+    var experiments = serversProxy.getExperimentsAndSimulations(testConf.config);
+    return experiments.then(function(x) {
+      expect(x[0]).to.deep.equal(testConf.experimentList);
+      expect(_.isEqual(x[1],testConf.serveserverSimulations)).to.equal(true);
+    });
   });
 
    it('should fail to return experiments due a non-JSON response', function () {
     testConf.mockNonJsonResponses();
-    var exp = serversProxy.getExperiments(testConf.config);
+    var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
     return exp.should.be.rejected;
   });
 
   it('should fail to return experiments due to a failed response', function () {
     testConf.mockFailedResponses();
-    var exp = serversProxy.getExperiments(testConf.config);
+    var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
     return exp.should.be.rejected;
   });
 

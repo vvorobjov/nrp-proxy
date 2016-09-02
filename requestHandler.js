@@ -6,6 +6,7 @@ var _ = require('lodash');
 var q = require('q');
 
 var experimentList = {};
+var simulationList = [];
 
 var oidcToken;
 var configuration;
@@ -31,12 +32,12 @@ function reloadConfigFile() {
 
 reloadConfigFile();
 
-var filterJoinableExperimentByContext = function (experiments, contextId) {
+var filterJoinableExperimentByContext = function (experiments) {
   return _.mapValues(experiments, function (originalExperiment) {
     var exp = _.cloneDeep(originalExperiment);
     if (exp && exp.joinableServers) {
       exp.joinableServers = exp.joinableServers.filter(function (joinable) {
-        return joinable.runningSimulation.contextID === contextId;
+        return joinable.runningSimulation.contextID === null;
       });
     }
     return exp;
@@ -51,9 +52,10 @@ function updateExperimentList(updateInterval) {
   } else {
     oidcToken = q(false);
   }
-  oidcToken.then(_.partial(serversProxy.getExperiments, configuration))
-    .then(function (experiments) {
-      experimentList = experiments;
+  oidcToken.then(_.partial(serversProxy.getExperimentsAndSimulations, configuration))
+    .then(function (experimentData) {
+      experimentList = experimentData[0];
+      simulationList = experimentData[1];
     })
     .fail(function (err) {
       console.error('Polling Error. Failed to get experiments: ', err);
@@ -77,16 +79,22 @@ function getServer(clientIP, serverId) {
   return deferred.promise;
 }
 
-function getJoinableServers(clientIP, experimentId) {
-  console.log('[FRONTEND REQUEST from', clientIP, '] GET Joinable Servers. ExperimentID:', experimentId);
+function getJoinableServers(clientIP, contextId) {
+  console.log('[FRONTEND REQUEST from', clientIP, '] GET Joinable Servers. ContextID:', contextId);
   var deferred = q.defer();
-  if(experimentList[experimentId]) {
-    deferred.resolve(experimentList[experimentId].joinableServers);
-  }
-  else {
-    console.error('Wrong Experiment ID');
-    deferred.reject('experimentId: \'' + experimentId + '\' not found\n');
-  }
+  var contextSims = [];
+  _.forOwn(simulationList, function(serverSimulations, serverId) {
+    serverSimulations.forEach(function(simulation) {
+      if (simulation.contextID === contextId &&
+          serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1) {
+        contextSims.push({
+          server: serverId,
+          runningSimulation: simulation
+        });
+      }
+    });
+  });
+  deferred.resolve(contextSims);
   return deferred.promise;
 }
 
@@ -102,19 +110,10 @@ function getAvailableServers(clientIP, experimentId) {
   return deferred.promise;
 }
 
-function getExperiments(clientIP, experimentId, contextId) {
+function getExperiments(clientIP) {
   console.log('[FRONTEND REQUEST from', clientIP, '] GET Experiments');
   var deferred = q.defer();
-  if (experimentId) {
-    if (!contextId) {
-      deferred.reject('\'contextId\' query string missing\n');
-      console.error('contextId query string missing');
-    } else {
-      deferred.resolve(filterJoinableExperimentByContext(_.pick(experimentList, experimentId), contextId));
-    }
-  } else {
-    deferred.resolve(filterJoinableExperimentByContext(experimentList, null));
-  }
+  deferred.resolve(filterJoinableExperimentByContext(experimentList));
   return deferred.promise;
 }
 

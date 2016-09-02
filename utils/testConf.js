@@ -63,7 +63,10 @@ var experimentsConf = {
         _.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
       ],
       geneva3: [_.merge({ state: SIMULATION_STATES.STARTED }, experimentsConf.experiment1)],
-      geneva4: [_.merge({ contextID: CTX_ID, state: SIMULATION_STATES.CREATED }, experimentsConf.experiment2)],
+      geneva4: [
+        _.merge({ contextID: CTX_ID, state: SIMULATION_STATES.CREATED }, experimentsConf.experiment2),
+        _.merge({ contextID: CTX_ID, state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
+      ],
   };
 
  var serversStatus = {
@@ -233,6 +236,7 @@ module.exports = {
   experimentsConf: experimentsConf,
   experimentList: experimentList,
   experimentListNoCTXID: experimentListNoCTXID,
+  serveserverSimulations: serveserverSimulations,
   mockImageResponses: mockImageResponses,
   consoleMock: consoleMock,
   mockSuccessfulOidcResponse: mockSuccessfulOidcResponse,
