@@ -31,7 +31,7 @@ describe('requestHandler', function () {
   });
 
   it('should return an error regarding the missing contextId', function (done) {
-    requestHandler.getExperiments(Object.keys(testConf.experimentsConf)[0], null)
+    requestHandler.getExperiments(null, Object.keys(testConf.experimentsConf)[0], null)
       .catch(function (data) {
         expect(data).to.equal('\'contextId\' query string missing\n');
         done();
@@ -40,23 +40,23 @@ describe('requestHandler', function () {
 
   it('should return a complete list of experiments', function () {
     revert = requestHandler.__set__('experimentList', testConf.experimentListNoCTXID);
-    return requestHandler.getExperiments(undefined, undefined)
+    return requestHandler.getExperiments(null, undefined, undefined)
       .should.eventually.deep.equal(testConf.experimentListNoCTXID);
   });
 
   it('should return a list of experiments based on a given contextId', function () {
     revert = requestHandler.__set__('experimentList', testConf.experimentList);
-    return requestHandler.getExperiments('experiment2', testConf.CTX_ID)
+    return requestHandler.getExperiments(null, 'experiment2', testConf.CTX_ID)
       .should.eventually.deep.equal({'experiment2': testConf.experimentList['experiment2']});
   });
 
   it('should return an empty experiment list', function() {
-    return requestHandler.getExperiments(undefined, undefined)
+    return requestHandler.getExperiments(null, undefined, undefined)
       .should.eventually.deep.equal({});
   });
 
   it('should return a response indicating that the server was not found', function (done) {
-    requestHandler.getServer('NonExistentServer')
+    requestHandler.getServer(null, 'NonExistentServer')
       .catch(function (data) {
         expect(data).to.equal('\'serverId\' not found\n');
         done();
@@ -65,18 +65,18 @@ describe('requestHandler', function () {
 
   it('should return joinable servers for a given experiment', function () {
     revert = requestHandler.__set__('experimentList', testConf.experimentList);
-    return requestHandler.getJoinableServers('experiment1')
+    return requestHandler.getJoinableServers(null, 'experiment1')
       .should.eventually.deep.equal(testConf.experimentList['experiment1'].joinableServers);
   });
 
   it('should return available servers for a given experiment', function () {
     revert = requestHandler.__set__('experimentList', testConf.experimentList);
-    return requestHandler.getAvailableServers('experiment1')
+    return requestHandler.getAvailableServers(null, 'experiment1')
       .should.eventually.deep.equal(testConf.experimentList['experiment1'].availableServers);
   });
 
   it('should fail to get availableServers due to wrong experimentId', function(done) {
-    requestHandler.getAvailableServers('NonExistentExperiment')
+    requestHandler.getAvailableServers(null, 'NonExistentExperiment')
       .catch(function (data) {
         expect(data).to.equal('experimentId: \'NonExistentExperiment\' not found\n');
         done();
@@ -84,7 +84,7 @@ describe('requestHandler', function () {
   });
 
  it('should fail to get joinableServers due to wrong experimentId', function(done) {
-    requestHandler.getJoinableServers('NonExistentExperiment')
+    requestHandler.getJoinableServers(null, 'NonExistentExperiment')
       .catch(function (data) {
         expect(data).to.equal('experimentId: \'NonExistentExperiment\' not found\n');
         done();
@@ -92,7 +92,7 @@ describe('requestHandler', function () {
   });
 
   it('should return server details', function () {
-    return requestHandler.getServer(testConf.SERVERS[0])
+    return requestHandler.getServer(null, testConf.SERVERS[0])
       .should.eventually.deep.equal(testConf.config.servers[testConf.SERVERS[0]]);
   });
 
@@ -102,7 +102,7 @@ describe('requestHandler', function () {
       'serversProxy.getExperimentImage': serversProxyGetExperimentImageSpy,
       'experimentList': testConf.experimentList
     });
-    requestHandler.getExperimentImage('experiment1');
+    requestHandler.getExperimentImage(null, 'experiment1');
     sinon.assert.calledOnce(serversProxyGetExperimentImageSpy);
   });
 
@@ -122,12 +122,4 @@ describe('requestHandler', function () {
     sinon.assert.calledWith(logSpy,
       'config.json not found! Please create a config.json from config.json.sample and run again!');
   });
-/*
-  it('should call readConfigFile', function () {
-    var readConfigFileSpy = sinon.spy();
-    revert = requestHandler.__set__('readConfigFile', readConfigFileSpy);
-    requestHandler.reloadConfigFile();
-    sinon.assert.calledOnce(readConfigFileSpy);
-  });
-  */
 });

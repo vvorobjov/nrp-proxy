@@ -65,8 +65,8 @@ function updateExperimentList(updateInterval) {
     });
 }
 
-function getServer(serverId) {
-  console.log('[FRONTEND REQUEST] GET Server. ServerID:', serverId);
+function getServer(clientIP, serverId) {
+  console.log('[FRONTEND REQUEST from', clientIP, '] GET Server. ServerID:', serverId);
   var deferred = q.defer();
   if (configuration.servers[serverId]) {
     deferred.resolve(configuration.servers[serverId]);
@@ -77,8 +77,8 @@ function getServer(serverId) {
   return deferred.promise;
 }
 
-function getJoinableServers(experimentId) {
-  console.log('[FRONTEND REQUEST] GET Joinable Servers. ExperimentID:', experimentId);
+function getJoinableServers(clientIP, experimentId) {
+  console.log('[FRONTEND REQUEST from', clientIP, '] GET Joinable Servers. ExperimentID:', experimentId);
   var deferred = q.defer();
   if(experimentList[experimentId]) {
     deferred.resolve(experimentList[experimentId].joinableServers);
@@ -90,8 +90,8 @@ function getJoinableServers(experimentId) {
   return deferred.promise;
 }
 
-function getAvailableServers(experimentId) {
-  console.log('[FRONTEND REQUEST] GET Available Servers. ExperimentID:', experimentId);
+function getAvailableServers(clientIP, experimentId) {
+  console.log('[FRONTEND REQUEST from', clientIP, '] GET Available Servers. ExperimentID:', experimentId);
   var deferred = q.defer();
   if(experimentList[experimentId]) {
     deferred.resolve(experimentList[experimentId].availableServers);
@@ -102,8 +102,8 @@ function getAvailableServers(experimentId) {
   return deferred.promise;
 }
 
-function getExperiments(experimentId, contextId) {
-  console.log('[FRONTEND REQUEST] GET Experiments');
+function getExperiments(clientIP, experimentId, contextId) {
+  console.log('[FRONTEND REQUEST from', clientIP, '] GET Experiments');
   var deferred = q.defer();
   if (experimentId) {
     if (!contextId) {
@@ -118,8 +118,8 @@ function getExperiments(experimentId, contextId) {
   return deferred.promise;
 }
 
-function getExperimentImage(experiments) {
-  console.log('[FRONTEND REQUEST] GET Experiment Images');
+function getExperimentImage(clientIP, experiments) {
+  console.log('[FRONTEND REQUEST from', clientIP, '] GET Experiment Images');
   var deferred = q.defer();
   experiments = experiments.split(',');
   q.all(experiments.map(function (exp) {

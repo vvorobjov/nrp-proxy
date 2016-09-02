@@ -229,7 +229,6 @@ var mockNonJsonOidcResponse = function () {
 module.exports = {
   config: config,
   CTX_ID: CTX_ID,
-  BASE_URL: BASE_URL,
   SERVERS: SERVERS,
   experimentsConf: experimentsConf,
   experimentList: experimentList,
