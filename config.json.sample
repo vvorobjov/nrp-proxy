@@ -14,12 +14,6 @@
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/1/ws/gzbridge"
       },
       "rosbridge": {
-        "topics": {
-          "spikes": "/monitor/spike_recorder",
-          "joint": "/joint_states",
-          "status": "/ros_cle_simulation/status",
-          "cleError": "/ros_cle_simulation/cle_error"
-        },
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/1/ws"
       },
       "serverJobLocation": "lugano"
@@ -31,12 +25,6 @@
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/2/ws/gzbridge"
       },
       "rosbridge": {
-        "topics": {
-          "spikes": "/monitor/spike_recorder",
-          "joint": "/joint_states",
-          "status": "/ros_cle_simulation/status",
-          "cleError": "/ros_cle_simulation/cle_error"
-        },
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/2/ws"
       },
       "serverJobLocation": "lugano"
@@ -48,12 +36,6 @@
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/3/ws/gzbridge"
       },
       "rosbridge": {
-        "topics": {
-          "spikes": "/monitor/spike_recorder",
-          "joint": "/joint_states",
-          "status": "/ros_cle_simulation/status",
-          "cleError": "/ros_cle_simulation/cle_error"
-        },
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/3/ws"
       },
       "serverJobLocation": "lugano"
@@ -65,12 +47,6 @@
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/4/ws/gzbridge"
       },
       "rosbridge": {
-        "topics": {
-          "spikes": "/monitor/spike_recorder",
-          "joint": "/joint_states",
-          "status": "/ros_cle_simulation/status",
-          "cleError": "/ros_cle_simulation/cle_error"
-        },
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/4/ws"
       },
       "serverJobLocation": "lugano"
@@ -82,12 +58,6 @@
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/5/ws/gzbridge"
       },
       "rosbridge": {
-        "topics": {
-          "spikes": "/monitor/spike_recorder",
-          "joint": "/joint_states",
-          "status": "/ros_cle_simulation/status",
-          "cleError": "/ros_cle_simulation/cle_error"
-        },
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/5/ws"
       },
       "serverJobLocation": "lugano"
@@ -99,12 +69,6 @@
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/6/ws/gzbridge"
       },
       "rosbridge": {
-        "topics": {
-          "spikes": "/monitor/spike_recorder",
-          "joint": "/joint_states",
-          "status": "/ros_cle_simulation/status",
-          "cleError": "/ros_cle_simulation/cle_error"
-        },
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/6/ws"
       },
       "serverJobLocation": "lugano"
