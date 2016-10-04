@@ -3,7 +3,10 @@
 var request = require('request');
 var q = require('q');
 var _ = require('lodash');
-require('log-prefix')(function() { return new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ' ') + '%s'; });
+var dateFormat = require('dateformat');
+require('log-prefix')(function() {
+  return dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z');
+});
 
 var SERVER_URLS = {
   EXPERIMENT: '/experiment',
