@@ -22,7 +22,9 @@ var CLIENT_ID = 'CLIENT_ID';
 var CLIENT_SECRET = 'CLIENT_SECRET';
 
 var config = {
+  refreshInterval: 5000,
   auth: {
+    renewInternal: 0,
     clientId: CLIENT_ID,
     clientSecret: CLIENT_SECRET,
     url: URL,
@@ -49,141 +51,141 @@ var experimentsConf = {
   experiment3: { experimentConfiguration: 'experimentConf3' }
 };
 
- var serverExperiments = {
-      geneva1: { experiment1: experimentsConf.experiment1 },
-      geneva2: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2 },
-      geneva3: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2 },
-      geneva4: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2, experiment3: experimentsConf.experiment3  }
-  };
+var serverExperiments = {
+  geneva1: { experiment1: experimentsConf.experiment1 },
+  geneva2: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2 },
+  geneva3: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2 },
+  geneva4: { experiment1: experimentsConf.experiment1, experiment2: experimentsConf.experiment2, experiment3: experimentsConf.experiment3 }
+};
 
- var serveserverSimulations = {
-      geneva1: [_.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment1)],
-      geneva2: [
-        _.merge({ state: SIMULATION_STATES.FAILED }, experimentsConf.experiment1),
-        _.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
-      ],
-      geneva3: [_.merge({ state: SIMULATION_STATES.STARTED }, experimentsConf.experiment1)],
-      geneva4: [
-        _.merge({ contextID: CTX_ID, state: SIMULATION_STATES.CREATED }, experimentsConf.experiment2),
-        _.merge({ contextID: CTX_ID, state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
-      ],
-  };
+var serveserverSimulations = {
+  geneva1: [_.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment1)],
+  geneva2: [
+    _.merge({ state: SIMULATION_STATES.FAILED }, experimentsConf.experiment1),
+    _.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
+  ],
+  geneva3: [_.merge({ state: SIMULATION_STATES.STARTED }, experimentsConf.experiment1)],
+  geneva4: [
+    _.merge({ contextID: CTX_ID, state: SIMULATION_STATES.CREATED }, experimentsConf.experiment2),
+    _.merge({ contextID: CTX_ID, state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
+  ],
+};
 
- var serversStatus = {
-      geneva1: 'OK',
-      geneva2: 'OK',
-      geneva3: 'OK'
-  };
+var serversStatus = {
+  geneva1: 'OK',
+  geneva2: 'OK',
+  geneva3: 'OK'
+};
 
-  var experimentList = {
-      experiment1: {
-        availableServers: ['geneva1', 'geneva2'],
-        configuration: { experimentConfiguration: 'experimentConf1' },
-        joinableServers: [{
-          runningSimulation: {
-            experimentConfiguration: 'experimentConf1',
-            state: 'started'
-          },
-          server: 'geneva3'
-        }]
+var experimentList = {
+  experiment1: {
+    availableServers: ['geneva1', 'geneva2'],
+    configuration: { experimentConfiguration: 'experimentConf1' },
+    joinableServers: [{
+      runningSimulation: {
+        experimentConfiguration: 'experimentConf1',
+        state: 'started'
       },
-      experiment2: {
-        availableServers: ['geneva2'],
-        configuration: { experimentConfiguration: 'experimentConf2' },
-        joinableServers: [{
-          runningSimulation: {
-            contextID: 'ctxId',
-            experimentConfiguration: 'experimentConf2',
-            state: 'created'
-          },
-          server: 'geneva4'
-        }]
+      server: 'geneva3'
+    }]
+  },
+  experiment2: {
+    availableServers: ['geneva2'],
+    configuration: { experimentConfiguration: 'experimentConf2' },
+    joinableServers: [{
+      runningSimulation: {
+        contextID: 'ctxId',
+        experimentConfiguration: 'experimentConf2',
+        state: 'created'
       },
-      experiment3: {
-        availableServers: [],
-        configuration: { experimentConfiguration: 'experimentConf3' },
-        joinableServers: []
-      }
-    };
+      server: 'geneva4'
+    }]
+  },
+  experiment3: {
+    availableServers: [],
+    configuration: { experimentConfiguration: 'experimentConf3' },
+    joinableServers: []
+  }
+};
 
-    var experimentListNoCTXID = {
-      experiment1: {
-        availableServers: ['geneva1', 'geneva2'],
-        configuration: { experimentConfiguration: 'experimentConf1' },
-        joinableServers: [{
-          runningSimulation: {
-            contextID: null,
-            experimentConfiguration: 'experimentConf1',
-            state: 'started'
-          },
-          server: 'geneva3'
-        }]
+var experimentListNoCTXID = {
+  experiment1: {
+    availableServers: ['geneva1', 'geneva2'],
+    configuration: { experimentConfiguration: 'experimentConf1' },
+    joinableServers: [{
+      runningSimulation: {
+        contextID: null,
+        experimentConfiguration: 'experimentConf1',
+        state: 'started'
       },
-      experiment2: {
-        availableServers: ['geneva2'],
-        configuration: { experimentConfiguration: 'experimentConf2' },
-        joinableServers: [{
-          runningSimulation: {
-            contextID: null,
-            experimentConfiguration: 'experimentConf2',
-            state: 'created'
-          },
-          server: 'geneva4'
-        }]
+      server: 'geneva3'
+    }]
+  },
+  experiment2: {
+    availableServers: ['geneva2'],
+    configuration: { experimentConfiguration: 'experimentConf2' },
+    joinableServers: [{
+      runningSimulation: {
+        contextID: null,
+        experimentConfiguration: 'experimentConf2',
+        state: 'created'
       },
-      experiment3: {
-        availableServers: [],
-        configuration: { experimentConfiguration: 'experimentConf3' },
-        joinableServers: []
-      }
-    };
+      server: 'geneva4'
+    }]
+  },
+  experiment3: {
+    availableServers: [],
+    configuration: { experimentConfiguration: 'experimentConf3' },
+    joinableServers: []
+  }
+};
 
 var mockResponses = function () {
-    _.forOwn(serverExperiments, function (exp, server) {
-      nock(BASE_URL + '/' + server)
-        .get('/experiment')
-        .reply(200, { 'data': serverExperiments[server] });
+  _.forOwn(serverExperiments, function (exp, server) {
+    nock(BASE_URL + '/' + server)
+      .get('/experiment')
+      .reply(200, { 'data': serverExperiments[server] });
 
-      nock(BASE_URL + '/' + server)
-        .get('/health/errors')
-        .reply(200, { 'state': serversStatus[server] });
+    nock(BASE_URL + '/' + server)
+      .get('/health/errors')
+      .reply(200, { 'state': serversStatus[server] });
 
-      nock(BASE_URL + '/' + server)
-        .get('/simulation')
-        .reply(200, serveserverSimulations[server]);
-    });
+    nock(BASE_URL + '/' + server)
+      .get('/simulation')
+      .reply(200, serveserverSimulations[server]);
+  });
 };
 
 var mockNonJsonResponses = function () {
   _.forOwn(serverExperiments, function (exp, server) {
-      nock(BASE_URL + '/' + server)
-        .get('/experiment')
-        .reply(200, 'experiments');
+    nock(BASE_URL + '/' + server)
+      .get('/experiment')
+      .reply(200, 'experiments');
 
-      nock(BASE_URL + '/' + server)
-        .get('/health/errors')
-        .reply(200, 'errors');
+    nock(BASE_URL + '/' + server)
+      .get('/health/errors')
+      .reply(200, 'errors');
 
-      nock(BASE_URL + '/' + server)
-        .get('/simulation')
-        .reply(200, 'simulation');
+    nock(BASE_URL + '/' + server)
+      .get('/simulation')
+      .reply(200, 'simulation');
   });
 };
 
 var mockFailedResponses = function () {
   _.forOwn(serverExperiments, function (exp, server) {
-      nock(BASE_URL + '/' + server)
-        .get('/experiment')
-        .reply(500, {});
+    nock(BASE_URL + '/' + server)
+      .get('/experiment')
+      .reply(500, {});
 
-      nock(BASE_URL + '/' + server)
-        .get('/health/errors')
-        .reply(500, {});
+    nock(BASE_URL + '/' + server)
+      .get('/health/errors')
+      .reply(500, {});
 
-      nock(BASE_URL + '/' + server)
-        .get('/simulation')
-        .reply(500, {});
-    });
+    nock(BASE_URL + '/' + server)
+      .get('/simulation')
+      .reply(500, {});
+  });
 }
 
 var mockImageResponses = function () {
@@ -191,7 +193,7 @@ var mockImageResponses = function () {
     expDetails['availableServers'].forEach(function (server) {
       nock(BASE_URL + '/' + server)
         .get('/experiment/' + exp + '/preview')
-        .reply(200, {'image_as_base64': 'image'});
+        .reply(200, { 'image_as_base64': 'image' });
     });
   });
 };
@@ -207,26 +209,26 @@ var mockFailedImageResponse = function () {
 };
 
 var consoleMock = {
-    'log': function () {},
-    'error': function () {}
+  'log': function () { },
+  'error': function () { }
 };
 
 var mockSuccessfulOidcResponse = function () {
   nock(URL)
-      .post('/token')
-      .reply(200, { 'access_token': 'testToken' });
+    .post('/token')
+    .reply(200, { 'access_token': 'testToken' });
 }
 
 var mockFailedOidcResponse = function () {
   nock(URL)
-      .post('/token')
-      .reply(500, {});
+    .post('/token')
+    .reply(500, {});
 }
 
 var mockNonJsonOidcResponse = function () {
   nock(URL)
-      .post('/token')
-      .reply(200, 'OK!');
+    .post('/token')
+    .reply(200, 'OK!');
 }
 
 module.exports = {

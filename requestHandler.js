@@ -18,9 +18,22 @@ var serversProxy = require('./serversProxy.js');
 // and when that happens fs.readFileSync fails if using a relative path
 var CONFIG_FILE = path.resolve('./config.json');
 
+function initialize() {
+  reloadConfigFile();
+  updateExperimentList();
+}
+
 function reloadConfigFile() {
   try {
     configuration = JSON.parse(fs.readFileSync(CONFIG_FILE));
+
+    if (!configuration.refreshInterval)
+      throw 'Configuration key \'refreshInterval\' is missing in the config file. Please update';
+
+    console.log('Polling Backend Servers for Experiments, Health & Running Simulations every',
+      configuration.refreshInterval, 'ms.');
+
+    oidcAuthenticator.configure(configuration.auth);
   }
   catch (err) {
     if (err.code === 'ENOENT' && typeof configuration === 'undefined') {
@@ -29,8 +42,6 @@ function reloadConfigFile() {
     console.error(err);
   }
 }
-
-reloadConfigFile();
 
 var filterJoinableExperimentByContext = function (experiments) {
   return _.mapValues(experiments, function (originalExperiment) {
@@ -44,14 +55,9 @@ var filterJoinableExperimentByContext = function (experiments) {
   });
 };
 
-function updateExperimentList(updateInterval) {
-  if (!configuration.auth.deactivate) {
-    oidcToken = oidcAuthenticator(configuration.auth.url)
-      .getToken(configuration.auth.clientId, configuration.auth.clientSecret)
-      .then(serversProxy.setToken);
-  } else {
-    oidcToken = q(false);
-  }
+function updateExperimentList() {
+  oidcToken = oidcAuthenticator.getToken().then(serversProxy.setToken);
+
   oidcToken.then(_.partial(serversProxy.getExperimentsAndSimulations, configuration))
     .then(function (experimentData) {
       experimentList = experimentData[0];
@@ -61,9 +67,9 @@ function updateExperimentList(updateInterval) {
       console.error('Polling Error. Failed to get experiments: ', err);
     })
     .finally(function () {
-      setTimeout(function() {
-        updateExperimentList(updateInterval);
-      }, updateInterval);
+      setTimeout(function () {
+        updateExperimentList();
+      }, configuration.refreshInterval);
     });
 }
 
@@ -83,10 +89,10 @@ function getJoinableServers(clientIP, contextId) {
   console.log('[FRONTEND REQUEST from', clientIP, '] GET Joinable Servers. ContextID:', contextId);
   var deferred = q.defer();
   var contextSims = [];
-  _.forOwn(simulationList, function(serverSimulations, serverId) {
-    serverSimulations.forEach(function(simulation) {
+  _.forOwn(simulationList, function (serverSimulations, serverId) {
+    serverSimulations.forEach(function (simulation) {
       if (simulation.contextID === contextId &&
-          serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1) {
+        serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1) {
         contextSims.push({
           server: serverId,
           runningSimulation: simulation
@@ -101,7 +107,7 @@ function getJoinableServers(clientIP, contextId) {
 function getAvailableServers(clientIP, experimentId) {
   console.log('[FRONTEND REQUEST from', clientIP, '] GET Available Servers. ExperimentID:', experimentId);
   var deferred = q.defer();
-  if(experimentList[experimentId]) {
+  if (experimentList[experimentId]) {
     deferred.resolve(experimentList[experimentId].availableServers);
   } else {
     console.error('Wrong Experiment ID');
@@ -128,16 +134,16 @@ function getExperimentImage(clientIP, experiments) {
     .then(function (images) {
       deferred.resolve(images);
     }).catch(function (err) {
-        console.error('Failed to get experiments images: ', err);
+      console.error('Failed to get experiments images: ', err);
     });
   return deferred.promise;
 }
 
 module.exports = {
   CONFIG_FILE: CONFIG_FILE,
-  configuration: configuration,
+  getConfiguration: function () { return configuration; },
   reloadConfigFile: reloadConfigFile,
-  updateExperimentList: updateExperimentList,
+  initialize: initialize,
   getServer: getServer,
   getExperiments: getExperiments,
   getExperimentImage: getExperimentImage,

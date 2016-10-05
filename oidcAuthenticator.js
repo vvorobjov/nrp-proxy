@@ -4,21 +4,37 @@ var request = require('request');
 var q = require('q');
 
 var CREATE_TOKEN_URL = '/token';
+var authConfig;
+var lastRenewalTime = 0;
+var lastRetrievedToken;
 
-var getToken = function (baseUrl, clientId, clientSecret) {
+var configure = function (newAuthConfig) {
+  authConfig = newAuthConfig;
+};
 
+var getToken = function () {
+  if (authConfig.deactivate)
+    return q(false);
+
+  if (lastRetrievedToken && Date.now() - lastRenewalTime < authConfig.renewInternal) {
+    //the token is still valid (= under renewal interval)
+    return q(lastRetrievedToken);
+  }
+
+  console.log('About to renew OIDC token...');
   var options = {
     method: 'post',
     form: {
       'grant_type': 'client_credentials',
-      'client_id': clientId,
-      'client_secret': clientSecret
+      'client_id': authConfig.clientId,
+      'client_secret': authConfig.clientSecret
     },
-    url: baseUrl + CREATE_TOKEN_URL,
+    url: authConfig.url + CREATE_TOKEN_URL,
   };
 
   var deferred = q.defer();
 
+  lastRetrievedToken = null;
   request(options, function (err, res, body) {
     if (err) {
       deferred.reject(new Error(err));
@@ -26,8 +42,9 @@ var getToken = function (baseUrl, clientId, clientSecret) {
       deferred.reject(new Error('Status code: ' + res.statusCode + '\n' + body));
     } else {
       try {
-        var accessToken = JSON.parse(body)['access_token'];
-        deferred.resolve(accessToken);
+        lastRetrievedToken = JSON.parse(body)['access_token'];
+        lastRenewalTime = Date.now();
+        deferred.resolve(lastRetrievedToken);
       } catch (e) {
         deferred.reject(new Error(body));
       }
@@ -36,10 +53,9 @@ var getToken = function (baseUrl, clientId, clientSecret) {
   return deferred.promise;
 };
 
-module.exports = function (baseUrl) {
-  return {
-    getToken: function (clientId, clientSecret) {
-      return getToken(baseUrl, clientId, clientSecret);
-    }
-  };
+module.exports = {
+  getToken: function () {
+    return getToken();
+  },
+  configure: configure
 };

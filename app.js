@@ -7,8 +7,6 @@ var requestHandler = require('./requestHandler.js');
 
 var app = express();
 
-var updateInterval = 5 * 1000; // interval in ms
-
 // watcher for config file to re-parse if the file has been edited
 fs.watchFile(requestHandler.CONFIG_FILE, function (curr, prev) {
   if (!curr.isFile()) {
@@ -20,8 +18,9 @@ fs.watchFile(requestHandler.CONFIG_FILE, function (curr, prev) {
 });
 
 function startServer() {
-  app.listen(requestHandler.configuration.port, function () {
-    console.log('Listening on port:', requestHandler.configuration.port);
+  var port = requestHandler.getConfiguration().port;
+  app.listen(port, function () {
+    console.log('Listening on port:', port);
   });
 }
 
@@ -33,12 +32,12 @@ app.use(function (req, res, next) {
 
 app.get('/experimentImage/:experiments', function (req, res) {
   requestHandler.getExperimentImage(req.connection.remoteAddress, req.params.experiments)
-  .then(function (response) {
-    res.send(response);
-  })
-  .catch(function (response) {
-    res.status(500).send(response);
-  });
+    .then(function (response) {
+      res.send(response);
+    })
+    .catch(function (response) {
+      res.status(500).send(response);
+    });
 });
 
 app.get('/experiments', function (req, res) {
@@ -51,7 +50,7 @@ app.get('/experiments', function (req, res) {
     });
 });
 
-app.get('/server/:serverId', function(req, res) {
+app.get('/server/:serverId', function (req, res) {
   requestHandler.getServer(req.connection.remoteAddress, req.params.serverId)
     .then(function (response) {
       res.send(response);
@@ -61,7 +60,7 @@ app.get('/server/:serverId', function(req, res) {
     });
 });
 
-app.get('/availableServers/:experimentId', function(req, res) {
+app.get('/availableServers/:experimentId', function (req, res) {
   requestHandler.getAvailableServers(req.connection.remoteAddress, req.params.experimentId)
     .then(function (response) {
       res.send(response);
@@ -71,7 +70,7 @@ app.get('/availableServers/:experimentId', function(req, res) {
     });
 });
 
-app.get('/joinableServers/:contextId', function(req, res) {
+app.get('/joinableServers/:contextId', function (req, res) {
   requestHandler.getJoinableServers(req.connection.remoteAddress, req.params.contextId)
     .then(function (response) {
       res.send(response);
@@ -81,6 +80,6 @@ app.get('/joinableServers/:contextId', function(req, res) {
     });
 });
 
+requestHandler.initialize();
+
 startServer();
-console.log('Polling Backend Servers for Experiments, Health & Running Simulations every', updateInterval, 'ms.');
-requestHandler.updateExperimentList(updateInterval);

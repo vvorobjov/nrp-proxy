@@ -4,7 +4,7 @@ var request = require('request');
 var q = require('q');
 var _ = require('lodash');
 var dateFormat = require('dateformat');
-require('log-prefix')(function() {
+require('log-prefix')(function () {
   return dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z');
 });
 
@@ -144,7 +144,7 @@ var getExperimentsAndSimulations = function (configuration) {
     executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
     executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
   ])
-    .then(function(response) {
+    .then(function (response) {
       return [mergeData(response), _.fromPairs(response[2])];
     });
 };

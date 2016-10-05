@@ -16,10 +16,12 @@ var testConf = rewire('../utils/testConf');
 var revert = function () {};
 
 describe('requestHandler', function () {
+
   beforeEach(function () {
     nock.cleanAll();
     testConf.mockResponses();
     testConf.mockSuccessfulOidcResponse();
+    requestHandler.initialize();
     requestHandler.__set__({
       'console': testConf.consoleMock,
       'configuration': testConf.config,
