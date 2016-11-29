@@ -2,5 +2,5 @@ node_modules/
 reports
 coverage
 config.json
-config.json.epfl
-config.json.local
+config.json.sample
+config.json.sample.local
