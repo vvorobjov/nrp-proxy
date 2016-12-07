@@ -8,6 +8,8 @@ require('log-prefix')(function () {
   return dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z');
 });
 
+var REQUEST_TIMEOUT = 10 * 1000;//ms
+
 var SERVER_URLS = {
   EXPERIMENT: '/experiment',
   HEALTH: '/health/errors',
@@ -47,6 +49,7 @@ var executeServerRequest = function (url) {
   var options = {
     method: 'GET',
     url: url,
+    timeout: REQUEST_TIMEOUT,
     headers: { Authorization: 'Bearer ' + authToken }
   };
 
@@ -80,14 +83,18 @@ var executeRequestForAllServers = function (configuration, urlPostFix) {
     serversResponses.push(executeServerRequest(serverConfig.gzweb['nrp-services'] + urlPostFix)
       .then(function (serverResponse) {
         return [serverId, serverResponse];
-      }));
+      })
+      .catch(function (serverResponse) {
+        return [serverId, null];
+      })
+    );
   });
   return q.all(serversResponses);
 };
 
 var mergeData = function (responsesData) {
   var filterErrors = function (data) {
-    return data.filter(function (e) { return !(e[1].data instanceof Error); });
+    return data.filter(function (e) { return e[1] && !(e[1].data instanceof Error); });
   };
   var data = {
     experiments: filterErrors(responsesData[0]),
@@ -145,7 +152,8 @@ var getExperimentsAndSimulations = function (configuration) {
     executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
   ])
     .then(function (response) {
-      return [mergeData(response), _.fromPairs(response[2])];
+      var availableServers = response[2].filter(function (e) { return e[1] && !(e[1].data instanceof Error); });
+      return [mergeData(response), _.fromPairs(availableServers)];
     });
 };
 
