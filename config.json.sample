@@ -13,6 +13,7 @@
       "gzweb": {
         "assets": "https://neurorobotics-dev.humanbrainproject.eu/cle/1/assets",
         "nrp-services": "https://neurorobotics-dev.humanbrainproject.eu/cle/1/api",
+        "videoStreaming": "https://neurorobotics-dev.humanbrainproject.eu/cle/1/api/webstream/",
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/1/ws/gzbridge"
       },
       "rosbridge": {
@@ -24,6 +25,7 @@
       "gzweb": {
         "assets": "https://neurorobotics-dev.humanbrainproject.eu/cle/2/assets",
         "nrp-services": "https://neurorobotics-dev.humanbrainproject.eu/cle/2/api",
+        "videoStreaming": "https://neurorobotics-dev.humanbrainproject.eu/cle/2/api/webstream/",
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/2/ws/gzbridge"
       },
       "rosbridge": {
@@ -35,6 +37,7 @@
       "gzweb": {
         "assets": "https://neurorobotics-dev.humanbrainproject.eu/cle/3/assets",
         "nrp-services": "https://neurorobotics-dev.humanbrainproject.eu/cle/3/api",
+        "videoStreaming": "https://neurorobotics-dev.humanbrainproject.eu/cle/3/api/webstream/",
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/3/ws/gzbridge"
       },
       "rosbridge": {
@@ -46,6 +49,7 @@
       "gzweb": {
         "assets": "https://neurorobotics-dev.humanbrainproject.eu/cle/4/assets",
         "nrp-services": "https://neurorobotics-dev.humanbrainproject.eu/cle/4/api",
+        "videoStreaming": "https://neurorobotics-dev.humanbrainproject.eu/cle/4/api/webstream/",
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/4/ws/gzbridge"
       },
       "rosbridge": {
@@ -57,6 +61,7 @@
       "gzweb": {
         "assets": "https://neurorobotics-dev.humanbrainproject.eu/cle/5/assets",
         "nrp-services": "https://neurorobotics-dev.humanbrainproject.eu/cle/5/api",
+        "videoStreaming": "https://neurorobotics-dev.humanbrainproject.eu/cle/5/api/webstream/",
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/5/ws/gzbridge"
       },
       "rosbridge": {
@@ -68,6 +73,7 @@
       "gzweb": {
         "assets": "https://neurorobotics-dev.humanbrainproject.eu/cle/6/assets",
         "nrp-services": "https://neurorobotics-dev.humanbrainproject.eu/cle/6/api",
+        "videoStreaming": "https://neurorobotics-dev.humanbrainproject.eu/cle/6/api/webstream/",
         "websocket": "wss://neurorobotics-dev.humanbrainproject.eu/cle/6/ws/gzbridge"
       },
       "rosbridge": {
