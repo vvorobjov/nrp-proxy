@@ -13,6 +13,7 @@
       "gzweb": {
         "assets": "http://localhost:8040",
         "nrp-services": "http://localhost:8080",
+        "videoStreaming": "http://localhost:8080/webstream/",
         "websocket": "ws://localhost:9091/gzbridge"
       },
       "rosbridge": {
