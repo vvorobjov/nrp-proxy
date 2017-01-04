@@ -1,6 +1,6 @@
 {
   "name": "nrp_backend_proxy",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Keep an updated list of available and joinable servers for each experiment",
   "main": "app.js",
   "dependencies": {
