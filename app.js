@@ -30,54 +30,46 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.get('/experimentImage/:experiments', function (req, res) {
-  requestHandler.getExperimentImage(req.connection.remoteAddress, req.params.experiments)
-    .then(function (response) {
-      res.send(response);
-    })
-    .catch(function (response) {
-      res.status(500).send(response);
-    });
+app.use(function(req, res, next) {
+  if (req.method !== 'OPTIONS')
+    console.log(`[FRONTEND REQUEST from ${req.connection.remoteAddress}] ${req.method} ${req.url}`);
+  next();
 });
 
-app.get('/experiments', function (req, res) {
-  requestHandler.getExperiments(req.connection.remoteAddress)
-    .then(function (response) {
-      res.send(response);
-    })
-    .catch(function (response) {
-      res.status(500).send(response);
-    });
+app.get('/experimentImage/:experiments', function(req, res, next) {
+  requestHandler.getExperimentImage(req.params.experiments)
+    .then(r => res.send(r))
+    .catch(next);
 });
 
-app.get('/server/:serverId', function (req, res) {
-  requestHandler.getServer(req.connection.remoteAddress, req.params.serverId)
-    .then(function (response) {
-      res.send(response);
-    })
-    .catch(function (response) {
-      res.status(500).send(response);
-    });
+app.get('/experiments', function(req, res, next) {
+  requestHandler.getExperiments()
+    .then(r => res.send(r))
+    .catch(next);
 });
 
-app.get('/availableServers/:experimentId', function (req, res) {
-  requestHandler.getAvailableServers(req.connection.remoteAddress, req.params.experimentId)
-    .then(function (response) {
-      res.send(response);
-    })
-    .catch(function (response) {
-      res.status(500).send(response);
-    });
+app.get('/server/:serverId', function(req, res, next) {
+  requestHandler.getServer(req.params.serverId)
+    .then(r => res.send(r))
+    .catch(next);
 });
 
-app.get('/joinableServers/:contextId', function (req, res) {
-  requestHandler.getJoinableServers(req.connection.remoteAddress, req.params.contextId)
-    .then(function (response) {
-      res.send(response);
-    })
-    .catch(function (response) {
-      res.status(500).send(response);
-    });
+app.get('/availableServers/:experimentId', function(req, res, next) {
+  requestHandler.getAvailableServers(req.params.experimentId)
+    .then(r => res.send(r))
+    .catch(next);
+});
+
+app.get('/joinableServers/:contextId', function(req, res, next) {
+  requestHandler.getJoinableServers(req.params.contextId)
+    .then(r => res.send(r))
+    .catch(next);
+});
+
+app.get('/models/:modelType', function(req, res, next) {
+  requestHandler.getModels(req.params.modelType)
+    .then(r => res.send(r))
+    .catch(next);
 });
 
 requestHandler.initialize();

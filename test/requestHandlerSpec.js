@@ -34,18 +34,18 @@ describe('requestHandler', function () {
 
   it('should return a complete list of experiments', function () {
     revert = requestHandler.__set__('experimentList', testConf.experimentListNoCTXID);
-    return requestHandler.getExperiments(null)
+    return requestHandler.getExperiments()
       .should.eventually.deep.equal(testConf.experimentListNoCTXID);
   });
 
 
   it('should return an empty experiment list', function() {
-    return requestHandler.getExperiments(null)
+    return requestHandler.getExperiments()
       .should.eventually.deep.equal({});
   });
 
   it('should return a response indicating that the server was not found', function (done) {
-    requestHandler.getServer(null, 'NonExistentServer')
+    requestHandler.getServer('NonExistentServer')
       .catch(function (data) {
         expect(data).to.equal('\'serverId\' not found\n');
         done();
@@ -58,18 +58,18 @@ describe('requestHandler', function () {
       server: 'geneva4',
       runningSimulation: testConf.serveserverSimulations['geneva4'][0]
     }];
-    return expect(requestHandler.getJoinableServers(null, testConf.CTX_ID))
+    return expect(requestHandler.getJoinableServers(testConf.CTX_ID))
       .to.eventually.deep.equal(myobj);
   });
 
   it('should return available servers for a given experiment', function () {
     revert = requestHandler.__set__('experimentList', testConf.experimentList);
-    return requestHandler.getAvailableServers(null, 'experiment1')
+    return requestHandler.getAvailableServers('experiment1')
       .should.eventually.deep.equal(testConf.experimentList['experiment1'].availableServers);
   });
 
   it('should fail to get availableServers due to wrong experimentId', function(done) {
-    requestHandler.getAvailableServers(null, 'NonExistentExperiment')
+    requestHandler.getAvailableServers('NonExistentExperiment')
       .catch(function (data) {
         expect(data).to.equal('experimentId: \'NonExistentExperiment\' not found\n');
         done();
@@ -77,7 +77,7 @@ describe('requestHandler', function () {
   });
 
   it('should return server details', function () {
-    return requestHandler.getServer(null, testConf.SERVERS[0])
+    return requestHandler.getServer(testConf.SERVERS[0])
       .should.eventually.deep.equal(testConf.config.servers[testConf.SERVERS[0]]);
   });
 
@@ -87,7 +87,7 @@ describe('requestHandler', function () {
       'serversProxy.getExperimentImage': serversProxyGetExperimentImageSpy,
       'experimentList': testConf.experimentList
     });
-    requestHandler.getExperimentImage(null, 'experiment1');
+    requestHandler.getExperimentImage('experiment1');
     sinon.assert.calledOnce(serversProxyGetExperimentImageSpy);
   });
 

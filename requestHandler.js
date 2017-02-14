@@ -1,18 +1,20 @@
 'use strict';
 
-var fs = require('fs');
-var path = require('path');
-var _ = require('lodash');
-var q = require('q');
+var fs = require('fs'),
+  path = require('path'),
+  _ = require('lodash'),
+  q = require('q');
+
+var ModelsService = require('./modelsService.js'),
+  oidcAuthenticator = require('./oidcAuthenticator.js'),
+  serversProxy = require('./serversProxy.js');
 
 var experimentList = {};
 var simulationList = [];
 
-var oidcToken;
-var configuration;
-
-var oidcAuthenticator = require('./oidcAuthenticator.js');
-var serversProxy = require('./serversProxy.js');
+var oidcToken,
+  configuration,
+  modelsService;
 
 // path.resolve is required because the current directory is recreated regularly by puppet
 // and when that happens fs.readFileSync fails if using a relative path
@@ -34,6 +36,10 @@ function reloadConfigFile() {
       configuration.refreshInterval, 'ms.');
 
     oidcAuthenticator.configure(configuration.auth);
+
+    let modelsPath = configuration.modelsPath.replace(/\$([A-Za-z]*)/g, (m, v)=>process.env[v]);
+    modelsService = new ModelsService(modelsPath);
+    modelsService.loadModels();
   }
   catch (err) {
     if (err.code === 'ENOENT' && typeof configuration === 'undefined') {
@@ -62,35 +68,32 @@ function updateExperimentList() {
     .then(function (experimentData) {
       experimentList = experimentData[0];
       simulationList = experimentData[1];
+      //make sure images are preloaded
+      _(experimentList).forEach((exp, expId) => serversProxy.getExperimentImage(expId, experimentList, configuration));
     })
     .fail(function (err) {
       console.error('Polling Error. Failed to get experiments: ', err);
     })
-    .finally(function () {
-      setTimeout(function () {
+    .finally(function() {
+      setTimeout(function() {
         updateExperimentList();
       }, configuration.refreshInterval);
     });
 }
 
-function getServer(clientIP, serverId) {
-  console.log('[FRONTEND REQUEST from', clientIP, '] GET Server. ServerID:', serverId);
-  var deferred = q.defer();
-  if (configuration.servers[serverId]) {
-    deferred.resolve(configuration.servers[serverId]);
-  } else {
-    console.error('Wrong Server ID');
-    deferred.reject('\'serverId\' not found\n');
-  }
-  return deferred.promise;
+function getServer(serverId) {
+  if (configuration.servers[serverId])
+    return q.resolve(configuration.servers[serverId]);
+
+  console.error('Wrong Server ID');
+  return q.reject('\'serverId\' not found\n');
 }
 
-function getJoinableServers(clientIP, contextId) {
-  console.log('[FRONTEND REQUEST from', clientIP, '] GET Joinable Servers. ContextID:', contextId);
+function getJoinableServers(contextId) {
   var deferred = q.defer();
   var contextSims = [];
-  _.forOwn(simulationList, function (serverSimulations, serverId) {
-    serverSimulations.forEach(function (simulation) {
+  _.forOwn(simulationList, function(serverSimulations, serverId) {
+    serverSimulations.forEach(function(simulation) {
       if (simulation.contextID === contextId &&
         serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1) {
         contextSims.push({
@@ -104,39 +107,30 @@ function getJoinableServers(clientIP, contextId) {
   return deferred.promise;
 }
 
-function getAvailableServers(clientIP, experimentId) {
-  console.log('[FRONTEND REQUEST from', clientIP, '] GET Available Servers. ExperimentID:', experimentId);
-  var deferred = q.defer();
-  if (experimentList[experimentId]) {
-    deferred.resolve(experimentList[experimentId].availableServers);
-  } else {
-    console.error('Wrong Experiment ID');
-    deferred.reject('experimentId: \'' + experimentId + '\' not found\n');
-  }
-  return deferred.promise;
+function getAvailableServers(experimentId) {
+  if (experimentList[experimentId])
+    return q.resolve(experimentList[experimentId].availableServers);
+  console.error('Wrong Experiment ID');
+  return q.reject('experimentId: \'' + experimentId + '\' not found\n');
 }
 
-function getExperiments(clientIP) {
-  console.log('[FRONTEND REQUEST from', clientIP, '] GET Experiments');
-  var deferred = q.defer();
-  deferred.resolve(filterJoinableExperimentByContext(experimentList));
-  return deferred.promise;
+function getExperiments() {
+  return q.resolve(filterJoinableExperimentByContext(experimentList));
 }
 
-function getExperimentImage(clientIP, experiments) {
-  console.log('[FRONTEND REQUEST from', clientIP, '] GET Experiment Images');
-  var deferred = q.defer();
+function getExperimentImage(experiments) {
   experiments = experiments.split(',');
-  q.all(experiments.map(function (exp) {
+  return q.all(experiments.map(function(exp) {
     return serversProxy.getExperimentImage(exp, experimentList, configuration);
   }))
     .then(_.fromPairs)
-    .then(function (images) {
-      deferred.resolve(images);
-    }).catch(function (err) {
+    .catch(function(err) {
       console.error('Failed to get experiments images: ', err);
     });
-  return deferred.promise;
+}
+
+function getModels(modelType) {
+  return modelsService && modelsService.getModels(modelType);
 }
 
 module.exports = {
@@ -150,5 +144,6 @@ module.exports = {
   getAvailableServers: getAvailableServers,
   getJoinableServers: getJoinableServers,
   experimentList: experimentList,
-  filterJoinableExperimentByContext: filterJoinableExperimentByContext
+  filterJoinableExperimentByContext: filterJoinableExperimentByContext,
+  getModels: getModels
 };

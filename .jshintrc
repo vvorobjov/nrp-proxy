@@ -52,5 +52,6 @@
     "browser": true,
     "node": true,
     "mocha": true,
+    "-W093": true,
     "globals": {}
 }
