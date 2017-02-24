@@ -56,13 +56,13 @@ var executeServerRequest = function (url) {
   var deferred = q.defer();
 
   request(options, function (err, res, body) {
-    var queryServerError = new Error(err);
     function requestFailed(error) {
       console.error('Failed to execute request ' + options.url + '. ERROR: ' + error);
-      deferred.reject(queryServerError);
+      deferred.reject(error);
     }
+
     if (err) {
-      requestFailed(queryServerError);
+      requestFailed(new Error(err));
     } else if (res.statusCode < 200 || res.statusCode >= 300) {
       requestFailed(new Error('Status code: ' + res.statusCode + '\n' + body));
     } else {
@@ -70,7 +70,7 @@ var executeServerRequest = function (url) {
         var bodyObj = JSON.parse(body);
         deferred.resolve(bodyObj);
       } catch (e) {
-        requestFailed(new Error(body));
+        requestFailed(new Error(e));
       }
     }
   });
