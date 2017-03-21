@@ -20,8 +20,10 @@ class ModelLoader {
   parseFile(file) { throw 'Not implemented'; }
 
   loadModels(modelsPath) {
+    let loadModel = f => this.parseFile(f).then(m => m && (m.path = path.relative(modelsPath, f)) && m);
+
     return this.models = q.denodeify(glob)(path.join(modelsPath, this.filePattern))
-      .then(files => q.all(_(files).map(_.bind(this.parseFile, this)).value()))
+      .then(files => q.all(_(files).map(_.bind(loadModel, this)).value()))
       .then(models => models.filter(m => !!m))
       .catch(err => console.error(`Failed to load ${this.modelType}. Error: ${err}`));
   }
