@@ -54,7 +54,7 @@ app.get('/server/:serverId', function(req, res, next) {
     .catch(next);
 });
 
-app.get('/availableServers/:experimentId', function(req, res, next) {
+app.get('/availableServers/:experimentId?', function(req, res, next) {
   requestHandler.getAvailableServers(req.params.experimentId)
     .then(r => res.send(r))
     .catch(next);

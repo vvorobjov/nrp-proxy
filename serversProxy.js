@@ -153,7 +153,13 @@ var getExperimentsAndSimulations = function (configuration) {
   ])
     .then(function (response) {
       var availableServers = response[2].filter(function (e) { return e[1] && !(e[1].data instanceof Error); });
-      return [mergeData(response), _.fromPairs(availableServers)];
+      var availableServerIDs =
+        availableServers
+          .filter(a => !a[1]
+            .filter(a => RUNNING_SIMULATION_STATES
+              .includes(a.state)).length)
+          .map(a => a[0]);
+      return [mergeData(response), _.fromPairs(availableServers), availableServerIDs];
     });
 };
 

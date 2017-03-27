@@ -11,6 +11,7 @@ var ModelsService = require('./modelsService.js'),
 
 var experimentList = {};
 var simulationList = [];
+var availableServers = [];
 
 var oidcToken,
   configuration,
@@ -68,6 +69,7 @@ function updateExperimentList() {
     .then(function (experimentData) {
       experimentList = experimentData[0];
       simulationList = experimentData[1];
+      availableServers = experimentData[2];
       //make sure images are preloaded
       _(experimentList).forEach((exp, expId) => serversProxy.getExperimentImage(expId, experimentList, configuration));
     })
@@ -108,6 +110,8 @@ function getJoinableServers(contextId) {
 }
 
 function getAvailableServers(experimentId) {
+  if (!experimentId)
+    return q.resolve(availableServers);
   if (experimentList[experimentId])
     return q.resolve(experimentList[experimentId].availableServers);
   console.error('Wrong Experiment ID');

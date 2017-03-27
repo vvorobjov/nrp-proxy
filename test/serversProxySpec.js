@@ -32,16 +32,16 @@ describe('serversProxy', function () {
     });
   });
 
-   it('should NOT fail to return experiments due a non-JSON response', function () {
+  it('should NOT fail to return experiments due a non-JSON response', function () {
     testConf.mockNonJsonResponses();
     var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
-    return exp.should.eventually.deep.equal([{}, {}]);
+    return exp.should.eventually.deep.equal([{}, {}, []]);
   });
 
   it('should NOT fail to return experiments due to a failed response', function () {
     testConf.mockFailedResponses();
     var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
-    return exp.should.eventually.deep.equal([{}, {}]);
+    return exp.should.eventually.deep.equal([{}, {}, []]);
   });
 
   it('should fail to get experiment image because experiment has neither available nor joinable servers', function () {
