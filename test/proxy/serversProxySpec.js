@@ -9,7 +9,7 @@ var nock = require('nock');
 var rewire = require('rewire');
 var _ = require('underscore');
 
-var serversProxy = rewire('../serversProxy.js');
+var serversProxy = rewire('../../proxy/serversProxy.js');
 var testConf = require('../utils/testConf.js');
 
 describe('serversProxy', function () {

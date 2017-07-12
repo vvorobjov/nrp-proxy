@@ -20,7 +20,7 @@ let expectedModelsParseResult = JSON.parse(fs.readFileSync(expectedModelsFileNam
 chai.use(chaiAsPromised);
 
 describe('ModelsService', () => {
-  let ModelsService = require('../modelsService.js'),
+  let ModelsService = require('../../proxy/modelsService.js'),
     modelsService = new ModelsService(modelsPath);
   modelsService.loadModels();
 
@@ -40,7 +40,7 @@ describe('ModelsService errors', () => {
   let consoleMock = { error: sinon.spy() };
 
   beforeEach(() => {
-    ModelsService = rewire('../modelsService.js');
+    ModelsService = rewire('../../proxy/modelsService.js');
     ModelsService.__set__('console', consoleMock);
     consoleMock.error.reset();
   });
@@ -66,7 +66,7 @@ describe('ModelsService errors', () => {
 });
 
 describe('ModelLoader errors', () => {
-  let ModelsService = rewire('../modelsService.js'),
+  let ModelsService = rewire('../../proxy/modelsService.js'),
     ModelLoader = ModelsService.__get__('ModelLoader');
 
   it(`should throw error on unimplemented methods`, () => {

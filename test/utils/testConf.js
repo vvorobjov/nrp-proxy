@@ -209,7 +209,7 @@ var mockFailedResponses = function () {
       .get('/simulation')
       .reply(500, {});
   });
-}
+};
 
 var mockImageResponses = function () {
   _.forOwn(experimentList, function (expDetails, exp) {
@@ -240,19 +240,19 @@ var mockSuccessfulOidcResponse = function () {
   nock(URL)
     .post('/token')
     .reply(200, { 'access_token': 'testToken' });
-}
+};
 
 var mockFailedOidcResponse = function () {
   nock(URL)
     .post('/token')
     .reply(500, {});
-}
+};
 
 var mockNonJsonOidcResponse = function () {
   nock(URL)
     .post('/token')
     .reply(200, 'OK!');
-}
+};
 
 module.exports = {
   config: config,
@@ -271,4 +271,4 @@ module.exports = {
   mockNonJsonResponses: mockNonJsonResponses,
   mockFailedResponses: mockFailedResponses,
   mockResponses: mockResponses
-}
+};

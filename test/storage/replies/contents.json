@@ -1,0 +1,139 @@
+{
+    "count": 11,
+    "next": null,
+    "previous": null,
+    "results": [
+        {
+            "uuid": "53ab549f-030f-4d0f-ac82-eac66a181092",
+            "entity_type": "file",
+            "name": "arm_reinforcement_learning.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:16.514456Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:22.493599Z"
+        },
+        {
+            "uuid": "2a47824e-6c7a-47ab-b228-d61e1439d062",
+            "entity_type": "file",
+            "name": "braitenberg_mouse.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:14.794301Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:17.281647Z"
+        },
+        {
+            "uuid": "d444cf8a-8d0f-4020-ba18-bde02188610d",
+            "entity_type": "file",
+            "name": "braitenberg.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:15.746718Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:18.691551Z"
+        },
+        {
+            "uuid": "b2f5fa46-63db-4f44-bffa-a2be0bc6d733",
+            "entity_type": "file",
+            "name": "braitenberg_spinnaker.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:15.027673Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:19.119831Z"
+        },
+        {
+            "uuid": "afbec328-7ad5-4170-9ad7-23d4e5b7e5e6",
+            "entity_type": "file",
+            "name": "extended_braitenberg.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:15.189125Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:22.878679Z"
+        },
+        {
+            "uuid": "ec3a5e2f-6623-4983-8289-87b8fc3b4979",
+            "entity_type": "file",
+            "name": "idle_brain.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:15.191949Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:19.118542Z"
+        },
+        {
+            "uuid": "c96d9ddd-822d-4e3a-8e60-7e12552714b5",
+            "entity_type": "file",
+            "name": "interactive_manipulation.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:15.958391Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:19.616583Z"
+        },
+        {
+            "uuid": "5126f8c5-742a-403b-bc53-d437cf5fc410",
+            "entity_type": "file",
+            "name": "retina_mockup_icub_brain.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:16.511902Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:22.176540Z"
+        },
+        {
+            "uuid": "93029e1b-3d2f-410d-839b-3b406ee42cf9",
+            "entity_type": "file",
+            "name": "retina_tracking_rg_icub_brain.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:16.557746Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:23.312847Z"
+        },
+        {
+            "uuid": "1ef90782-c1d6-4811-ad50-f6978a013de4",
+            "entity_type": "file",
+            "name": "somatosensory_force.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:16.603010Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:25.742621Z"
+        },
+        {
+            "uuid": "fee75145-e4a1-4eaf-935a-4314611066c0",
+            "entity_type": "file",
+            "name": "somatosensory.py",
+            "description": "",
+            "content_type": "text/x-python",
+            "parent": "fbdaba55-2012-40d9-b466-017cff025c36",
+            "created_by": "302416",
+            "created_on": "2017-02-10T15:20:17.975967Z",
+            "modified_by": "302416",
+            "modified_on": "2017-02-10T15:20:23.370398Z"
+        }
+    ]
+}

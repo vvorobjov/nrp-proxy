@@ -4,3 +4,5 @@ coverage
 config.json
 config.json.sample
 config.json.sample.local
+.nyc_output
+artifacts

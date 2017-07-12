@@ -10,7 +10,7 @@ var rewire = require('rewire');
 var sinon = require('sinon');
 var nock = require('nock');
 
-var requestHandler = rewire('../requestHandler.js');
+var requestHandler = rewire('../../proxy/requestHandler.js');
 var testConf = rewire('../utils/testConf');
 
 var revert = function () {};
@@ -99,12 +99,9 @@ describe('requestHandler', function () {
         error: errorSpy,
         log: logSpy
       },
-      CONFIG_FILE: '',
       configuration: undefined
     });
-    requestHandler.reloadConfigFile();
+    requestHandler.reloadConfiguration();
     sinon.assert.calledOnce(errorSpy);
-    sinon.assert.calledWith(logSpy,
-      'config.json not found! Please create a config.json from config.json.sample and run again!');
   });
 });
