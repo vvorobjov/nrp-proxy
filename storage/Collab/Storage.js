@@ -36,7 +36,10 @@ class Storage extends BaseStorage {
   handleError(err) {
     let errType = Object.prototype.toString.call(err).slice(8, -1);
     if (errType === 'Object' && err.statusCode)
-      return q.reject({ code: err.statusCode, msg: err.message });
+      if (err.statusCode === 403)
+        return q.reject({ code: 302, msg: 'https://services.humanbrainproject.eu/oidc/authorize?response_type=token' });
+      else
+        return q.reject({ code: err.statusCode, msg: err.message });
     return q.reject(err);
   }
 

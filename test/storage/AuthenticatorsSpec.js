@@ -29,12 +29,11 @@ describe('BaseAuthenticator', () => {
     return expect(() => { return new BaseAuthenticator(); }).to.throw(TypeError, 'BaseAuthenticator is an abstract class');
   });
 
-  it('should throw a non implemented method error when trying to use a base class non-overidden function', () => {
-    return expect(baseClassMock.login).to.throw('not implemented');
-  });
-
-  it('should throw a non implemented method error when trying to use a base class non-overidden function', () => {
-    return expect(baseClassMock.checkToken).to.throw('not implemented');
+  //for all the non implemented methods of the base class
+  ['login', 'checkToken', 'getLoginPage',].forEach(method => {
+    it('should throw a non implemented method error when trying to use the base class non-overidden function: ' + method, () => {
+      return expect(baseClassMock[method]).to.throw('not implemented');
+    });
   });
 });
 

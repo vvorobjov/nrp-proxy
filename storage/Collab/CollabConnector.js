@@ -83,6 +83,9 @@ class CollabConnector {
   }
 
   getEntity(token, collabId, ...entityPath) {
+    if (!collabId)
+      return q.reject('No collab id specified');
+
     if (!this._getMemoizedEntity) {
       this._getMemoizedEntity = _.memoize((token, collabId, ...entityPath) => {
         let fullpath = encodeURIComponent(path.join('/', collabId + '', ...entityPath));

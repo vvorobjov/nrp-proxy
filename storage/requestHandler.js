@@ -73,6 +73,9 @@ class RequestHandler {
     return this.authenticator.checkToken(token)
       .then(() => this.storage.createExperiment(newExperiment, token));
   }
+  getLoginPage() {
+    return this.authenticator.getLoginPage();
+  }
 }
 
 module.exports = RequestHandler;

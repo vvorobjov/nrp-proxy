@@ -370,4 +370,13 @@ describe('Collab Storage', () => {
       .should.eventually.equal('Success');
   });
 
+  it('should redirect if there is an authentication error (403)', () => {
+    const response = nock('https://services.humanbrainproject.eu')
+      .get('/storage/v1/api/file/fakeFile/content/')
+      .reply(403, 'error!');
+
+    return expect(collabStorage.getFile('fakeFile', fakeExperiment, fakeToken))
+      .to.eventually.be.rejected;
+  });
+
 });

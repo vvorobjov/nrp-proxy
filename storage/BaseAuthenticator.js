@@ -33,6 +33,7 @@ class BaseAuthenticator {
 
   login(usr, pwd) { throw 'not implemented'; }
   checkToken(token) { throw 'not implemented'; }
+  getLoginPage() { throw 'not implemented'; }
 }
 
 module.exports = BaseAuthenticator;

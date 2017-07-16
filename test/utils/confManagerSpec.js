@@ -42,7 +42,7 @@ describe('Configuration Manager', () => {
         sinon.assert.calledOnce(errorSpy);
     });
 
-    it('should check the onConfigChange function when we are not passing a file', () => {
+    it('should check the onConfigChange function when we are not passing a valid change state', () => {
         var errorSpy = sinon.spy();
         var logSpy = sinon.spy();
         let onChange = rewiredManager.__get__('onConfigChange');
@@ -52,11 +52,11 @@ describe('Configuration Manager', () => {
                 error: errorSpy
             }
         });
-        onChange({ isFile: () => false });
+        onChange('deleted');
         sinon.assert.calledOnce(logSpy);
     });
 
-    it('should check the onConfigChange function when we are passing a file', () => {
+    it('should check the onConfigChange function when we are passing a valid change state', () => {
         var errorSpy = sinon.spy();
         var logSpy = sinon.spy();
         let onChange = rewiredManager.__get__('onConfigChange');

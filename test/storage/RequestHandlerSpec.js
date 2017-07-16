@@ -115,6 +115,11 @@ describe('Storage request handler', () => {
                 return expect(stringContents).to.contain('fakeContent');
             });
     });
+
+    //getFile
+    it(`should obtain the login page`, () => {
+        return storageRequestHandler.getLoginPage().should.eventually.contain('storage/FS/login.html');
+    });
 });
 
 describe('Request handler (not mocking the mkdir)', () => {

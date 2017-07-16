@@ -38,7 +38,7 @@
     "start-dev": "NODE_ENV=development node app.js",
     "lint": "jshint proxy/**.js storage/*/**.js test/*/**.js",
     "test": "ARTIFACTS_DIR=./reports jenkins-mocha --cobertura test/*/*",
-    "posttest": "istanbul report",
+    "test_istanbul": "istanbul cover --report html node_modules/jenkins-mocha/bin/jenkins.js test/*/*",
     "pretest": "npm run lint"
   },
   "repository": {

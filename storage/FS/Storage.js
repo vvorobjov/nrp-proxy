@@ -30,7 +30,8 @@ const q = require('q'),
   Authenticator = require('./Authenticator.js');
 //mocked in the tests thus non const
 let utils = require('./utils.js'),
-  DB = require('./DB.js'), fs = require('fs');
+  DB = require('./DB.js'),
+  fs = require('fs');
 
 class Storage extends BaseStorage {
 

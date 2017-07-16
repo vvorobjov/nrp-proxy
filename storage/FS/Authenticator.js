@@ -24,9 +24,11 @@
 'use strict';
 
 const q = require('q'),
+  fs = require('fs'),
+  path = require('path'),
   BaseAuthenticator = require('../BaseAuthenticator.js');
-  //mocked in the tests thus non const
-  let DB = require('./DB.js');
+//mocked in the tests thus non const
+let DB = require('./DB.js');
 
 
 class Authenticator extends BaseAuthenticator {
@@ -40,9 +42,13 @@ class Authenticator extends BaseAuthenticator {
       .then(res => res && res.token || q.reject(Authenticator.AUTHORIZATION_ERROR));
   }
 
+  getLoginPage() {
+    return q.resolve(path.join(__dirname, 'login.html'));//q.denodeify(fs.readFile)(path.join(__dirname, 'login.html'));
+  }
+
   checkToken(token) {
     return DB.instance.users.findOne({ token: token })
-      .then(res => res || q.reject(Authenticator.AUTHORIZATION_ERROR));
+      .then(res => res || q.reject({ code: 302, msg: '/storage/loginpage?origin=FS' }));
   }
 }
 
