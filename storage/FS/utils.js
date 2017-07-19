@@ -24,9 +24,9 @@
 'use strict';
 
 const STORAGE_PATH_ENV = 'STORAGE_PATH', //STORAGE_PATH variable
-  DEFAULT_STORAGE_PATH = '$HOME/.opt';
+  DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
 
-//storagePath = 'STORAGE_PATH' env variable is defined, or $HOME/.opt by default
+//storagePath = 'STORAGE_PATH' env variable is defined, or $HOME/.opt/nrpStorage by default
 let storagePath = process.env[STORAGE_PATH_ENV] || DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v]);
 
 module.exports = {
