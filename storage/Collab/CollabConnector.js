@@ -55,6 +55,8 @@ class CollabConnector {
       .then(res => {
         if (res.statusCode < 200 || res.statusCode >= 300)
           throw 'Status code: ' + res.statusCode;
+        if (options.encoding === null)
+          return { contentType: res.headers['content-type'], body: res.body };
         return res.body;
       });
   }
@@ -87,7 +89,7 @@ class CollabConnector {
       return q.reject('No collab id specified');
 
     if (!this._getMemoizedEntity) {
-      this._getMemoizedEntity = _.memoize((token, collabId, ...entityPath) => {
+      this._getMemoizedEntity = _.memoize((collabId, ...entityPath) => {
         let fullpath = encodeURIComponent(path.join('/', collabId + '', ...entityPath));
         const COLLAB_STORAGE_URL = `${CollabConnector.COLLAB_API_URL}/entity/?path=${fullpath}`;
         return this.get(COLLAB_STORAGE_URL, token)
@@ -95,7 +97,7 @@ class CollabConnector {
       });
     }
 
-    return this._getMemoizedEntity(token, collabId, ...entityPath);
+    return this._getMemoizedEntity(collabId, ...entityPath);
   }
 
   projectFolders(token, project) {
@@ -130,7 +132,8 @@ class CollabConnector {
   uploadContent(token, entityUuid, content) {
     const COLLAB_FILE_URL = `${CollabConnector.COLLAB_API_URL}/file/${entityUuid}/content/upload/`;
 
-    return this.post(COLLAB_FILE_URL, content, token);
+    return this.post(COLLAB_FILE_URL, content, token)
+      .then(() => ({ uuid: entityUuid }));
   }
 
   folderContent(token, folder) {
@@ -138,7 +141,13 @@ class CollabConnector {
   }
 
   entityContent(token, entityUuid) {
-    return this.api(token, 'file', entityUuid, 'content');
+    const COLLAB_ENTITY_URL = `${CollabConnector.COLLAB_API_URL}/file/${entityUuid}/content/`;
+
+    return this.executeRequest({
+      method: 'GET',
+      uri: COLLAB_ENTITY_URL,
+      encoding: null
+    }, token);
   }
 
   jsonApi(token, entityType, entityUuid, requestType) {
@@ -146,7 +155,8 @@ class CollabConnector {
       .then(res => JSON.parse(res))
       .then(res => res.results.map(f => ({
         uuid: f.uuid,
-        name: f.name
+        name: f.name,
+        parent: f.parent
       })));
   }
 
@@ -155,6 +165,20 @@ class CollabConnector {
 
     return this.get(COLLAB_ENTITY_URL, token);
   }
+
+  getContextIdCollab(token, contextId) {
+    if (!this._getMemoizedCollab) {
+      this._getMemoizedCollab = _.memoize((token, contextId) => {
+        const COLLAB_URL = `https://services.humanbrainproject.eu/collab/v0/collab/context/${contextId}/`;
+        return this.get(COLLAB_URL, token)
+          .then(res => JSON.parse(res))
+          .then(({ collab: { id } }) => id);
+      });
+    }
+
+    return this._getMemoizedCollab(token, contextId);
+  }
+
 }
 
 module.exports = CollabConnector;

@@ -53,25 +53,32 @@ class RequestHandler {
     return this.authenticator.checkToken(token)
       .then(() => this.storage.listFiles(parentDir, token));
   }
-  getFile(filename, parentDir, token) {
+  getFile(filename, parentDir, token, byname = false) {
     return this.authenticator.checkToken(token)
-      .then(() => this.storage.getFile(filename, parentDir, token));
+      .then(() => this.storage.getFile(filename, parentDir, token, byname));
   }
-  deleteFile(filename, parentDir, token) {
+  deleteFile(filename, parentDir, token, byname = false) {
     return this.authenticator.checkToken(token)
-      .then(() => this.storage.deleteFile(filename, parentDir, token));
+      .then(() => this.storage.deleteFile(filename, parentDir, token, byname));
   }
   createOrUpdate(filename, fileContent, contentType, parentDir, token) {
     return this.authenticator.checkToken(token)
       .then(() => this.storage.createOrUpdate(filename, fileContent, contentType, parentDir, token));
   }
-  listExperiments(token) {
+
+  listExperiments(token, contextId, filter) {
+    const SPECIAL_FOLDERS = new Set(['robots', 'brains', 'environments']);
     return this.authenticator.checkToken(token)
-      .then(() => this.storage.listExperiments(token));
+      .then(() => this.storage.listExperiments(token, contextId))
+      .then(exps => filter
+        ? exps.filter(e => e.name === filter)
+        : exps.filter(e => !SPECIAL_FOLDERS.has(e.name)
+        )
+      );
   }
-  createExperiment(newExperiment, token) {
+  createExperiment(newExperiment, token, contextId) {
     return this.authenticator.checkToken(token)
-      .then(() => this.storage.createExperiment(newExperiment, token));
+      .then(() => this.storage.createExperiment(newExperiment, token, contextId));
   }
   getLoginPage() {
     return this.authenticator.getLoginPage();

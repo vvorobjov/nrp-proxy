@@ -34,44 +34,61 @@ class Storage extends BaseStorage {
   }
 
   handleError(err) {
+    console.error(`[Collab error] ${err}`);
     let errType = Object.prototype.toString.call(err).slice(8, -1);
     if (errType === 'Object' && err.statusCode)
-      if (err.statusCode === 403)
+      if (err.statusCode === 403 || err.statusCode === 401 && err.message.indexOf('OpenId response: token is not valid') >= 0)
         return q.reject({ code: 302, msg: 'https://services.humanbrainproject.eu/oidc/authorize?response_type=token' });
-      else
-        return q.reject({ code: err.statusCode, msg: err.message });
     return q.reject(err);
   }
 
-  listFiles(experiment, token) {
+  listFiles(experiment, token, filter) {
     return CollabConnector.instance.folderContent(token, experiment).catch(this.handleError);
   }
 
-  getFile(filename, experiment, token) {
-    return CollabConnector.instance.entityContent(token, filename).catch(this.handleError);
+  getFileUuid(filename, experiment, token) {
+    return this.listFiles(experiment, token)
+      .then(files => files.filter(f => f.name === filename))
+      .then(files => files.length === 0 ? null : files[0].uuid);
   }
 
-  deleteFile(filename, experiment, token) {
-    return CollabConnector.instance.deleteFile(token, experiment, filename).catch(this.handleError);
+  getFile(filename, experiment, token, byname = false) {
+    return (byname ? this.getFileUuid(filename, experiment, token) : q.when(filename))
+      .then(uuid => q.all([uuid, uuid && CollabConnector.instance.entityContent(token, uuid)]))
+      .then(([uuid, content]) => content ? { uuid, contentType: content.contentType, body: content.body } : {})
+      .catch(this.handleError);
+  }
+
+  deleteFile(filename, experiment, token, byname = false) {
+    return (byname ? this.getFileUuid(filename, experiment, token) : q.when(filename))
+      .then(uuid => uuid && CollabConnector.instance.deleteFile(token, experiment, uuid))
+      .catch(this.handleError);
   }
 
   createOrUpdate(filename, fileContent, contentType, experiment, token) {
     return CollabConnector.instance.folderContent(token, experiment)
       .then(files => {
         let file = files.find(f => f.name === filename);
-        file = file ? q.when(file) : CollabConnector.instance.createFile(token, experiment, filename, contentType);
-        return file.then(file => CollabConnector.instance.uploadContent(token, file.uuid, fileContent));
-      }).catch(this.handleError);
+        return file || CollabConnector.instance.createFile(token, experiment, filename, contentType);
+      })
+      .then(file => CollabConnector.instance.uploadContent(token, file.uuid, fileContent))
+      .catch(this.handleError);
   }
 
-  listExperiments(token) {
-    return CollabConnector.instance.getEntity(token, this.config.collabId)
-      .then(entity => CollabConnector.instance.projectFolders(token, entity.uuid)).catch(this.handleError);
-
+  getCollabId(token, contextId) {
+    return contextId ? CollabConnector.instance.getContextIdCollab(token, contextId) : q.when(this.config.collabId);
   }
 
-  createExperiment(newExperiment, token) {
-    return CollabConnector.instance.getEntity(token, this.config.collabId)
+  listExperiments(token, contextId) {
+    return this.getCollabId(token, contextId)
+      .then(collabId => CollabConnector.instance.getEntity(token, collabId))
+      .then(entity => CollabConnector.instance.projectFolders(token, entity.uuid))
+      .catch(this.handleError);
+  }
+
+  createExperiment(newExperiment, token, contextId) {
+    return this.getCollabId(token, contextId)
+      .then(collabId => CollabConnector.instance.getEntity(token, collabId))
       .then(entity => CollabConnector.instance.createFolder(token, entity.uuid, newExperiment)).catch(this.handleError);
   }
 }

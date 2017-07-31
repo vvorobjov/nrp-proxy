@@ -134,7 +134,8 @@
             let redirect_uri = window.location.search.match(/redirect_uri=([^&]*)/)
             if (!redirect_uri)
               throw `'redirect_uri' parameter required in the url`;
-            window.location = decodeURIComponent(redirect_uri[1]) + '?storage_token=' + token
+            let url = decodeURIComponent(redirect_uri[1]);
+            window.location = url + (url.indexOf('?') > 0 ? '&' : '?') + 'storage_token=' + token
           });
         })
         .catch(err => {

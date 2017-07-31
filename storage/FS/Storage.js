@@ -51,16 +51,21 @@ class Storage extends BaseStorage {
 
   listFiles(experiment, token) {
     return this.tokenHasAccessToExperiment(token, experiment)
-      .then(() => q.denodeify(fs.readdir)(path.join(utils.storagePath, experiment)));
+      .then(() => q.denodeify(fs.readdir)(path.join(utils.storagePath, experiment)))
+      .then(files => files.map(f => ({
+        uuid: f,
+        name: f,
+      })));
   }
 
-  getFile(filename, experiment, token) {
+  getFile(filename, experiment, token, byname) {
     return this.tokenHasAccessToExperiment(token, experiment)
       .then(() => this.calculateFilePath(experiment, filename))
-      .then(filePath => q.denodeify(fs.readFile)(filePath));
+      .then(filePath => q.denodeify(fs.readFile)(filePath))
+      .then(filecontent => ({ uuid: filename, body: filecontent }));
   }
 
-  deleteFile(filename, experiment, token) {
+  deleteFile(filename, experiment, token, byname) {
     return this.tokenHasAccessToExperiment(token, experiment)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.unlink)(filePath));
@@ -72,7 +77,7 @@ class Storage extends BaseStorage {
       .then(filePath => q.denodeify(fs.writeFile)(filePath, fileContent));
   }
 
-  listExperiments(token) {
+  listExperiments(token, contextId) {
     return DB.instance.experiments.find({ token: token })
       .then(res => res.map(f => ({
         uuid: f.experiment,

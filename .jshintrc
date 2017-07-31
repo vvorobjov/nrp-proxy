@@ -54,5 +54,6 @@
     "mocha": true,
     "-W093": true,
     "-W030": true,
+    "-W014": true,
     "globals": {}
 }

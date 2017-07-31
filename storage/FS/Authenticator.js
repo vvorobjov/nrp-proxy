@@ -48,7 +48,7 @@ class Authenticator extends BaseAuthenticator {
 
   checkToken(token) {
     return DB.instance.users.findOne({ token: token })
-      .then(res => res || q.reject({ code: 302, msg: '/storage/loginpage?origin=FS' }));
+      .then(res => res || q.reject({ code: 302, msg: '/authentication/loginpage?origin=FS' }));
   }
 }
 

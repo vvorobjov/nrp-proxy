@@ -32,7 +32,7 @@ describe('BaseStorage', () => {
   });
 
   //for all the non implemented methods of the base class
-  ['listFiles', 'getFile', 'deleteFile', 'createOrUpdate', 'listExperiments', 'createExperiment'].forEach(function (item) {
+  ['listFiles', 'getFile', 'deleteFile', 'createOrUpdate', 'listExperiments', 'createExperiment'].forEach(function(item) {
     it('should throw a non implemented method error when trying to use a base class non-overidden function ', () => {
       return expect(baseClassMock[item]).to.throw('not implemented');
     });
@@ -89,9 +89,11 @@ describe('FSStorage', () => {
 
   //listFiles
   it(`should list all the files contained in a certain experiment`, () => {
-    const expectedContents = ['fakeFifakeTokenle', 'fakeFile2'];
     return expect(fsStorage.listFiles(fakeExperiment, fakeToken))
-      .to.eventually.be.an('array').that.include('fakeFile');
+      .to.eventually.be.an('array').that.include({
+        uuid: 'fakeFile',
+        name: 'fakeFile'
+      });
   });
 
   it(`should throw authorization exception when calling the listFiles function with wrong parameters`, () => {
@@ -104,7 +106,7 @@ describe('FSStorage', () => {
     return fsStorage.getFile('fakeFile',
       fakeExperiment,
       fakeToken).then((val) => {
-        var stringContents = String.fromCharCode.apply(null, new Uint8Array(val));
+        var stringContents = String.fromCharCode.apply(null, new Uint8Array(val.body));
         return expect(stringContents).to.contain('fakeContent');
       });
   });
@@ -141,7 +143,10 @@ describe('FSStorage', () => {
           var folderContents = val;
           //clean up the tmp file
           fsStorage.deleteFile('tmp', fakeExperiment, fakeToken);
-          return expect(folderContents).to.include('tmp');
+          return expect(folderContents).to.include({
+            uuid: 'tmp',
+            name: 'tmp'
+          });
         });
       });
   });
@@ -261,7 +266,8 @@ describe('Collab Storage', () => {
 
       expected = {
         uuid: '53ab549f-030f-4d0f-ac82-eac66a181092',
-        name: 'arm_reinforcement_learning.py'
+        name: 'arm_reinforcement_learning.py',
+        parent: 'fbdaba55-2012-40d9-b466-017cff025c36'
       };
 
     return expect(collabStorage.listFiles(fakeExperiment, fakeToken))
@@ -278,7 +284,25 @@ describe('Collab Storage', () => {
       };
 
     return collabStorage.getFile('fakeFile', fakeExperiment, fakeToken).then((res) => {
-      expect(JSON.parse(res)).to.contain(expected);
+      expect(JSON.parse(res.body)).to.contain(expected);
+    });
+  });
+
+  //get file by name
+  it('should get a file by name under a specific experiment ', () => {
+    nock('https://services.humanbrainproject.eu')
+      .get('/storage/v1/api/folder/' + fakeExperiment + '/children/')
+      .replyWithFile(200, path.join(__dirname, 'replies/contents.json'));
+
+    const response = nock('https://services.humanbrainproject.eu')
+      .get('/storage/v1/api/file/2a47824e-6c7a-47ab-b228-d61e1439d062/content/')
+      .replyWithFile(200, path.join(__dirname, 'replies/file.json')),
+      expected = {
+        fakeContent: 'This is a really really fake content'
+      };
+
+    return collabStorage.getFile('braitenberg_mouse.py', fakeExperiment, fakeToken, true).then((res) => {
+      expect(JSON.parse(res.body)).to.contain(expected);
     });
   });
 
@@ -310,7 +334,9 @@ describe('Collab Storage', () => {
         .reply(200, 'success');
 
     return collabStorage.createOrUpdate('arm_reinforcement_learning.py', 'fakeContent', 'text/plain', fakeExperiment, fakeToken)
-      .should.eventually.equal('success');
+      .should.eventually.contain({
+        uuid: '53ab549f-030f-4d0f-ac82-eac66a181092'
+      });
   });
 
   //list experiments
@@ -341,10 +367,50 @@ describe('Collab Storage', () => {
 
       expected = {
         uuid: '53ab549f-030f-4d0f-ac82-eac66a181092',
-        name: 'arm_reinforcement_learning.py'
+        name: 'arm_reinforcement_learning.py',
+        parent: 'fbdaba55-2012-40d9-b466-017cff025c36'
       };
 
     return expect(collabStorage.listExperiments(fakeToken))
+      .to.eventually.be.an('array').that.include(expected);
+  });
+
+  //list experiments by contextId
+  it('should list all experiments available to the user', () => {
+    const fileUuid = '53ab549f-030f-4d0f-ac82-eac66a181092',
+
+      response = JSON.stringify({
+        'uuid': '53ab549f-030f-4d0f-ac82-eac66a181092',
+        'entity_type': 'file',
+        'name': 'arm_reinforcement_learning.py',
+        'description': '',
+        'content_type': 'text/x-python',
+        'parent': 'fbdaba55-2012-40d9-b466-017cff025c36',
+        'created_by': '302416',
+        'created_on': '2017-02-10T15:20:16.514456Z',
+        'modified_by': '302416',
+        'modified_on': '2017-02-10T15:20:22.493599Z'
+      }),
+
+      fakeGet = nock('https://services.humanbrainproject.eu')
+        .get('/storage/v1/api/entity/?path=%2FfakeId')
+        .reply(200, response),
+
+      fakeGet2 = nock('https://services.humanbrainproject.eu')
+        .get('/storage/v1/api/project/' + fileUuid + '/children/')
+        .replyWithFile(200, path.join(__dirname, 'replies/contents.json')),
+
+      expected = {
+        uuid: '53ab549f-030f-4d0f-ac82-eac66a181092',
+        name: 'arm_reinforcement_learning.py',
+        parent: 'fbdaba55-2012-40d9-b466-017cff025c36'
+      };
+
+    nock('https://services.humanbrainproject.eu')
+      .get('/collab/v0/collab/context/contextid/')
+      .reply(200, '{ "collab": { "id":"fakeId"}}');
+
+    return expect(collabStorage.listExperiments(fakeToken, 'contextid'))
       .to.eventually.be.an('array').that.include(expected);
   });
 

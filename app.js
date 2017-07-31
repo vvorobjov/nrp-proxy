@@ -41,7 +41,9 @@ let storageRequestHandler = new StorageRequestHandler(configFile);
 
 app.use(function(req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'accept, authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'accept, Authorization, Context-Id, Content-Type');
+  res.setHeader('Access-Control-Expose-Headers', 'uuid');
   next();
 });
 
@@ -94,58 +96,69 @@ app.use(bodyParser.text({ type: () => true }));
 
 let handleError = (res, err) => {
   let errType = Object.prototype.toString.call(err).slice(8, -1);
-  if (errType === 'String' || errType === 'Error') {
+  if (errType === 'String' || errType === 'Error' || !err.code) {
     console.error('[ERROR] ' + err);
-    res.status(418).send(err);
+    res.status(500).send(err);
   } else
     res.status(err.code).send(err.msg);
 };
 
-app.post('/storage/authenticate', (req, res, next) => {
+app.post('/authentication/authenticate', (req, res, next) => {
   storageRequestHandler.authenticate(req.body.user, req.body.password)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/loginpage', (req, res, next) => {
+app.get('/authentication/loginpage', (req, res, next) => {
   storageRequestHandler.getLoginPage()
     .then(r => res.sendFile(r))
     .catch(_.partial(handleError, res));
 });
 
+let getAuthToken = req => {
+  let authorization = req.get('authorization');
+  if (!authorization || authorization.length < 7)
+    throw 'Authorization header missing';
+  return authorization.length > 7 && authorization.substr(7);
+};
+
 app.get('/storage/experiments', (req, res, next) => {
-  storageRequestHandler.listExperiments(req.query.token)
+  storageRequestHandler.listExperiments(getAuthToken(req), req.get('context-id'), req.query.filter)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
 app.get('/storage/:experiment/:filename', (req, res, next) => {
-  storageRequestHandler.getFile(req.params.filename, req.params.experiment, req.query.token)
-    .then(r => res.send(r))
+  storageRequestHandler.getFile(req.params.filename, req.params.experiment, getAuthToken(req), req.query.byname === 'true')
+    .then(r => {
+      r.uuid && res.header('uuid', r.uuid);
+      res.header('content-type', r.contentType);
+      res.send(r.body);
+    })
     .catch(_.partial(handleError, res));
 });
 
 app.delete('/storage/:experiment/:filename', (req, res, next) => {
-  storageRequestHandler.deleteFile(req.params.filename, req.params.experiment, req.query.token)
+  storageRequestHandler.deleteFile(req.params.filename, req.params.experiment, getAuthToken(req), req.query.byname === 'true')
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
 app.post('/storage/:experiment/:filename', (req, res, next) => {
-  storageRequestHandler.createOrUpdate(req.params.filename, req.body, req.headers['content-type'],
-    req.params.experiment, req.query.token)
+  storageRequestHandler.createOrUpdate(req.params.filename, req.body, req.get('content-type'),
+    req.params.experiment, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
 app.get('/storage/:experiment', (req, res, next) => {
-  storageRequestHandler.listFiles(req.params.experiment, req.query.token)
+  storageRequestHandler.listFiles(req.params.experiment, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
 app.put('/storage/:experiment', (req, res, next) => {
-  storageRequestHandler.createExperiment(req.params.experiment, req.query.token)
+  storageRequestHandler.createExperiment(req.params.experiment, getAuthToken(req), req.get('context-id'))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });

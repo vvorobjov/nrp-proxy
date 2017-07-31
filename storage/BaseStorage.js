@@ -30,11 +30,11 @@ class BaseStorage {
   }
 
   listFiles(experiment, token) { throw 'not implemented'; }
-  getFile(filename, experiment, token) { throw 'not implemented'; }
-  deleteFile(filename, experiment, token) { throw 'not implemented'; }
+  getFile(filename, experiment, token, byname) { throw 'not implemented'; }
+  deleteFile(filename, experiment, token, byname) { throw 'not implemented'; }
   createOrUpdate(filename, fileContent, contentType, experiment, token) { throw 'not implemented'; }
-  listExperiments(token) { throw 'not implemented'; }
-  createExperiment(newExperiment, token) { throw 'not implemented'; }
+  listExperiments(token, contextId) { throw 'not implemented'; }
+  createExperiment(newExperiment, token, contextId) { throw 'not implemented'; }
 }
 
 module.exports = BaseStorage;
