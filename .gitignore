@@ -1,8 +1,6 @@
 node_modules/
 reports
 coverage
-config.json
-config.json.sample
-config.json.sample.local
+config.json*
 .nyc_output
 artifacts
