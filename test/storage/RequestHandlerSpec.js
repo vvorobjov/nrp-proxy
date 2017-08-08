@@ -28,6 +28,8 @@ describe('Storage request handler', () => {
       code: 403
     };
 
+  let mkdirCalls = 0;
+  let rmdirCalls = 0;
   beforeEach(() => {
     storageRequestHandler = new StorageRequestHandler(configFile);
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
@@ -36,11 +38,20 @@ describe('Storage request handler', () => {
     RewiredFSStorage = rewire('../../storage/FS/Storage.js');
     RewiredFSStorage.__set__('DB', RewiredDB);
     RewiredFSStorage.__set__('utils', mockUtils);
-    var empty = (path, callback) => {
-      //empty implementation just to check if fs functions are called
+    mkdirCalls = 0;
+
+    var fakeMkdir = (path, callback) => {
+      mkdirCalls++;
       callback();
     };
-    RewiredFSStorage.__set__('fs.mkdir', empty);
+
+    var fakeRmdir = (path, callback) => {
+      rmdirCalls++;
+      callback();
+    };
+
+    RewiredFSStorage.__set__('fs.mkdir', fakeMkdir);
+    RewiredFSStorage.__set__('rmdir', fakeRmdir);
     fsStorage = new RewiredFSStorage();
     RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator.js');
     RewiredFSAuthenticator.__set__('DB', RewiredDB);
@@ -56,10 +67,13 @@ describe('Storage request handler', () => {
 
   //listFiles
   it(`should list all the files contained in a certain experiment`, () => {
-    return expect(storageRequestHandler.listFiles(fakeExperiment, fakeToken))
+    return expect(storageRequestHandler
+      .listFiles(fakeExperiment, fakeToken))
       .to.eventually.be.an('array').that.include({
-        uuid: 'fakeFile',
-        name: 'fakeFile'
+        name: 'fakeFile',
+        uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/fakeFile',
+        size: 11,
+        type: 'file'
       });
   });
 
@@ -74,7 +88,7 @@ describe('Storage request handler', () => {
     //create a temp file to be deleted
     return q.denodeify(fs.writeFile)(tmpFilePath, 'fakeContent').then((val) => {
       //delete the temp file
-      return storageRequestHandler.deleteFile('tmp',
+      return storageRequestHandler.deleteFile(fakeExperiment + '/tmp',
         fakeExperiment,
         fakeToken).then((val) => {
           //check if the file was indeed deleted
@@ -91,10 +105,29 @@ describe('Storage request handler', () => {
       .then(() => {
         return fsStorage.listFiles(fakeExperiment, fakeToken).then((folderContents) => {
           //clean up the tmp file
-          fsStorage.deleteFile('tmp', fakeExperiment, fakeToken);
-          return expect(folderContents).to.include({ uuid: 'tmp', name: 'tmp' });
+          fsStorage.deleteFile(fakeExperiment + '/tmp', fakeExperiment, fakeToken);
+          return expect(folderContents).to.include({
+            name: 'tmp',
+            uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/tmp',
+            size: 12,
+            type: 'file'
+          });
         });
       });
+  });
+
+  //create folder
+  it(`should call mkdir when creating folder`, () => {
+    //create a tmp file
+    return storageRequestHandler.createFolder('tmp_folder', fakeExperiment, fakeToken)
+      .then(() => expect(mkdirCalls).to.equal(1));
+  });
+
+  //delete folder
+  it(`should call rmdir when deleting folder createFolder`, () => {
+    //create a tmp file
+    return storageRequestHandler.deleteFolder(fakeExperiment + '/*tmp_folder', fakeExperiment, fakeToken)
+      .then(() => expect(rmdirCalls).to.equal(1));
   });
 
   //listExperiments
@@ -109,7 +142,7 @@ describe('Storage request handler', () => {
 
   //getFile
   it(`should return the contents of a file given a correct experiment and token`, () => {
-    return storageRequestHandler.getFile('fakeFile',
+    return storageRequestHandler.getFile(fakeExperiment + '/fakeFile',
       fakeExperiment,
       fakeToken).then((val) => {
         var stringContents = String.fromCharCode.apply(null, new Uint8Array(val.body));

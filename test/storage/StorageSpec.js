@@ -32,11 +32,12 @@ describe('BaseStorage', () => {
   });
 
   //for all the non implemented methods of the base class
-  ['listFiles', 'getFile', 'deleteFile', 'createOrUpdate', 'listExperiments', 'createExperiment'].forEach(function(item) {
-    it('should throw a non implemented method error when trying to use a base class non-overidden function ', () => {
-      return expect(baseClassMock[item]).to.throw('not implemented');
+  ['listFiles', 'getFile', 'deleteFile', 'createOrUpdate', 'listExperiments', 'createExperiment', 'deleteFolder', 'createFolder']
+    .forEach(function(item) {
+      it('should throw a non implemented method error when trying to use a base class non-overidden function ', () => {
+        return expect(baseClassMock[item]).to.throw('not implemented');
+      });
     });
-  });
 });
 
 describe('FSStorage', () => {
@@ -63,22 +64,22 @@ describe('FSStorage', () => {
     fsStorage = new RewiredFSStorage();
   });
 
-  //tokenHasAccessToExperiment
+  //tokenHasAccessToPath
   it(`should return an entry when we check an existing token`, () => {
-    return fsStorage.tokenHasAccessToExperiment(fakeToken, fakeExperiment)
+    return fsStorage.tokenHasAccessToPath(fakeToken, fakeExperiment)
       .should.eventually.contain({ token: fakeToken });
   });
 
   it(`should throw when we check a non-existing token`, () => {
     return assert.isRejected(fsStorage.
-      tokenHasAccessToExperiment('non-existing-token', fakeExperiment),
+      tokenHasAccessToPath('non-existing-token', fakeExperiment),
       AUTHORIZATION_ERROR);
   });
 
   //calculateFilePath
   it(`should calculate the file path given an existing folder and file name `, () => {
     const expectedPath = path.join(__dirname, '/dbMock/folder1/fakeFile');
-    return fsStorage.calculateFilePath('folder1', 'fakeFile').should.equal(expectedPath);
+    return fsStorage.calculateFilePath('folder1', 'folder1/fakeFile').should.equal(expectedPath);
   });
 
   it(`should throw an exception when trying to calculate a path
@@ -91,8 +92,10 @@ describe('FSStorage', () => {
   it(`should list all the files contained in a certain experiment`, () => {
     return expect(fsStorage.listFiles(fakeExperiment, fakeToken))
       .to.eventually.be.an('array').that.include({
-        uuid: 'fakeFile',
-        name: 'fakeFile'
+        name: 'fakeFile',
+        uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/fakeFile',
+        size: 11,
+        type: 'file'
       });
   });
 
@@ -103,7 +106,7 @@ describe('FSStorage', () => {
 
   //getFile
   it(`should return the contents of a file given a correct experiment and token`, () => {
-    return fsStorage.getFile('fakeFile',
+    return fsStorage.getFile(fakeExperiment + '/fakeFile',
       fakeExperiment,
       fakeToken).then((val) => {
         var stringContents = String.fromCharCode.apply(null, new Uint8Array(val.body));
@@ -124,7 +127,7 @@ describe('FSStorage', () => {
     //create a temp file to be deleted
     return q.denodeify(fs.writeFile)(tmpFilePath, 'fakeContent').then((val) => {
       //delete the temp file
-      return fsStorage.deleteFile('tmp',
+      return fsStorage.deleteFile(fakeExperiment + '/tmp',
         fakeExperiment,
         fakeToken).then((val) => {
           //check if the file was indeed deleted
@@ -142,10 +145,12 @@ describe('FSStorage', () => {
         return fsStorage.listFiles(fakeExperiment, fakeToken).then((val) => {
           var folderContents = val;
           //clean up the tmp file
-          fsStorage.deleteFile('tmp', fakeExperiment, fakeToken);
+          fsStorage.deleteFile(fakeExperiment + '/tmp', fakeExperiment, fakeToken);
           return expect(folderContents).to.include({
-            uuid: 'tmp',
-            name: 'tmp'
+            name: 'tmp',
+            uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/tmp',
+            size: 12,
+            type: 'file'
           });
         });
       });
@@ -267,7 +272,10 @@ describe('Collab Storage', () => {
       expected = {
         uuid: '53ab549f-030f-4d0f-ac82-eac66a181092',
         name: 'arm_reinforcement_learning.py',
-        parent: 'fbdaba55-2012-40d9-b466-017cff025c36'
+        parent: 'fbdaba55-2012-40d9-b466-017cff025c36',
+        contentType: 'text/x-python',
+        modifiedOn: '2017-02-10T15:20:22.493599Z',
+        type: 'file'
       };
 
     return expect(collabStorage.listFiles(fakeExperiment, fakeToken))
@@ -307,12 +315,22 @@ describe('Collab Storage', () => {
   });
 
   //delete file
-  it('should delete a file under a specific experiment ', () => {
+  it('should delete a file under a specific experiment', () => {
     const response = nock('https://services.humanbrainproject.eu')
       .delete('/storage/v1/api/file/fakeFile/')
       .reply(200, 'Success');
 
     return collabStorage.deleteFile('fakeFile', fakeExperiment, fakeToken)
+      .should.eventually.equal('Success');
+  });
+
+  //create folder
+  it('should create a folder', () => {
+    const response = nock('https://services.humanbrainproject.eu')
+      .post('/storage/v1/api/folder/')
+      .reply(200, 'Success');
+
+    return collabStorage.createFolder('fakeFile', fakeExperiment, fakeToken)
       .should.eventually.equal('Success');
   });
 

@@ -28,53 +28,82 @@ const q = require('q'),
   path = require('path'),
   BaseStorage = require('../BaseStorage.js'),
   Authenticator = require('./Authenticator.js');
+
 //mocked in the tests thus non const
 let utils = require('./utils.js'),
   DB = require('./DB.js'),
-  fs = require('fs');
+  fs = require('fs'),
+  rmdir = require('rmdir');
 
 class Storage extends BaseStorage {
 
-  tokenHasAccessToExperiment(token, experiment) {
+  tokenHasAccessToPath(token, filename) {
+    let experiment = filename.split('/')[0];
     return DB.instance.experiments.findOne({ token: token, experiment: experiment })
       .then(res => res || q.reject(Authenticator.AUTHORIZATION_ERROR));
   }
 
   calculateFilePath(experiment, filename) {
-    let dirPath = path.join(utils.storagePath, experiment);
-    let filePath = path.join(dirPath, filename);
-    if (!filePath.startsWith(dirPath))
+    //let dirPath = path.join(utils.storagePath, experiment);
+    let filePath = path.join(utils.storagePath, filename);
+    if (!filePath.startsWith(utils.storagePath))
       //file name attempts at going somewhere else (ie '../../someosfile' or '/usr/someimportantfile')
       return q.reject(Authenticator.AUTHORIZATION_ERROR);
     return filePath;
   }
 
   listFiles(experiment, token) {
-    return this.tokenHasAccessToExperiment(token, experiment)
-      .then(() => q.denodeify(fs.readdir)(path.join(utils.storagePath, experiment)))
-      .then(files => files.map(f => ({
-        uuid: f,
-        name: f,
-      })));
+    return this.tokenHasAccessToPath(token, experiment)
+      .then(() => this.calculateFilePath('', experiment))
+      .then(fullpath => q.all([fullpath, q.denodeify(fs.readdir)(fullpath)]))
+      .then(([fullpath, files]) => files.map(f => {
+        let stat = fs.statSync(path.join(fullpath, f));
+        return {
+          name: f,
+          uuid: path.join(experiment, f),
+          size: stat.size,
+          type: stat.isDirectory() ? 'folder' : 'file'
+        };
+      }));
   }
 
   getFile(filename, experiment, token, byname) {
-    return this.tokenHasAccessToExperiment(token, experiment)
+    let basename = path.basename(filename);
+    return this.tokenHasAccessToPath(token, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.readFile)(filePath))
-      .then(filecontent => ({ uuid: filename, body: filecontent }));
+      .then(filecontent => ({
+        uuid: filename,
+        contentDisposition: `attachment; filename=${basename}`,
+        body: filecontent
+      }));
   }
 
   deleteFile(filename, experiment, token, byname) {
-    return this.tokenHasAccessToExperiment(token, experiment)
+    return this.tokenHasAccessToPath(token, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.unlink)(filePath));
   }
 
+  deleteFolder(foldername, experiment, token, byname = false) {
+    return this.tokenHasAccessToPath(token, foldername)
+      .then(() => this.calculateFilePath(experiment, foldername))
+      .then(filePath => q.denodeify(rmdir)(filePath))
+      .then(() => { });
+  }
+
   createOrUpdate(filename, fileContent, contentType, experiment, token) {
-    return this.tokenHasAccessToExperiment(token, experiment)
+    filename = path.join(experiment, filename);
+    return this.tokenHasAccessToPath(token, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.writeFile)(filePath, fileContent));
+  }
+
+  createFolder(foldername, experiment, token) {
+    foldername = path.join(experiment, foldername);
+    return this.tokenHasAccessToPath(token, foldername)
+      .then(() => this.calculateFilePath(experiment, foldername))
+      .then(folderpath => q.denodeify(fs.mkdir)(folderpath));
   }
 
   listExperiments(token, contextId) {
@@ -92,7 +121,7 @@ class Storage extends BaseStorage {
           return q.reject('Experiment already exists');
 
         return DB.instance.experiments.insert({ token: token, experiment: newExperiment })
-          .then(() => this.calculateFilePath(newExperiment, ''))
+          .then(() => this.calculateFilePath('', newExperiment))
           .then(filePath => q.denodeify(fs.mkdir)(filePath))
           .then(() => newExperiment);
       });

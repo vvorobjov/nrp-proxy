@@ -56,7 +56,7 @@ class CollabConnector {
         if (res.statusCode < 200 || res.statusCode >= 300)
           throw 'Status code: ' + res.statusCode;
         if (options.encoding === null)
-          return { contentType: res.headers['content-type'], body: res.body };
+          return { headers: res.headers, body: res.body };
         return res.body;
       });
   }
@@ -84,39 +84,44 @@ class CollabConnector {
     }, token);
   }
 
+  getCollabEntity(token, collabId) {
+    if (!this._getMemoizedCollabs)
+      this._getMemoizedCollabs = _.memoize(this.getEntity, (token, collabId) => collabId);
+
+    return this._getMemoizedCollabs(token, collabId);
+  }
+
   getEntity(token, collabId, ...entityPath) {
     if (!collabId)
       return q.reject('No collab id specified');
 
-    if (!this._getMemoizedEntity) {
-      this._getMemoizedEntity = _.memoize((collabId, ...entityPath) => {
-        let fullpath = encodeURIComponent(path.join('/', collabId + '', ...entityPath));
-        const COLLAB_STORAGE_URL = `${CollabConnector.COLLAB_API_URL}/entity/?path=${fullpath}`;
-        return this.get(COLLAB_STORAGE_URL, token)
-          .then(res => JSON.parse(res));
-      });
-    }
-
-    return this._getMemoizedEntity(collabId, ...entityPath);
+    let fullpath = encodeURIComponent(path.join('/', collabId + '', entityPath.join('/')));
+    const COLLAB_STORAGE_URL = `${CollabConnector.COLLAB_API_URL}/entity/?path=${fullpath}`;
+    return this.get(COLLAB_STORAGE_URL, token)
+      .then(res => JSON.parse(res));
   }
 
   projectFolders(token, project) {
-    return this.jsonApi(token, 'project', project, 'children');
+    return this.jsonApi(token, 'project', project, 'children')
+      .then(res => res.results.map(f => ({
+        uuid: f.uuid,
+        name: f.name,
+        parent: f.parent
+      })));
   }
 
-  createFile(token, folder, name, contentType) {
+  createFile(token, parent, name, contentType) {
     const COLLAB_FILE_URL = `${CollabConnector.COLLAB_API_URL}/file/`;
 
     return this.post(COLLAB_FILE_URL, {
       name,
-      parent: folder,
+      parent: parent,
       'content_type': contentType
     }, token, true);
   }
 
-  deleteFile(token, folder, entityUuid) {
-    const COLLAB_FILE_URL = `${CollabConnector.COLLAB_API_URL}/file/${entityUuid}/`;
-
+  deleteEntity(token, folder, entityUuid, type = 'file') {
+    const COLLAB_FILE_URL = `${CollabConnector.COLLAB_API_URL}/${type}/${entityUuid}/`;
     return this.delete(COLLAB_FILE_URL, token);
   }
 
@@ -137,7 +142,15 @@ class CollabConnector {
   }
 
   folderContent(token, folder) {
-    return this.jsonApi(token, 'folder', folder, 'children');
+    return this.jsonApi(token, 'folder', folder, 'children')
+      .then(res => res.results.map(f => ({
+        uuid: f.uuid,
+        name: f.name,
+        parent: f.parent,
+        contentType: f['content_type'],
+        type: f['entity_type'],
+        modifiedOn: f['modified_on'],
+      })));
   }
 
   entityContent(token, entityUuid) {
@@ -152,12 +165,7 @@ class CollabConnector {
 
   jsonApi(token, entityType, entityUuid, requestType) {
     return this.api(token, entityType, entityUuid, requestType)
-      .then(res => JSON.parse(res))
-      .then(res => res.results.map(f => ({
-        uuid: f.uuid,
-        name: f.name,
-        parent: f.parent
-      })));
+      .then(res => JSON.parse(res));
   }
 
   api(token, entityType, entityUuid, requestType) {

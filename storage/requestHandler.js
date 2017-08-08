@@ -57,13 +57,25 @@ class RequestHandler {
     return this.authenticator.checkToken(token)
       .then(() => this.storage.getFile(filename, parentDir, token, byname));
   }
+
   deleteFile(filename, parentDir, token, byname = false) {
     return this.authenticator.checkToken(token)
       .then(() => this.storage.deleteFile(filename, parentDir, token, byname));
   }
+
+  deleteFolder(filename, parentDir, token, byname = false) {
+    return this.authenticator.checkToken(token)
+      .then(() => this.storage.deleteFolder(filename, parentDir, token, byname));
+  }
+
   createOrUpdate(filename, fileContent, contentType, parentDir, token) {
     return this.authenticator.checkToken(token)
       .then(() => this.storage.createOrUpdate(filename, fileContent, contentType, parentDir, token));
+  }
+
+  createFolder(foldername, parentDir, token) {
+    return this.authenticator.checkToken(token)
+      .then(() => this.storage.createFolder(foldername, parentDir, token));
   }
 
   listExperiments(token, contextId, filter) {

@@ -43,7 +43,7 @@ app.use(function(req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'accept, Authorization, Context-Id, Content-Type');
-  res.setHeader('Access-Control-Expose-Headers', 'uuid');
+  res.setHeader('Access-Control-Expose-Headers', 'uuid, content-disposition');
   next();
 });
 
@@ -91,7 +91,7 @@ app.get('/models/:modelType', function(req, res, next) {
 
 // storage API
 app.use(bodyParser.json());
-app.use(bodyParser.raw());
+app.use(bodyParser.raw({ limit: '10mb' }));
 app.use(bodyParser.text({ type: () => true }));
 
 let handleError = (res, err) => {
@@ -133,20 +133,30 @@ app.get('/storage/:experiment/:filename', (req, res, next) => {
     .then(r => {
       r.uuid && res.header('uuid', r.uuid);
       res.header('content-type', r.contentType);
+      res.header('content-disposition', r.contentDisposition);
       res.send(r.body);
     })
     .catch(_.partial(handleError, res));
 });
 
 app.delete('/storage/:experiment/:filename', (req, res, next) => {
-  storageRequestHandler.deleteFile(req.params.filename, req.params.experiment, getAuthToken(req), req.query.byname === 'true')
+  let args = [req.params.filename, req.params.experiment, getAuthToken(req), req.query.byname === 'true'];
+  let deleted = req.query.type === 'folder'
+    ? storageRequestHandler.deleteFolder(...args)
+    : storageRequestHandler.deleteFile(...args);
+
+  deleted
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/:experiment/:filename', (req, res, next) => {
-  storageRequestHandler.createOrUpdate(req.params.filename, req.body, req.get('content-type'),
-    req.params.experiment, getAuthToken(req))
+app.post('/storage/:experiment/*', (req, res, next) => {
+  if (!req.params['0'])
+    return handleError(res, 'File name is required');
+
+  (req.query.type === 'folder'
+    ? storageRequestHandler.createFolder(req.params['0'], req.params.experiment, getAuthToken(req))
+    : storageRequestHandler.createOrUpdate(req.params['0'], req.body, req.get('content-type'), req.params.experiment, getAuthToken(req)))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -163,8 +173,8 @@ app.put('/storage/:experiment', (req, res, next) => {
     .catch(_.partial(handleError, res));
 });
 
+
+configurationManager.configuration.then(null, null, conf => proxyRequestHandler.reloadConfiguration(conf));
+
 //start server
 app.listen(configFile.port, () => console.log('Listening on port:', configFile.port));
-
-configurationManager.configuration
-  .then(null, null, conf => proxyRequestHandler.reloadConfiguration(conf));
