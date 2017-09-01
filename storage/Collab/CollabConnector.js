@@ -181,7 +181,7 @@ class CollabConnector {
         return this.get(COLLAB_URL, token)
           .then(res => JSON.parse(res))
           .then(({ collab: { id } }) => id);
-      });
+      }, (token, contextId) => token + contextId);
     }
 
     return this._getMemoizedCollab(token, contextId);
