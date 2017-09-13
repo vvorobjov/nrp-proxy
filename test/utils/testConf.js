@@ -36,6 +36,7 @@ var SIMULATION_STATES = {
 };
 
 var CTX_ID = 'ctxId',
+  EXPERIMENT_ID = 'experimentId',
   BASE_URL = 'http://localhost';
 
 var SERVERS = ['geneva1', 'geneva2', 'geneva3', 'geneva4'];
@@ -89,8 +90,8 @@ var serveserverSimulations = {
   ],
   geneva3: [_.merge({ state: SIMULATION_STATES.STARTED }, experimentsConf.experiment1)],
   geneva4: [
-    _.merge({ contextID: CTX_ID, state: SIMULATION_STATES.CREATED }, experimentsConf.experiment2),
-    _.merge({ contextID: CTX_ID, state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
+    _.merge({ contextID: CTX_ID, experimentID: EXPERIMENT_ID, state: SIMULATION_STATES.CREATED }, experimentsConf.experiment2),
+    _.merge({ contextID: CTX_ID, experimentID: EXPERIMENT_ID, state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment2)
   ],
 };
 
@@ -118,6 +119,7 @@ var experimentList = {
     joinableServers: [{
       runningSimulation: {
         contextID: 'ctxId',
+        experimentID: EXPERIMENT_ID,
         experimentConfiguration: 'experimentConf2',
         state: 'created'
       },
@@ -256,7 +258,7 @@ var mockNonJsonOidcResponse = function () {
 
 module.exports = {
   config: config,
-  CTX_ID: CTX_ID,
+  EXPERIMENT_ID: EXPERIMENT_ID,
   SERVERS: SERVERS,
   experimentsConf: experimentsConf,
   experimentList: experimentList,

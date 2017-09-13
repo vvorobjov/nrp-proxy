@@ -68,7 +68,7 @@ var filterJoinableExperimentByContext = function(experiments) {
     var exp = _.cloneDeep(originalExperiment);
     if (exp && exp.joinableServers) {
       exp.joinableServers = exp.joinableServers.filter(function(joinable) {
-        return joinable.runningSimulation.contextID === null;
+        return !joinable.runningSimulation.contextID;
       });
     }
     return exp;
@@ -104,12 +104,12 @@ function getServer(serverId) {
   return q.reject('\'serverId\' not found\n');
 }
 
-function getJoinableServers(contextId) {
+function getJoinableServers(experimentId) {
   var deferred = q.defer();
   var contextSims = [];
   _.forOwn(simulationList, function(serverSimulations, serverId) {
     serverSimulations.forEach(function(simulation) {
-      if (simulation.contextID === contextId &&
+      if (simulation.experimentID === experimentId &&
         serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1) {
         contextSims.push({
           server: serverId,

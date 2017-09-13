@@ -68,6 +68,8 @@ class Storage extends BaseStorage {
   }
 
   getFile(filename, experiment, token, byname) {
+    if (byname)
+      filename = path.join(experiment, filename);
     let basename = path.basename(filename);
     return this.tokenHasAccessToPath(token, filename)
       .then(() => this.calculateFilePath(experiment, filename))
@@ -76,10 +78,14 @@ class Storage extends BaseStorage {
         uuid: filename,
         contentDisposition: `attachment; filename=${basename}`,
         body: filecontent
-      }));
+      }))
+      .catch(e => q.reject({ code: 404, msg: `Could not find file ${filename}` }));
   }
 
   deleteFile(filename, experiment, token, byname) {
+    if (byname)
+      filename = path.join(experiment, filename);
+
     return this.tokenHasAccessToPath(token, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.unlink)(filePath));
@@ -100,10 +106,15 @@ class Storage extends BaseStorage {
   }
 
   createFolder(foldername, experiment, token) {
-    foldername = path.join(experiment, foldername);
-    return this.tokenHasAccessToPath(token, foldername)
-      .then(() => this.calculateFilePath(experiment, foldername))
-      .then(folderpath => q.denodeify(fs.mkdir)(folderpath));
+    const fullFoldername = path.join(experiment, foldername);
+    return this.tokenHasAccessToPath(token, fullFoldername)
+      .then(() => this.calculateFilePath(experiment, fullFoldername))
+      .then(folderpath => q.denodeify(fs.mkdir)(folderpath))
+      .then(() => ({
+        uuid: fullFoldername,
+        'entity_type': 'folder',
+        name: foldername
+      }));
   }
 
   listExperiments(token, contextId) {

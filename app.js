@@ -77,8 +77,8 @@ app.get('/availableServers/:experimentId?', function(req, res, next) {
     .catch(next);
 });
 
-app.get('/joinableServers/:contextId', function(req, res, next) {
-  proxyRequestHandler.getJoinableServers(req.params.contextId)
+app.get('/joinableServers/:experimentId', function(req, res, next) {
+  proxyRequestHandler.getJoinableServers(req.params.experimentId)
     .then(r => res.send(r))
     .catch(next);
 });

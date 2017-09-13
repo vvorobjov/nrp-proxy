@@ -52,14 +52,15 @@ describe('requestHandler', function () {
       });
   });
 
-  it('should return joinable servers for a given contextid', function () {
+  it('should return joinable servers for a given experimentID', function () {
     revert = requestHandler.__set__('simulationList', testConf.serveserverSimulations);
     var myobj = [{
       server: 'geneva4',
       runningSimulation: testConf.serveserverSimulations['geneva4'][0]
     }];
-    return expect(requestHandler.getJoinableServers(testConf.CTX_ID))
-      .to.eventually.deep.equal(myobj);
+
+    return requestHandler.getJoinableServers(testConf.EXPERIMENT_ID)
+      .should.eventually.deep.equal(myobj);
   });
 
   it('should return available servers for a given experiment', function () {
@@ -103,5 +104,20 @@ describe('requestHandler', function () {
     });
     requestHandler.reloadConfiguration();
     sinon.assert.calledOnce(errorSpy);
+  });
+
+  it('should reconfigure oidcAuthenticator on reloadConfiguration', function () {
+    var configureSpy = sinon.spy();
+    revert = requestHandler.__set__({
+      oidcAuthenticator: {
+        configure: configureSpy
+      },
+      configuration: undefined
+    });
+    requestHandler.reloadConfiguration({
+      refreshInterval: 1000,
+      modelsPath: ''
+    });
+    sinon.assert.calledOnce(configureSpy);
   });
 });
