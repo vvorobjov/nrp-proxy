@@ -39,7 +39,7 @@ configurationManager.watch();
 proxyRequestHandler.initialize(configFile);
 let storageRequestHandler = new StorageRequestHandler(configFile);
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'accept, Authorization, Context-Id, Content-Type');
@@ -47,52 +47,52 @@ app.use(function(req, res, next) {
   next();
 });
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   if (req.method !== 'OPTIONS')
     console.log(`[FRONTEND REQUEST from ${req.connection.remoteAddress}] ${req.method} ${req.url}`);
   next();
 });
 
-app.get('/experimentImage/:experiments', function(req, res, next) {
+app.get('/experimentImage/:experiments', function (req, res, next) {
   proxyRequestHandler.getExperimentImage(req.params.experiments)
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/experiments', function(req, res, next) {
+app.get('/experiments', function (req, res, next) {
   proxyRequestHandler.getExperiments()
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/server/:serverId', function(req, res, next) {
+app.get('/server/:serverId', function (req, res, next) {
   proxyRequestHandler.getServer(req.params.serverId)
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/availableServers/:experimentId?', function(req, res, next) {
+app.get('/availableServers/:experimentId?', function (req, res, next) {
   proxyRequestHandler.getAvailableServers(req.params.experimentId)
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/joinableServers/:experimentId', function(req, res, next) {
+app.get('/joinableServers/:experimentId', function (req, res, next) {
   proxyRequestHandler.getJoinableServers(req.params.experimentId)
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/models/:modelType', function(req, res, next) {
+app.get('/models/:modelType', function (req, res, next) {
   proxyRequestHandler.getModels(req.params.modelType)
     .then(r => res.send(r))
     .catch(next);
 });
 
 // storage API
-app.use(bodyParser.json());
-app.use(bodyParser.raw({ limit: '10mb' }));
-app.use(bodyParser.text({ type: () => true }));
+app.use(bodyParser.json({ limit: '200mb' }));
+app.use(bodyParser.raw({ limit: '200mb' }));
+app.use(bodyParser.text({ type: () => true, limit: '200mb' }));
 
 let handleError = (res, err) => {
   let errType = Object.prototype.toString.call(err).slice(8, -1);

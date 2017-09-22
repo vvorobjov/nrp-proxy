@@ -189,7 +189,7 @@ describe('FS Storage (not mocking the mkdir)', () => {
       fs.unlinkSync(path.join(__dirname, 'dbMock2/FS_db/experiments'));
       fs.rmdirSync(path.join(__dirname, 'dbMock2/FS_db/'));
       fs.rmdirSync(path.join(__dirname, 'dbMock2/'));
-      return res.should.contain('-');
+      return res['uuid'].should.contain('-');
     });
   });
 });

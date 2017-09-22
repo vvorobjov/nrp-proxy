@@ -134,7 +134,7 @@ class Storage extends BaseStorage {
         return DB.instance.experiments.insert({ token: token, experiment: newExperiment })
           .then(() => this.calculateFilePath('', newExperiment))
           .then(filePath => q.denodeify(fs.mkdir)(filePath))
-          .then(() => newExperiment);
+          .then(() => ({ 'uuid':newExperiment }));
       });
   }
 }
