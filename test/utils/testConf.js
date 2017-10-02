@@ -60,7 +60,7 @@ var config = {
 var emptyConfig = _.cloneDeep(config);
 
 //build server config
-SERVERS.forEach(function (server) {
+SERVERS.forEach(function(server) {
   config.servers[server] = {
     gzweb: {
       assets: BASE_URL + '/' + server,
@@ -103,7 +103,22 @@ var serversStatus = {
 
 var experimentList = {
   experiment1: {
-    availableServers: ['geneva1', 'geneva2'],
+    availableServers: [
+      {
+        gzweb: {
+          assets: 'http://localhost/geneva1',
+          'nrp-services': 'http://localhost/geneva1'
+        },
+        id: 'geneva1'
+      },
+      {
+        gzweb: {
+          assets: 'http://localhost/geneva2',
+          'nrp-services': 'http://localhost/geneva2'
+        },
+        id: 'geneva2'
+      }
+    ],
     configuration: { experimentConfiguration: 'experimentConf1' },
     joinableServers: [{
       runningSimulation: {
@@ -114,7 +129,16 @@ var experimentList = {
     }]
   },
   experiment2: {
-    availableServers: ['geneva2'],
+    availableServers: [
+      {
+        gzweb: {
+          assets: 'http://localhost/geneva2',
+          'nrp-services': 'http://localhost/geneva2'
+        },
+        id: 'geneva2'
+      }
+
+    ],
     configuration: { experimentConfiguration: 'experimentConf2' },
     joinableServers: [{
       runningSimulation: {
@@ -135,7 +159,20 @@ var experimentList = {
 
 var experimentListNoCTXID = {
   experiment1: {
-    availableServers: ['geneva1', 'geneva2'],
+    availableServers: [{
+      gzweb: {
+        assets: 'http://localhost/geneva1',
+        'nrp-services': 'http://localhost/geneva1'
+      },
+      id: 'geneva1'
+    },
+    {
+      gzweb: {
+        assets: 'http://localhost/geneva2',
+        'nrp-services': 'http://localhost/geneva2'
+      },
+      id: 'geneva2'
+    }],
     configuration: { experimentConfiguration: 'experimentConf1' },
     joinableServers: [{
       runningSimulation: {
@@ -147,7 +184,13 @@ var experimentListNoCTXID = {
     }]
   },
   experiment2: {
-    availableServers: ['geneva2'],
+    availableServers: [{
+      gzweb: {
+        assets: 'http://localhost/geneva2',
+        'nrp-services': 'http://localhost/geneva2'
+      },
+      id: 'geneva2'
+    }],
     configuration: { experimentConfiguration: 'experimentConf2' },
     joinableServers: [{
       runningSimulation: {
@@ -165,8 +208,8 @@ var experimentListNoCTXID = {
   }
 };
 
-var mockResponses = function () {
-  _.forOwn(serverExperiments, function (exp, server) {
+var mockResponses = function() {
+  _.forOwn(serverExperiments, function(exp, server) {
     nock(BASE_URL + '/' + server)
       .get('/experiment')
       .reply(200, { 'data': serverExperiments[server] });
@@ -181,8 +224,8 @@ var mockResponses = function () {
   });
 };
 
-var mockNonJsonResponses = function () {
-  _.forOwn(serverExperiments, function (exp, server) {
+var mockNonJsonResponses = function() {
+  _.forOwn(serverExperiments, function(exp, server) {
     nock(BASE_URL + '/' + server)
       .get('/experiment')
       .reply(200, 'experiments');
@@ -197,8 +240,8 @@ var mockNonJsonResponses = function () {
   });
 };
 
-var mockFailedResponses = function () {
-  _.forOwn(serverExperiments, function (exp, server) {
+var mockFailedResponses = function() {
+  _.forOwn(serverExperiments, function(exp, server) {
     nock(BASE_URL + '/' + server)
       .get('/experiment')
       .reply(500, {});
@@ -213,20 +256,20 @@ var mockFailedResponses = function () {
   });
 };
 
-var mockImageResponses = function () {
-  _.forOwn(experimentList, function (expDetails, exp) {
-    expDetails['availableServers'].forEach(function (server) {
-      nock(BASE_URL + '/' + server)
+var mockImageResponses = function() {
+  _.forOwn(experimentList, function(expDetails, exp) {
+    expDetails['availableServers'].forEach(function(server) {
+      nock(BASE_URL + '/' + server.id)
         .get('/experiment/' + exp + '/preview')
         .reply(200, { 'image_as_base64': 'image' });
     });
   });
 };
 
-var mockFailedImageResponse = function () {
-  _.forOwn(experimentList, function (expDetails, exp) {
-    expDetails['availableServers'].forEach(function (server) {
-      nock(BASE_URL + '/' + server)
+var mockFailedImageResponse = function() {
+  _.forOwn(experimentList, function(expDetails, exp) {
+    expDetails['availableServers'].forEach(function(server) {
+      nock(BASE_URL + '/' + server.id)
         .get('/experiment/' + exp + '/preview')
         .replyWithError('An Error occurred');
     });
@@ -234,23 +277,23 @@ var mockFailedImageResponse = function () {
 };
 
 var consoleMock = {
-  'log': function () { },
-  'error': function () { }
+  'log': function() { },
+  'error': function() { }
 };
 
-var mockSuccessfulOidcResponse = function () {
+var mockSuccessfulOidcResponse = function() {
   nock(URL)
     .post('/token')
     .reply(200, { 'access_token': 'testToken' });
 };
 
-var mockFailedOidcResponse = function () {
+var mockFailedOidcResponse = function() {
   nock(URL)
     .post('/token')
     .reply(500, {});
 };
 
-var mockNonJsonOidcResponse = function () {
+var mockNonJsonOidcResponse = function() {
   nock(URL)
     .post('/token')
     .reply(200, 'OK!');

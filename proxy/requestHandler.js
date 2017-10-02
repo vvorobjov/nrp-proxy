@@ -57,7 +57,7 @@ function reloadConfiguration(config) {
     configuration.refreshInterval, 'ms.');
 
   oidcAuthenticator.configure(configuration.auth);
-
+  _.forEach(configuration.servers, (conf, id) => conf.id = id);
   let modelsPath = configuration.modelsPath.replace(/\$([A-Za-z]*)/g, (m, v) => process.env[v]);
   modelsService = new ModelsService(modelsPath);
   modelsService.loadModels();

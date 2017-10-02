@@ -135,7 +135,7 @@
             if (!redirect_uri)
               throw `'redirect_uri' parameter required in the url`;
             let url = decodeURIComponent(redirect_uri[1]);
-            window.location = url + (url.indexOf('?') > 0 ? '&' : '?') + 'storage_token=' + token
+            window.location = url + (url.indexOf('?') > 0 ? '&' : '?') + 'access_token=' + token
           });
         })
         .catch(err => {

@@ -79,7 +79,7 @@ class Storage extends BaseStorage {
         contentDisposition: `attachment; filename=${basename}`,
         body: filecontent
       }))
-      .catch(e => q.reject({ code: 404, msg: `Could not find file ${filename}` }));
+      .catch(e => q.reject({ code: 204, msg: `Could not find file ${filename}` }));
   }
 
   deleteFile(filename, experiment, token, byname) {
@@ -88,7 +88,8 @@ class Storage extends BaseStorage {
 
     return this.tokenHasAccessToPath(token, filename)
       .then(() => this.calculateFilePath(experiment, filename))
-      .then(filePath => q.denodeify(fs.unlink)(filePath));
+      .then(filePath => q.denodeify(fs.unlink)(filePath))
+      .catch(e => q.reject({ code: 204, msg: `Could not find file ${filename}` }));
   }
 
   deleteFolder(foldername, experiment, token, byname = false) {

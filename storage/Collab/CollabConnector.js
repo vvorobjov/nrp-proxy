@@ -43,6 +43,16 @@ class CollabConnector {
     return this._instance;
   }
 
+  handleError(err) {
+    console.error(`[Collab error] ${err}`);
+    let errType = Object.prototype.toString.call(err).slice(8, -1);
+    if (errType === 'Object' && err.statusCode)
+      if (err.statusCode === 403 || err.statusCode === 401 &&
+        (err.message.indexOf('OpenId response: token is not valid') >= 0 || err.message.indexOf('invalid_token') >= 0))
+        return q.reject({ code: 302, msg: 'https://services.humanbrainproject.eu/oidc/authorize?response_type=token' });
+    return q.reject(err);
+  }
+
   executeRequest(options, token) {
 
     _.extend(options, {
@@ -58,7 +68,8 @@ class CollabConnector {
         if (options.encoding === null)
           return { headers: res.headers, body: res.body };
         return res.body;
-      });
+      })
+      .catch(this.handleError);
   }
 
   post(url, data, token, jsonType = false) {
@@ -186,7 +197,6 @@ class CollabConnector {
 
     return this._getMemoizedCollab(token, contextId);
   }
-
 }
 
 module.exports = CollabConnector;

@@ -36,11 +36,13 @@ class RequestHandler {
 
       const basePath = path.resolve(path.join(__dirname, config.storage.type));
 
-      const Authenticator = require(path.join(basePath, 'Authenticator.js')),
-        Storage = require(path.join(basePath, 'Storage.js'));
+      const Authenticator = require(path.join(basePath, 'Authenticator.js'));
+      const Storage = require(path.join(basePath, 'Storage.js'));
+      const Identity = require(path.join(basePath, 'Identity.js'));
 
       this.authenticator = new Authenticator(config.storage);
       this.storage = new Storage(config.storage);
+      this.identity = new Identity(config.storage);
     }
     catch (e) {
       console.error('Failed to instantiate storage implementation', e);
@@ -88,12 +90,24 @@ class RequestHandler {
         )
       );
   }
+
   createExperiment(newExperiment, token, contextId) {
     return this.authenticator.checkToken(token)
       .then(() => this.storage.createExperiment(newExperiment, token, contextId));
   }
+
   getLoginPage() {
     return this.authenticator.getLoginPage();
+  }
+
+  getUserInfo(userId, token) {
+    return this.authenticator.checkToken(token)
+      .then(() => this.identity.getUserInfo(userId, token));
+  }
+
+  getUserGroups(token) {
+    return this.authenticator.checkToken(token)
+      .then(() => this.identity.getUserGroups(token));
   }
 }
 
