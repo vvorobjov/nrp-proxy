@@ -80,12 +80,12 @@ class RequestHandler {
       .then(() => this.storage.createFolder(foldername, parentDir, token));
   }
 
-  listExperiments(token, contextId, filter) {
+  listExperiments(token, contextId, options={}) {
     const SPECIAL_FOLDERS = new Set(['robots', 'brains', 'environments']);
     return this.authenticator.checkToken(token)
-      .then(() => this.storage.listExperiments(token, contextId))
-      .then(exps => filter
-        ? exps.filter(e => e.name === filter)
+      .then(() => this.storage.listExperiments(token, contextId, options))
+      .then(exps => options.filter
+        ? exps.filter(e => e.name === options.filter)
         : exps.filter(e => !SPECIAL_FOLDERS.has(e.name)
         )
       );

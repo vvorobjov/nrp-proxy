@@ -35,7 +35,7 @@ class BaseStorage {
   deleteFolder(foldername, experiment, token, byname = false) { throw 'not implemented'; }
   createFolder(foldername, experiment, token) { throw 'not implemented'; }
   createOrUpdate(filename, fileContent, contentType, experiment, token) { throw 'not implemented'; }
-  listExperiments(token, contextId) { throw 'not implemented'; }
+  listExperiments(token, contextId, options) { throw 'not implemented'; }
   createExperiment(newExperiment, token, contextId) { throw 'not implemented'; }
 }
 

@@ -118,12 +118,12 @@ class Storage extends BaseStorage {
       }));
   }
 
-  listExperiments(token, contextId) {
-    return DB.instance.experiments.find({ token: token })
-      .then(res => res.map(f => ({
-        uuid: f.experiment,
-        name: f.experiment
-      })));
+  listExperiments(token, contextId, options = {}) {
+    return options.all
+      ? q.denodeify(fs.readdir)(utils.storagePath)
+        .then(res => res.map(file => ({ uuid: file, name: file })))
+      : DB.instance.experiments.find({ token: token })
+        .then(res => res.map(f => ({ uuid: f.experiment, name: f.experiment })));
   }
 
   createExperiment(newExperiment, token) {
@@ -135,7 +135,7 @@ class Storage extends BaseStorage {
         return DB.instance.experiments.insert({ token: token, experiment: newExperiment })
           .then(() => this.calculateFilePath('', newExperiment))
           .then(filePath => q.denodeify(fs.mkdir)(filePath))
-          .then(() => ({ 'uuid':newExperiment }));
+          .then(() => ({ 'uuid': newExperiment }));
       });
   }
 }

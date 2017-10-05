@@ -123,7 +123,7 @@ let getAuthToken = req => {
 };
 
 app.get('/storage/experiments', (req, res, next) => {
-  storageRequestHandler.listExperiments(getAuthToken(req), req.get('context-id'), req.query.filter)
+  storageRequestHandler.listExperiments(getAuthToken(req), req.get('context-id'), req.query/*options*/)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
