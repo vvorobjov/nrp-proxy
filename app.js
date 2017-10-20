@@ -49,7 +49,7 @@ app.use(function(req, res, next) {
 
 app.use(function(req, res, next) {
   if (req.method !== 'OPTIONS')
-    console.log(`[FRONTEND REQUEST from ${req.connection.remoteAddress}] ${req.method} ${req.url}`);
+    console.log(`[REQUEST from ${req.connection.remoteAddress}] ${req.method} ${req.url}`);
   next();
 });
 
@@ -96,11 +96,15 @@ app.use(bodyParser.text({ type: () => true, limit: '200mb' }));
 
 let handleError = (res, err) => {
   let errType = Object.prototype.toString.call(err).slice(8, -1);
+
   if (errType === 'String' || errType === 'Error' || !err.code) {
     console.error('[ERROR] ' + err);
     res.status(500).send(err);
-  } else
+  } else {
+    if (err.code !== 204)// 204= file not found
+      console.error('[ERROR] ' + err.msg);
     res.status(err.code).send(err.msg);
+  }
 };
 
 app.post('/authentication/authenticate', (req, res, next) => {

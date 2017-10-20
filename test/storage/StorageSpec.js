@@ -114,6 +114,14 @@ describe('FSStorage', () => {
       });
   });
 
+  it(`should return the contents of a file by file name`, () => {
+    return fsStorage.getFile('fakeFile', fakeExperiment, fakeToken, true)
+      .then((val) => {
+        var stringContents = String.fromCharCode.apply(null, new Uint8Array(val.body));
+        return expect(stringContents).to.contain('fakeContent');
+      });
+  });
+
   it(`should throw an authorization exception when trying to read a file from a non existing folder`, () => {
     return assert.isRejected(fsStorage.getFile('wrongFileName',
       fakeExperiment,
@@ -216,7 +224,7 @@ describe('Collab Storage', () => {
 
   //Collab connector
   it('should succesfully get the correct request timeout', () => {
-    return CollabConnector.REQUEST_TIMEOUT.should.equal(60 * 1000);
+    return CollabConnector.REQUEST_TIMEOUT.should.equal(30 * 1000);
   });
 
   it('should succesfully get the correct collab api url', () => {

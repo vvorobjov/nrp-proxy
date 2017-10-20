@@ -33,7 +33,7 @@ let request = require('request-promise');
 //wraps the collab connection
 class CollabConnector {
 
-  static get REQUEST_TIMEOUT() { return 60 * 1000; }//ms
+  static get REQUEST_TIMEOUT() { return 30 * 1000; }//ms
 
   static get COLLAB_API_URL() { return 'https://services.humanbrainproject.eu/storage/v1/api'; }
 
@@ -46,10 +46,14 @@ class CollabConnector {
   handleError(err) {
     console.error(`[Collab error] ${err}`);
     let errType = Object.prototype.toString.call(err).slice(8, -1);
-    if (errType === 'Object' && err.statusCode)
+
+    if (errType === 'Object' && err.statusCode) {
       if (err.statusCode === 403 || err.statusCode === 401 &&
         (err.message.indexOf('OpenId response: token is not valid') >= 0 || err.message.indexOf('invalid_token') >= 0))
         return q.reject({ code: 302, msg: 'https://services.humanbrainproject.eu/oidc/authorize?response_type=token' });
+    }else if (errType === 'String' ){
+      err = `[Collab error] ${err}`;
+    }
     return q.reject(err);
   }
 
@@ -73,12 +77,19 @@ class CollabConnector {
   }
 
   post(url, data, token, jsonType = false) {
-    return this.executeRequest({
+    let operation = () => this.executeRequest({
       method: 'POST',
       uri: url,
       body: data,
       json: !!jsonType,
     }, token);
+
+    return operation()
+      .catch(e => {
+        if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
+          return operation();
+        throw e;
+      });
   }
 
   get(url, token) {
