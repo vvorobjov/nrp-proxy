@@ -27,7 +27,6 @@ const q = require('q'),
   BaseIdentity = require('../BaseIdentity.js');
 let DB = require('./DB.js');
 class Identity extends BaseIdentity {
-
   constructor(config) {
     super();
     this.config = config;
@@ -38,18 +37,18 @@ class Identity extends BaseIdentity {
     if (user === 'me' || user === 'default-owner') {
       userId = 'default-owner';
       findCondition = { token };
-    } else
-      findCondition = { user };
+    } else findCondition = { user };
 
-    return DB.instance.users.findOne(findCondition)
+    return DB.instance.users
+      .findOne(findCondition)
       .then(res => res || q.reject({ code: 404, msg: 'user id not found' }))
-      .then((res) => ({
+      .then(res => ({
         id: userId || res.user,
         displayName: res.user
       }));
   }
 
-  getUserGroups(token) {
+  getUserGroups() {
     return q.when([{ name: 'hbp-sp10-user-edit-rights' }]);
   }
 }

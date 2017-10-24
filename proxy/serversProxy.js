@@ -31,7 +31,7 @@ require('log-prefix')(function() {
   return dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z');
 });
 
-var REQUEST_TIMEOUT = 20 * 1000;//ms
+var REQUEST_TIMEOUT = 20 * 1000; //ms
 
 var SERVER_URLS = {
   EXPERIMENT: '/experiment',
@@ -80,7 +80,9 @@ var executeServerRequest = function(url) {
 
   request(options, function(err, res, body) {
     function requestFailed(error) {
-      console.error('Failed to execute request ' + options.url + '. ERROR: ' + error);
+      console.error(
+        'Failed to execute request ' + options.url + '. ERROR: ' + error
+      );
       deferred.reject(error);
     }
 
@@ -103,13 +105,12 @@ var executeServerRequest = function(url) {
 var executeRequestForAllServers = function(configuration, urlPostFix) {
   var serversResponses = [];
   _.forOwn(configuration.servers, function(serverConfig, serverId) {
-    serversResponses.push(executeServerRequest(serverConfig.gzweb['nrp-services'] + urlPostFix)
-      .then(function(serverResponse) {
-        return [serverId, serverResponse];
-      })
-      .catch(function(serverResponse) {
-        return [serverId, null];
-      })
+    serversResponses.push(
+      executeServerRequest(serverConfig.gzweb['nrp-services'] + urlPostFix)
+        .then(function(serverResponse) {
+          return [serverId, serverResponse];
+        })
+        .catch(() => [serverId, null])
     );
   });
   return q.all(serversResponses);
@@ -117,7 +118,9 @@ var executeRequestForAllServers = function(configuration, urlPostFix) {
 
 var mergeData = function(responsesData, configuration) {
   var filterErrors = function(data) {
-    return data.filter(function(e) { return e[1] && !(e[1].data instanceof Error); });
+    return data.filter(function(e) {
+      return e[1] && !(e[1].data instanceof Error);
+    });
   };
   var data = {
     experiments: filterErrors(responsesData[0]),
@@ -125,8 +128,10 @@ var mergeData = function(responsesData, configuration) {
     simulations: _.fromPairs(filterErrors(responsesData[2]))
   };
 
-  _.forOwn(data.simulations, function(serverSimulations, serverId) {
-    serverSimulations.runningSimulation = _.find(serverSimulations, function(s) {
+  _.forOwn(data.simulations, function(serverSimulations) {
+    serverSimulations.runningSimulation = _.find(serverSimulations, function(
+      s
+    ) {
       return RUNNING_SIMULATION_STATES.indexOf(s.state) !== -1;
     });
   });
@@ -145,11 +150,14 @@ var mergeData = function(responsesData, configuration) {
       }
       var responseExp = mergedData[expId];
       var runningSimulation = data.simulations[serverId].runningSimulation;
-      if (!runningSimulation) { //server is free
+      if (!runningSimulation) {
+        //server is free
         responseExp.availableServers.push(serverId);
-      }
-      else if (runningSimulation.experimentConfiguration === responseExp.configuration.experimentConfiguration &&
-        runningSimulation.state !== SIMULATION_STATES.HALTED) {
+      } else if (
+        runningSimulation.experimentConfiguration ===
+          responseExp.configuration.experimentConfiguration &&
+        runningSimulation.state !== SIMULATION_STATES.HALTED
+      ) {
         //server is running this experiment
         responseExp.joinableServers.push({
           server: serverId,
@@ -164,60 +172,88 @@ var mergeData = function(responsesData, configuration) {
     //debugger;
     exp.availableServers = _(exp.availableServers)
       .map(s => _.extend({}, configuration.servers[s], { id: s }))
-      .sortBy(({ id }) => HEALTH_STATUS_PRIORITY[data.health[id] && data.health[id].state] || 9)
+      .sortBy(
+        ({ id }) =>
+          HEALTH_STATUS_PRIORITY[data.health[id] && data.health[id].state] || 9
+      )
       .value();
   });
   return mergedData;
 };
 
 var getExperimentsAndSimulations = function(configuration) {
-  return q.all([
-    executeRequestForAllServers(configuration, SERVER_URLS.EXPERIMENT),
-    executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
-    executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
-  ])
+  return q
+    .all([
+      executeRequestForAllServers(configuration, SERVER_URLS.EXPERIMENT),
+      executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
+      executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
+    ])
     .then(function(response) {
-      var availableServers = response[2].filter(function(e) { return e[1] && !(e[1].data instanceof Error); });
+      var availableServers = response[2].filter(function(e) {
+        return e[1] && !(e[1].data instanceof Error);
+      });
       var availableServerObjects = availableServers
-        .filter(a => !a[1].filter(a => RUNNING_SIMULATION_STATES.includes(a.state)).length)
+        .filter(
+          a =>
+            !a[1].filter(a => RUNNING_SIMULATION_STATES.includes(a.state))
+              .length
+        )
         .map(a => configuration.servers[a[0]]);
-      return [mergeData(response, configuration), _.fromPairs(availableServers), availableServerObjects];
+      return [
+        mergeData(response, configuration),
+        _.fromPairs(availableServers),
+        availableServerObjects
+      ];
     });
 };
 
-var getExperimentImage = _.memoize(function(experimentId, experiments, configuration) {
-  var exp = experiments[experimentId];
+var getExperimentImage = _.memoize(
+  function(experimentId, experiments, configuration) {
+    var exp = experiments[experimentId];
 
-  if (!exp) {
-    console.error('[GET] Experiment Image: Experiment ID \"' + experimentId + '\" does not exist!');
-    return q.when([experimentId, null]);
+    if (!exp) {
+      console.error(
+        '[GET] Experiment Image: Experiment ID "' +
+          experimentId +
+          '" does not exist!'
+      );
+      return q.when([experimentId, null]);
+    }
+
+    var firstServer =
+      _.head(exp.availableServers) ||
+      _.head(_.map(exp.joinableServers, 'server'));
+    if (!firstServer) {
+      return q.when([experimentId, null]);
+    }
+
+    var url = configuration.servers[firstServer.id].gzweb['nrp-services'];
+    return q.all([
+      experimentId,
+      executeServerRequest(
+        url + SERVER_URLS.EXPERIMENT + '/' + experimentId + '/preview',
+        ''
+      )
+        .then(function(image) {
+          console.log(
+            "Image obtained for ExperimentID: '" + experimentId + "'"
+          );
+          return image['image_as_base64'];
+        })
+        .catch(function(err) {
+          console.error('Failed to load experiment Image: ', err);
+          return q.when(null);
+        })
+    ]);
+  },
+  function(experimentId) {
+    return experimentId;
   }
-
-  var firstServer = _.head(exp.availableServers) || _.head(_.map(exp.joinableServers, 'server'));
-  if (!firstServer) {
-    return q.when([experimentId, null]);
-  }
-
-  var url = configuration.servers[firstServer.id].gzweb['nrp-services'];
-  return q.all([
-    experimentId,
-    executeServerRequest(url + SERVER_URLS.EXPERIMENT + '/' + experimentId + '/preview', '')
-      .then(function(image) {
-        console.log('Image obtained for ExperimentID: \'' + experimentId + '\'');
-        return image['image_as_base64'];
-      })
-      .catch(function(err) {
-        console.error('Failed to load experiment Image: ', err);
-        return q.when(null);
-      })
-  ]);
-}, function(experimentId) {
-  return experimentId;
-});
+);
 
 module.exports = {
   setToken: setToken,
   getExperimentsAndSimulations: getExperimentsAndSimulations,
   getExperimentImage: getExperimentImage,
-  RUNNING_SIMULATION_STATES: RUNNING_SIMULATION_STATES,
+  RUNNING_SIMULATION_STATES: RUNNING_SIMULATION_STATES
 };

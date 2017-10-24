@@ -29,14 +29,30 @@ class BaseStorage {
       throw new TypeError('BaseStorage is an abstract class');
   }
 
-  listFiles(experiment, token) { throw 'not implemented'; }
-  getFile(filename, experiment, token, byname) { throw 'not implemented'; }
-  deleteFile(filename, experiment, token, byname) { throw 'not implemented'; }
-  deleteFolder(foldername, experiment, token, byname = false) { throw 'not implemented'; }
-  createFolder(foldername, experiment, token) { throw 'not implemented'; }
-  createOrUpdate(filename, fileContent, contentType, experiment, token) { throw 'not implemented'; }
-  listExperiments(token, contextId, options) { throw 'not implemented'; }
-  createExperiment(newExperiment, token, contextId) { throw 'not implemented'; }
+  listFiles(experiment, token) {
+    throw 'not implemented';
+  }
+  getFile(filename, experiment, token, byname) {
+    throw 'not implemented';
+  }
+  deleteFile(filename, experiment, token, byname) {
+    throw 'not implemented';
+  }
+  deleteFolder(foldername, experiment, token, byname = false) {
+    throw 'not implemented';
+  }
+  createFolder(foldername, experiment, token) {
+    throw 'not implemented';
+  }
+  createOrUpdate(filename, fileContent, contentType, experiment, token) {
+    throw 'not implemented';
+  }
+  listExperiments(token, contextId, options) {
+    throw 'not implemented';
+  }
+  createExperiment(newExperiment, token, contextId) {
+    throw 'not implemented';
+  }
 }
 
 module.exports = BaseStorage;

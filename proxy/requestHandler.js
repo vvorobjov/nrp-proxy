@@ -23,8 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
-var fs = require('fs'),
-  _ = require('lodash'),
+var _ = require('lodash'),
   q = require('q');
 
 var ModelsService = require('./modelsService.js'),
@@ -35,10 +34,7 @@ var experimentList = {};
 var simulationList = [];
 var availableServers = [];
 
-var oidcToken,
-  configuration,
-  modelsService;
-
+var oidcToken, configuration, modelsService;
 
 function initialize(config) {
   reloadConfiguration(config);
@@ -48,17 +44,25 @@ function initialize(config) {
 function reloadConfiguration(config) {
   configuration = config;
   if (!configuration)
-    return console.error('Proxy requestHandler.reloadConfiguration: configuration required');
+    return console.error(
+      'Proxy requestHandler.reloadConfiguration: configuration required'
+    );
 
   if (!configuration.refreshInterval)
-    throw 'Configuration key \'refreshInterval\' is missing in the config file. Please update';
+    throw "Configuration key 'refreshInterval' is missing in the config file. Please update";
 
-  console.log('Polling Backend Servers for Experiments, Health & Running Simulations every',
-    configuration.refreshInterval, 'ms.');
+  console.log(
+    'Polling Backend Servers for Experiments, Health & Running Simulations every',
+    configuration.refreshInterval,
+    'ms.'
+  );
 
   oidcAuthenticator.configure(configuration.auth);
-  _.forEach(configuration.servers, (conf, id) => conf.id = id);
-  let modelsPath = configuration.modelsPath.replace(/\$([A-Za-z]*)/g, (m, v) => process.env[v]);
+  _.forEach(configuration.servers, (conf, id) => (conf.id = id));
+  let modelsPath = configuration.modelsPath.replace(
+    /\$([A-Za-z]*)/g,
+    (m, v) => process.env[v]
+  );
   modelsService = new ModelsService(modelsPath);
   modelsService.loadModels();
 }
@@ -78,13 +82,16 @@ var filterJoinableExperimentByContext = function(experiments) {
 function updateExperimentList() {
   oidcToken = oidcAuthenticator.getToken().then(serversProxy.setToken);
 
-  oidcToken.then(_.partial(serversProxy.getExperimentsAndSimulations, configuration))
+  oidcToken
+    .then(_.partial(serversProxy.getExperimentsAndSimulations, configuration))
     .then(function(experimentData) {
       experimentList = experimentData[0];
       simulationList = experimentData[1];
       availableServers = experimentData[2];
       //make sure images are preloaded
-      _(experimentList).forEach((exp, expId) => serversProxy.getExperimentImage(expId, experimentList, configuration));
+      _(experimentList).forEach((exp, expId) =>
+        serversProxy.getExperimentImage(expId, experimentList, configuration)
+      );
     })
     .fail(function(err) {
       console.error('Polling Error. Failed to get experiments: ', err);
@@ -101,7 +108,7 @@ function getServer(serverId) {
     return q.resolve(configuration.servers[serverId]);
 
   console.error('Wrong Server ID');
-  return q.reject('\'serverId\' not found\n');
+  return q.reject("'serverId' not found\n");
 }
 
 function getJoinableServers(experimentId) {
@@ -109,8 +116,10 @@ function getJoinableServers(experimentId) {
   var contextSims = [];
   _.forOwn(simulationList, function(serverSimulations, serverId) {
     serverSimulations.forEach(function(simulation) {
-      if (simulation.experimentID === experimentId &&
-        serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1) {
+      if (
+        simulation.experimentID === experimentId &&
+        serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1
+      ) {
         contextSims.push({
           server: serverId,
           runningSimulation: simulation
@@ -123,12 +132,11 @@ function getJoinableServers(experimentId) {
 }
 
 function getAvailableServers(experimentId) {
-  if (!experimentId)
-    return q.resolve(availableServers);
+  if (!experimentId) return q.resolve(availableServers);
   if (experimentList[experimentId])
     return q.resolve(experimentList[experimentId].availableServers);
   console.error('Wrong Experiment ID');
-  return q.reject('experimentId: \'' + experimentId + '\' not found\n');
+  return q.reject("experimentId: '" + experimentId + "' not found\n");
 }
 
 function getExperiments() {
@@ -137,9 +145,16 @@ function getExperiments() {
 
 function getExperimentImage(experiments) {
   experiments = experiments.split(',');
-  return q.all(experiments.map(function(exp) {
-    return serversProxy.getExperimentImage(exp, experimentList, configuration);
-  }))
+  return q
+    .all(
+      experiments.map(function(exp) {
+        return serversProxy.getExperimentImage(
+          exp,
+          experimentList,
+          configuration
+        );
+      })
+    )
     .then(_.fromPairs)
     .catch(function(err) {
       console.error('Failed to get experiments images: ', err);

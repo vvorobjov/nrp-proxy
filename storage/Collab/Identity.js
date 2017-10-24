@@ -23,13 +23,13 @@
  * ---LICENSE-END**/
 'use strict';
 
-const q = require('q'),
-  BaseIdentity = require('../BaseIdentity.js'),
+const BaseIdentity = require('../BaseIdentity.js'),
   CollabConnector = require('./CollabConnector.js');
 
 class Identity extends BaseIdentity {
-
-  static get IDENTITY_API_URL() { return 'https://services.humanbrainproject.eu/idm/v1/api'; }
+  static get IDENTITY_API_URL() {
+    return 'https://services.humanbrainproject.eu/idm/v1/api';
+  }
 
   constructor(config) {
     super();
@@ -37,12 +37,17 @@ class Identity extends BaseIdentity {
   }
 
   getUserInfo(userId, token) {
-    return CollabConnector.instance.get(`${Identity.IDENTITY_API_URL}/user/${userId}`, token)
+    return CollabConnector.instance
+      .get(`${Identity.IDENTITY_API_URL}/user/${userId}`, token)
       .then(res => JSON.parse(res));
   }
 
   getUserGroups(token) {
-    return CollabConnector.instance.get(`${Identity.IDENTITY_API_URL}/user/me/member-groups?page=0&pageSize=1000`, token)
+    return CollabConnector.instance
+      .get(
+        `${Identity.IDENTITY_API_URL}/user/me/member-groups?page=0&pageSize=1000`,
+        token
+      )
       .then(res => JSON.parse(res)._embedded.groups);
   }
 }

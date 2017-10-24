@@ -45,7 +45,9 @@ let loadConfigFile = () => {
     return configFile;
   } catch (err) {
     if (err.code === 'ENOENT' && !configFile) {
-      console.log('config.json not found! Please create a config.json from config.json.sample and run again!');
+      console.log(
+        'config.json not found! Please create a config.json from config.json.sample and run again!'
+      );
     }
     console.error(err);
   }
@@ -53,7 +55,9 @@ let loadConfigFile = () => {
 
 let onConfigChange = (curr, prev) => {
   if (curr !== 'change') {
-    console.log('config.json has been deleted! Continuing with the previously-parsed version.');
+    console.log(
+      'config.json has been deleted! Continuing with the previously-parsed version.'
+    );
     return;
   }
   console.log('Received change for configuration file. Reparsing.');
@@ -69,5 +73,5 @@ module.exports = {
   watch: watch,
   initialize: initialize,
   loadConfigFile: loadConfigFile,
-  configuration: configuration.promise,
+  configuration: configuration.promise
 };

@@ -33,32 +33,54 @@ class Storage extends BaseStorage {
     this.config = config;
   }
 
-  listFiles(experiment, token, filter) {
+  listFiles(experiment, token) {
     return CollabConnector.instance.folderContent(token, experiment);
   }
 
   getFileUuid(filename, experiment, token) {
     return this.listFiles(experiment, token)
       .then(files => files.filter(f => f.name === filename))
-      .then(files => files.length === 0 ? null : files[0].uuid);
+      .then(files => (files.length === 0 ? null : files[0].uuid));
   }
 
   getFile(filename, experiment, token, byname = false) {
-    return (byname ? this.getFileUuid(filename, experiment, token) : q.when(filename))
-      .then(uuid => q.all([uuid, uuid && CollabConnector.instance.entityContent(token, uuid)]))
-      .then(([uuid, content]) => content
-        ? {
+    return (byname
+      ? this.getFileUuid(filename, experiment, token)
+      : q.when(filename)
+    )
+      .then(uuid =>
+        q.all([
           uuid,
-          contentType: content.headers['content-type'],
-          contentDisposition: content.headers['content-disposition'],
-          body: content.body
-        }
-        : {});
+          uuid && CollabConnector.instance.entityContent(token, uuid)
+        ])
+      )
+      .then(
+        ([uuid, content]) =>
+          content
+            ? {
+                uuid,
+                contentType: content.headers['content-type'],
+                contentDisposition: content.headers['content-disposition'],
+                body: content.body
+              }
+            : {}
+      );
   }
 
   deleteEntity(filename, experiment, token, byname = false, isFolder = false) {
-    return (byname ? this.getFileUuid(filename, experiment, token) : q.when(filename))
-      .then(uuid => uuid && CollabConnector.instance.deleteEntity(token, experiment, uuid, isFolder ? 'folder' : 'file'));
+    return (byname
+      ? this.getFileUuid(filename, experiment, token)
+      : q.when(filename)
+    ).then(
+      uuid =>
+        uuid &&
+        CollabConnector.instance.deleteEntity(
+          token,
+          experiment,
+          uuid,
+          isFolder ? 'folder' : 'file'
+        )
+    );
   }
 
   deleteFile(filename, experiment, token, byname = false) {
@@ -71,26 +93,43 @@ class Storage extends BaseStorage {
 
   ensurePath(pathparts, parent, contentType, token) {
     let fileType = pathparts.length > 1 ? 'folder' : 'file';
-    return CollabConnector.instance.folderContent(token, parent)
+    return CollabConnector.instance
+      .folderContent(token, parent)
       .then(contents => {
-        let foundEntity = contents.find(f => f.name === pathparts[0] && f.type === fileType);
-        if (foundEntity)
-          return foundEntity;
-        return fileType === 'file' ?
-          CollabConnector.instance.createFile(token, parent, pathparts[0], contentType)
+        let foundEntity = contents.find(
+          f => f.name === pathparts[0] && f.type === fileType
+        );
+        if (foundEntity) return foundEntity;
+        return fileType === 'file'
+          ? CollabConnector.instance.createFile(
+              token,
+              parent,
+              pathparts[0],
+              contentType
+            )
           : CollabConnector.instance.createFolder(token, parent, pathparts[0]);
       })
       .then(foundEntity => {
-        if (fileType === 'file')
-          return foundEntity;
-        return this.ensurePath(pathparts.slice(1), foundEntity.uuid, contentType, token);
+        if (fileType === 'file') return foundEntity;
+        return this.ensurePath(
+          pathparts.slice(1),
+          foundEntity.uuid,
+          contentType,
+          token
+        );
       });
   }
 
   createOrUpdate(filepath, fileContent, contentType, experiment, token) {
     let pathparts = filepath.split('/');
-    return this.ensurePath(pathparts, experiment, contentType, token)
-      .then(file => CollabConnector.instance.uploadContent(token, file.uuid, fileContent));
+    return this.ensurePath(
+      pathparts,
+      experiment,
+      contentType,
+      token
+    ).then(file =>
+      CollabConnector.instance.uploadContent(token, file.uuid, fileContent)
+    );
   }
 
   createFolder(foldername, experiment, token) {
@@ -98,19 +137,29 @@ class Storage extends BaseStorage {
   }
 
   getCollabId(token, contextId) {
-    return contextId ? CollabConnector.instance.getContextIdCollab(token, contextId) : q.when(this.config.collabId);
+    return contextId
+      ? CollabConnector.instance.getContextIdCollab(token, contextId)
+      : q.when(this.config.collabId);
   }
 
   listExperiments(token, contextId) {
     return this.getCollabId(token, contextId)
-      .then(collabId => CollabConnector.instance.getCollabEntity(token, collabId))
-      .then(entity => CollabConnector.instance.projectFolders(token, entity.uuid));
+      .then(collabId =>
+        CollabConnector.instance.getCollabEntity(token, collabId)
+      )
+      .then(entity =>
+        CollabConnector.instance.projectFolders(token, entity.uuid)
+      );
   }
 
   createExperiment(newExperiment, token, contextId) {
     return this.getCollabId(token, contextId)
-      .then(collabId => CollabConnector.instance.getCollabEntity(token, collabId))
-      .then(entity => CollabConnector.instance.createFolder(token, entity.uuid, newExperiment));
+      .then(collabId =>
+        CollabConnector.instance.getCollabEntity(token, collabId)
+      )
+      .then(entity =>
+        CollabConnector.instance.createFolder(token, entity.uuid, newExperiment)
+      );
   }
 }
 

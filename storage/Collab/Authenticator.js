@@ -24,17 +24,15 @@
 'use strict';
 
 const q = require('q'),
-  BaseAuthenticator = require('../BaseAuthenticator.js'),
-  CollabConnector = require('./CollabConnector.js');
+  BaseAuthenticator = require('../BaseAuthenticator.js');
 
 class Authenticator extends BaseAuthenticator {
-
   constructor() {
     super();
   }
 
-  checkToken(token) {
-    return q.resolve();//auth is checked by the collab request itself
+  checkToken() {
+    return q.resolve(); //auth is checked by the collab request itself
   }
 }
 

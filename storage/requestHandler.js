@@ -31,8 +31,7 @@ const fs = require('fs'),
 class RequestHandler {
   constructor(config) {
     try {
-      if (!config.storage)
-        throw '\'storage\' key missing in the config file';
+      if (!config.storage) throw "'storage' key missing in the config file";
 
       const basePath = path.resolve(path.join(__dirname, config.storage.type));
 
@@ -43,8 +42,7 @@ class RequestHandler {
       this.authenticator = new Authenticator(config.storage);
       this.storage = new Storage(config.storage);
       this.identity = new Identity(config.storage);
-    }
-    catch (e) {
+    } catch (e) {
       console.error('Failed to instantiate storage implementation', e);
     }
   }
@@ -52,48 +50,69 @@ class RequestHandler {
     return this.authenticator.login(usr, pwd);
   }
   listFiles(parentDir, token) {
-    return this.authenticator.checkToken(token)
+    return this.authenticator
+      .checkToken(token)
       .then(() => this.storage.listFiles(parentDir, token));
   }
   getFile(filename, parentDir, token, byname = false) {
-    return this.authenticator.checkToken(token)
+    return this.authenticator
+      .checkToken(token)
       .then(() => this.storage.getFile(filename, parentDir, token, byname));
   }
 
   deleteFile(filename, parentDir, token, byname = false) {
-    return this.authenticator.checkToken(token)
+    return this.authenticator
+      .checkToken(token)
       .then(() => this.storage.deleteFile(filename, parentDir, token, byname));
   }
 
   deleteFolder(filename, parentDir, token, byname = false) {
-    return this.authenticator.checkToken(token)
-      .then(() => this.storage.deleteFolder(filename, parentDir, token, byname));
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.deleteFolder(filename, parentDir, token, byname)
+      );
   }
 
   createOrUpdate(filename, fileContent, contentType, parentDir, token) {
-    return this.authenticator.checkToken(token)
-      .then(() => this.storage.createOrUpdate(filename, fileContent, contentType, parentDir, token));
-  }
-
-  createFolder(foldername, parentDir, token) {
-    return this.authenticator.checkToken(token)
-      .then(() => this.storage.createFolder(foldername, parentDir, token));
-  }
-
-  listExperiments(token, contextId, options={}) {
-    const SPECIAL_FOLDERS = new Set(['robots', 'brains', 'environments']);
-    return this.authenticator.checkToken(token)
-      .then(() => this.storage.listExperiments(token, contextId, options))
-      .then(exps => options.filter
-        ? exps.filter(e => e.name === options.filter)
-        : exps.filter(e => !SPECIAL_FOLDERS.has(e.name)
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.createOrUpdate(
+          filename,
+          fileContent,
+          contentType,
+          parentDir,
+          token
         )
       );
   }
 
+  createFolder(foldername, parentDir, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.storage.createFolder(foldername, parentDir, token));
+  }
+
+  listExperiments(token, contextId, options = {}) {
+    const SPECIAL_FOLDERS = new Set(['robots', 'brains', 'environments']);
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.storage.listExperiments(token, contextId, options))
+      .then(
+        exps =>
+          options.filter
+            ? exps.filter(e => e.name === options.filter)
+            : exps.filter(e => !SPECIAL_FOLDERS.has(e.name))
+      );
+  }
+
   createExperiment(newExperiment, token, contextId) {
-    return this.authenticator.checkToken(token)
-      .then(() => this.storage.createExperiment(newExperiment, token, contextId));
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.createExperiment(newExperiment, token, contextId)
+      );
   }
 
   getLoginPage() {
@@ -101,12 +120,14 @@ class RequestHandler {
   }
 
   getUserInfo(userId, token) {
-    return this.authenticator.checkToken(token)
+    return this.authenticator
+      .checkToken(token)
       .then(() => this.identity.getUserInfo(userId, token));
   }
 
   getUserGroups(token) {
-    return this.authenticator.checkToken(token)
+    return this.authenticator
+      .checkToken(token)
       .then(() => this.identity.getUserGroups(token));
   }
 }

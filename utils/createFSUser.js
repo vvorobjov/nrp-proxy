@@ -33,15 +33,17 @@ let argv = require('minimist')(process.argv.slice(2));
 if (!argv.user || !argv.password) {
   console.error(
     `Error: arguments 'user' and 'password' required
-Example: node createFSUser.js --user nrpuser --password password`);
+Example: node createFSUser.js --user nrpuser --password password`
+  );
   return;
 }
 
 let token = uuid();
 //we want to check if the user already exists to avoid inserting a duplicate
-DB.instance.users.find({ user: argv.user }).then((res) => {
+DB.instance.users.find({ user: argv.user }).then(res => {
   if (!res.length) {
-    DB.instance.users.insert({ user: argv.user, password: argv.password, token: token })
+    DB.instance.users
+      .insert({ user: argv.user, password: argv.password, token: token })
       .then(() => console.log(`New user '${argv.user}' created`))
       .catch(err => console.error('Failed to create new user:', err));
   } else {

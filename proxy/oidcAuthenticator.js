@@ -31,15 +31,17 @@ var authConfig;
 var lastRenewalTime = 0;
 var lastRetrievedToken;
 
-var configure = function (newAuthConfig) {
+var configure = function(newAuthConfig) {
   authConfig = newAuthConfig;
 };
 
-var getToken = function () {
-  if (authConfig.deactivate)
-    return q(false);
+var getToken = function() {
+  if (authConfig.deactivate) return q(false);
 
-  if (lastRetrievedToken && Date.now() - lastRenewalTime < authConfig.renewInternal) {
+  if (
+    lastRetrievedToken &&
+    Date.now() - lastRenewalTime < authConfig.renewInternal
+  ) {
     //the token is still valid (= under renewal interval)
     return q(lastRetrievedToken);
   }
@@ -48,21 +50,23 @@ var getToken = function () {
   var options = {
     method: 'post',
     form: {
-      'grant_type': 'client_credentials',
-      'client_id': authConfig.clientId,
-      'client_secret': authConfig.clientSecret
+      grant_type: 'client_credentials',
+      client_id: authConfig.clientId,
+      client_secret: authConfig.clientSecret
     },
-    url: authConfig.url + CREATE_TOKEN_URL,
+    url: authConfig.url + CREATE_TOKEN_URL
   };
 
   var deferred = q.defer();
 
   lastRetrievedToken = null;
-  request(options, function (err, res, body) {
+  request(options, function(err, res, body) {
     if (err) {
       deferred.reject(new Error(err));
     } else if (res.statusCode < 200 || res.statusCode >= 300) {
-      deferred.reject(new Error('Status code: ' + res.statusCode + '\n' + body));
+      deferred.reject(
+        new Error('Status code: ' + res.statusCode + '\n' + body)
+      );
     } else {
       try {
         lastRetrievedToken = JSON.parse(body)['access_token'];
@@ -77,7 +81,7 @@ var getToken = function () {
 };
 
 module.exports = {
-  getToken: function () {
+  getToken: function() {
     return getToken();
   },
   configure: configure

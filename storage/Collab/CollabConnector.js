@@ -29,17 +29,18 @@ const q = require('q'),
 //mocked in the tests
 let request = require('request-promise');
 
-
 //wraps the collab connection
 class CollabConnector {
+  static get REQUEST_TIMEOUT() {
+    return 30 * 1000;
+  } //ms
 
-  static get REQUEST_TIMEOUT() { return 30 * 1000; }//ms
-
-  static get COLLAB_API_URL() { return 'https://services.humanbrainproject.eu/storage/v1/api'; }
+  static get COLLAB_API_URL() {
+    return 'https://services.humanbrainproject.eu/storage/v1/api';
+  }
 
   static get instance() {
-    if (!this._instance)
-      this._instance = new CollabConnector();
+    if (!this._instance) this._instance = new CollabConnector();
     return this._instance;
   }
 
@@ -48,17 +49,24 @@ class CollabConnector {
     let errType = Object.prototype.toString.call(err).slice(8, -1);
 
     if (errType === 'Object' && err.statusCode) {
-      if (err.statusCode === 403 || err.statusCode === 401 &&
-        (err.message.indexOf('OpenId response: token is not valid') >= 0 || err.message.indexOf('invalid_token') >= 0))
-        return q.reject({ code: 302, msg: 'https://services.humanbrainproject.eu/oidc/authorize?response_type=token' });
-    }else if (errType === 'String' ){
+      if (
+        err.statusCode === 403 ||
+        (err.statusCode === 401 &&
+          (err.message.indexOf('OpenId response: token is not valid') >= 0 ||
+            err.message.indexOf('invalid_token') >= 0))
+      )
+        return q.reject({
+          code: 302,
+          msg:
+            'https://services.humanbrainproject.eu/oidc/authorize?response_type=token'
+        });
+    } else if (errType === 'String') {
       err = `[Collab error] ${err}`;
     }
     return q.reject(err);
   }
 
   executeRequest(options, token) {
-
     _.extend(options, {
       resolveWithFullResponse: true,
       timeout: CollabConnector.REQUEST_TIMEOUT,
@@ -77,69 +85,87 @@ class CollabConnector {
   }
 
   post(url, data, token, jsonType = false) {
-    let operation = () => this.executeRequest({
-      method: 'POST',
-      uri: url,
-      body: data,
-      json: !!jsonType,
-    }, token);
+    let operation = () =>
+      this.executeRequest(
+        {
+          method: 'POST',
+          uri: url,
+          body: data,
+          json: !!jsonType
+        },
+        token
+      );
 
-    return operation()
-      .catch(e => {
-        if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
-          return operation();
-        throw e;
-      });
+    return operation().catch(e => {
+      if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
+        return operation();
+      throw e;
+    });
   }
 
   get(url, token) {
-    return this.executeRequest({
-      method: 'GET',
-      uri: url,
-    }, token);
+    return this.executeRequest(
+      {
+        method: 'GET',
+        uri: url
+      },
+      token
+    );
   }
 
   delete(url, token) {
-    return this.executeRequest({
-      method: 'DELETE',
-      uri: url,
-    }, token);
+    return this.executeRequest(
+      {
+        method: 'DELETE',
+        uri: url
+      },
+      token
+    );
   }
 
   getCollabEntity(token, collabId) {
     if (!this._getMemoizedCollabs)
-      this._getMemoizedCollabs = _.memoize(this.getEntity, (token, collabId) => collabId);
+      this._getMemoizedCollabs = _.memoize(
+        this.getEntity,
+        (token, collabId) => collabId
+      );
 
     return this._getMemoizedCollabs(token, collabId);
   }
 
   getEntity(token, collabId, ...entityPath) {
-    if (!collabId)
-      return q.reject('No collab id specified');
+    if (!collabId) return q.reject('No collab id specified');
 
-    let fullpath = encodeURIComponent(path.join('/', collabId + '', entityPath.join('/')));
+    let fullpath = encodeURIComponent(
+      path.join('/', collabId + '', entityPath.join('/'))
+    );
     const COLLAB_STORAGE_URL = `${CollabConnector.COLLAB_API_URL}/entity/?path=${fullpath}`;
-    return this.get(COLLAB_STORAGE_URL, token)
-      .then(res => JSON.parse(res));
+    return this.get(COLLAB_STORAGE_URL, token).then(res => JSON.parse(res));
   }
 
   projectFolders(token, project) {
-    return this.jsonApi(token, 'project', project, 'children')
-      .then(res => res.results.map(f => ({
+    return this.jsonApi(token, 'project', project, 'children').then(res =>
+      res.results.map(f => ({
         uuid: f.uuid,
         name: f.name,
         parent: f.parent
-      })));
+      }))
+    );
   }
 
   createFile(token, parent, name, contentType) {
     const COLLAB_FILE_URL = `${CollabConnector.COLLAB_API_URL}/file/`;
 
-    return this.post(COLLAB_FILE_URL, {
-      name,
-      parent: parent,
-      'content_type': contentType
-    }, token, true);
+    return this.post(
+      COLLAB_FILE_URL,
+      {
+        name,
+        parent: parent,
+        content_type: contentType
+      },
+      token,
+      true
+    );
   }
 
   deleteEntity(token, folder, entityUuid, type = 'file') {
@@ -150,44 +176,55 @@ class CollabConnector {
   createFolder(token, parent, name) {
     const COLLAB_FILE_URL = `${CollabConnector.COLLAB_API_URL}/folder/`;
 
-    return this.post(COLLAB_FILE_URL, {
-      name,
-      parent
-    }, token, true);
+    return this.post(
+      COLLAB_FILE_URL,
+      {
+        name,
+        parent
+      },
+      token,
+      true
+    );
   }
 
   uploadContent(token, entityUuid, content) {
     const COLLAB_FILE_URL = `${CollabConnector.COLLAB_API_URL}/file/${entityUuid}/content/upload/`;
 
-    return this.post(COLLAB_FILE_URL, content, token)
-      .then(() => ({ uuid: entityUuid }));
+    return this.post(COLLAB_FILE_URL, content, token).then(() => ({
+      uuid: entityUuid
+    }));
   }
 
   folderContent(token, folder) {
-    return this.jsonApi(token, 'folder', folder, 'children')
-      .then(res => res.results.map(f => ({
+    return this.jsonApi(token, 'folder', folder, 'children').then(res =>
+      res.results.map(f => ({
         uuid: f.uuid,
         name: f.name,
         parent: f.parent,
         contentType: f['content_type'],
         type: f['entity_type'],
-        modifiedOn: f['modified_on'],
-      })));
+        modifiedOn: f['modified_on']
+      }))
+    );
   }
 
   entityContent(token, entityUuid) {
     const COLLAB_ENTITY_URL = `${CollabConnector.COLLAB_API_URL}/file/${entityUuid}/content/`;
 
-    return this.executeRequest({
-      method: 'GET',
-      uri: COLLAB_ENTITY_URL,
-      encoding: null
-    }, token);
+    return this.executeRequest(
+      {
+        method: 'GET',
+        uri: COLLAB_ENTITY_URL,
+        encoding: null
+      },
+      token
+    );
   }
 
   jsonApi(token, entityType, entityUuid, requestType) {
-    return this.api(token, entityType, entityUuid, requestType)
-      .then(res => JSON.parse(res));
+    return this.api(token, entityType, entityUuid, requestType).then(res =>
+      JSON.parse(res)
+    );
   }
 
   api(token, entityType, entityUuid, requestType) {

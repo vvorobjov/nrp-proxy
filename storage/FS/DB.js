@@ -30,7 +30,6 @@ const fs = require('fs'),
 //mocked in the test thus not const
 let utils = require('./utils.js');
 
-
 //wraps tingo db collection to promisefy methods
 class DBCollection {
   constructor(collection) {
@@ -47,32 +46,36 @@ class DBCollection {
 
   find(...args) {
     return q.Promise((resolve, reject) => {
-      this.collection.find(...args).toArray((err, res) => err ? reject(err) : resolve(res));
+      this.collection
+        .find(...args)
+        .toArray((err, res) => (err ? reject(err) : resolve(res)));
     });
   }
-
 }
 
 //wraps tingo db
 class DB {
-
-  static get DB_FOLDER() { return 'FS_db'; }
+  static get DB_FOLDER() {
+    return 'FS_db';
+  }
 
   static get instance() {
-    if (!this._instance)
-      this._instance = new DB();
+    if (!this._instance) this._instance = new DB();
     return this._instance;
   }
 
-  get users() { return this._users; }
-  get experiments() { return this._experiments; }
+  get users() {
+    return this._users;
+  }
+  get experiments() {
+    return this._experiments;
+  }
 
   constructor() {
     this.loadDB(path.join(utils.storagePath, DB.DB_FOLDER));
   }
 
   loadDB(dbDirectory) {
-
     fs.existsSync(dbDirectory) || fs.mkdirSync(dbDirectory);
 
     let db = new tingodb.Db(dbDirectory, {});

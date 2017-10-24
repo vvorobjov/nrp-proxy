@@ -24,14 +24,17 @@
 'use strict';
 
 class BaseIdentity {
-
   constructor() {
     if (new.target === BaseIdentity)
       throw new TypeError('BaseIdentity is an abstract class');
   }
 
-  getUserInfo() { throw 'not implemented'; }
-  getUserGroups() { throw 'not implemented'; }
+  getUserInfo() {
+    throw 'not implemented';
+  }
+  getUserGroups() {
+    throw 'not implemented';
+  }
 }
 
 module.exports = BaseIdentity;

@@ -24,16 +24,24 @@
 'use strict';
 
 class BaseAuthenticator {
-  static get AUTHORIZATION_ERROR() { return { code: 403 }; }
+  static get AUTHORIZATION_ERROR() {
+    return { code: 403 };
+  }
 
   constructor() {
     if (new.target === BaseAuthenticator)
       throw new TypeError('BaseAuthenticator is an abstract class');
   }
 
-  login(usr, pwd) { throw 'not implemented'; }
-  checkToken(token) { throw 'not implemented'; }
-  getLoginPage() { throw 'not implemented'; }
+  login(usr, pwd) {
+    throw 'not implemented';
+  }
+  checkToken(token) {
+    throw 'not implemented';
+  }
+  getLoginPage() {
+    throw 'not implemented';
+  }
 }
 
 module.exports = BaseAuthenticator;

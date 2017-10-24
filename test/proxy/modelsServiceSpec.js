@@ -6,16 +6,16 @@ const fs = require('fs'),
   rewire = require('rewire'),
   sinon = require('sinon'),
   q = require('q'),
-  expect = chai.expect,
-  should = chai.should();
+  expect = chai.expect;
 
 const modelsPath = 'test/modelsData',
   expectedModelsFileName = `${modelsPath}/expectedResponses.json`,
   numberOfBrains = 3,
   models = ['robots', 'environments', 'brains'];
 
-
-let expectedModelsParseResult = JSON.parse(fs.readFileSync(expectedModelsFileName, 'utf8'));
+let expectedModelsParseResult = JSON.parse(
+  fs.readFileSync(expectedModelsFileName, 'utf8')
+);
 
 chai.use(chaiAsPromised);
 
@@ -26,12 +26,16 @@ describe('ModelsService', () => {
 
   models.forEach(model => {
     it(`should load ${model} models correctly`, () => {
-      return modelsService.getModels(model).should.deep.eventually.equal(expectedModelsParseResult[model]);
+      return modelsService
+        .getModels(model)
+        .should.deep.eventually.equal(expectedModelsParseResult[model]);
     });
   });
 
   it(`should return error when loading incorrect model`, () => {
-    return modelsService.getModels('wrong_model').should.rejectedWith('Model wrong_model not found');
+    return modelsService
+      .getModels('wrong_model')
+      .should.rejectedWith('Model wrong_model not found');
   });
 });
 
@@ -49,18 +53,22 @@ describe('ModelsService errors', () => {
     ModelsService.__set__('glob', q.reject());
 
     let modelsService = new ModelsService(modelsPath);
-    return modelsService.loadModels()
+    return modelsService
+      .loadModels()
       .then(() => sinon.assert.callCount(consoleMock.error, models.length));
   });
 
   it(`should log to console if failure to parse brain file`, () => {
     let BrainsModelLoader = ModelsService.__get__('BrainsModelLoader');
     class BrainsModelLoaderMock extends BrainsModelLoader {
-      parseFileContent(file) { return q.reject(); }
+      parseFileContent() {
+        return q.reject();
+      }
     }
 
     let brainLoader = new BrainsModelLoaderMock();
-    return brainLoader.loadModels(modelsPath)
+    return brainLoader
+      .loadModels(modelsPath)
       .then(() => sinon.assert.callCount(consoleMock.error, numberOfBrains));
   });
 });
@@ -77,5 +85,4 @@ describe('ModelLoader errors', () => {
     expect(() => modelLoader.filePattern).to.throw(notImplementedException);
     expect(modelLoader.parseFile).to.throw(notImplementedException);
   });
-
 });

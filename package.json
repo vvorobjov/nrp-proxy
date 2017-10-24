@@ -1,7 +1,8 @@
 {
   "name": "nrp_backend_proxy",
   "version": "1.0.25",
-  "description": "Keep an updated list of available and joinable servers for each experiment",
+  "description":
+    "Keep an updated list of available and joinable servers for each experiment",
   "main": "app.js",
   "dependencies": {
     "body-parser": "^1.17.2",
@@ -27,28 +28,40 @@
   "devDependencies": {
     "chai": "3.5.0",
     "chai-as-promised": "6.0.0",
+    "eslint": "^4.9.0",
+    "eslint-config-prettier": "^2.6.0",
+    "eslint-plugin-prettier": "^2.3.1",
+    "husky": "0.14.3",
     "istanbul": "0.4.5",
     "jenkins-mocha": "4.1.1",
     "jshint": "2.9.4",
+    "lint-staged": "4.3.0",
     "mock-fs": "4.0.0",
     "nock": "9.0.6",
+    "prettier": "1.7.4",
     "underscore": "1.8.3"
   },
   "scripts": {
     "start": "NODE_ENV=production node app.js",
     "start-dev": "NODE_ENV=development node app.js",
-    "lint": "jshint proxy/**.js storage/*/**.js test/*/**.js",
+    "prettify":
+      "node_modules/prettier/bin/prettier.js  \"**/*.{js,json}\" --write",
+    "lint":
+      "node_modules/eslint/bin/eslint.js proxy/**.js storage/*/**.js test/*/**.js",
     "test": "ARTIFACTS_DIR=./reports jenkins-mocha --cobertura test/*/*",
-    "test_istanbul": "istanbul cover --report html node_modules/jenkins-mocha/bin/jenkins.js test/*/*",
-    "pretest": "npm run lint"
+    "test_istanbul":
+      "istanbul cover --report html node_modules/jenkins-mocha/bin/jenkins.js test/*/*",
+    "pretest": "npm run lint",
+    "precommit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,json}": ["node_modules/prettier/bin/prettier.js --write", "git add"]
   },
   "repository": {
     "type": "git",
     "url": "ssh://bbpcode.epfl.ch/neurorobotics/nrpBackendProxy"
   },
-  "keywords": [
-    "Proxy"
-  ],
+  "keywords": ["Proxy"],
   "engines": {
     "node": ">=7"
   },
