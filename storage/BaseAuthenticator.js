@@ -33,9 +33,11 @@ class BaseAuthenticator {
       throw new TypeError('BaseAuthenticator is an abstract class');
   }
 
+  //eslint-disable-next-line no-unused-vars
   login(usr, pwd) {
     throw 'not implemented';
   }
+  //eslint-disable-next-line no-unused-vars
   checkToken(token) {
     throw 'not implemented';
   }

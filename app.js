@@ -119,14 +119,14 @@ let handleError = (res, err) => {
   }
 };
 
-app.post('/authentication/authenticate', (req, res, next) => {
+app.post('/authentication/authenticate', (req, res) => {
   storageRequestHandler
     .authenticate(req.body.user, req.body.password)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.get('/authentication/loginpage', (req, res, next) => {
+app.get('/authentication/loginpage', (req, res) => {
   storageRequestHandler
     .getLoginPage()
     .then(r => res.sendFile(r))
@@ -140,7 +140,7 @@ let getAuthToken = req => {
   return authorization.length > 7 && authorization.substr(7);
 };
 
-app.get('/storage/experiments', (req, res, next) => {
+app.get('/storage/experiments', (req, res) => {
   storageRequestHandler
     .listExperiments(
       getAuthToken(req),
@@ -151,7 +151,7 @@ app.get('/storage/experiments', (req, res, next) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/:experiment/:filename', (req, res, next) => {
+app.get('/storage/:experiment/:filename', (req, res) => {
   storageRequestHandler
     .getFile(
       req.params.filename,
@@ -168,7 +168,7 @@ app.get('/storage/:experiment/:filename', (req, res, next) => {
     .catch(_.partial(handleError, res));
 });
 
-app.delete('/storage/:experiment/:filename', (req, res, next) => {
+app.delete('/storage/:experiment/:filename', (req, res) => {
   let args = [
     req.params.filename,
     req.params.experiment,
@@ -183,7 +183,7 @@ app.delete('/storage/:experiment/:filename', (req, res, next) => {
   deleted.then(r => res.send(r)).catch(_.partial(handleError, res));
 });
 
-app.post('/storage/:experiment/*', (req, res, next) => {
+app.post('/storage/:experiment/*', (req, res) => {
   if (!req.params['0']) return handleError(res, 'File name is required');
 
   (req.query.type === 'folder'
@@ -204,14 +204,14 @@ app.post('/storage/:experiment/*', (req, res, next) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/:experiment', (req, res, next) => {
+app.get('/storage/:experiment', (req, res) => {
   storageRequestHandler
     .listFiles(req.params.experiment, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/:experiment', (req, res, next) => {
+app.put('/storage/:experiment', (req, res) => {
   storageRequestHandler
     .createExperiment(
       req.params.experiment,
@@ -222,14 +222,14 @@ app.put('/storage/:experiment', (req, res, next) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/identity/:userid', (req, res, next) => {
+app.get('/identity/:userid', (req, res) => {
   storageRequestHandler
     .getUserInfo(req.params.userid, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.get('/identity/me/groups', (req, res, next) => {
+app.get('/identity/me/groups', (req, res) => {
   storageRequestHandler
     .getUserGroups(getAuthToken(req))
     .then(r => res.send(r))

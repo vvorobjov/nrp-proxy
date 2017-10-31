@@ -47,7 +47,7 @@
     "prettify":
       "node_modules/prettier/bin/prettier.js  \"**/*.{js,json}\" --write",
     "lint":
-      "node_modules/eslint/bin/eslint.js proxy/**.js storage/*/**.js test/*/**.js",
+      "node_modules/eslint/bin/eslint.js {proxy,test,storage}/**/*.js *.js",
     "test": "ARTIFACTS_DIR=./reports jenkins-mocha --cobertura test/*/*",
     "test_istanbul":
       "istanbul cover --report html node_modules/jenkins-mocha/bin/jenkins.js test/*/*",

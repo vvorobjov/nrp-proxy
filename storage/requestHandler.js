@@ -23,10 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
-const fs = require('fs'),
-  path = require('path'),
-  _ = require('lodash'),
-  q = require('q');
+const path = require('path');
 
 class RequestHandler {
   constructor(config) {

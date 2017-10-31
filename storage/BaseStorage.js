@@ -28,7 +28,7 @@ class BaseStorage {
     if (new.target === BaseStorage)
       throw new TypeError('BaseStorage is an abstract class');
   }
-
+  /*eslint-disable no-unused-vars*/
   listFiles(experiment, token) {
     throw 'not implemented';
   }
@@ -53,6 +53,7 @@ class BaseStorage {
   createExperiment(newExperiment, token, contextId) {
     throw 'not implemented';
   }
+  /*eslint-enable no-unused-vars*/
 }
 
 module.exports = BaseStorage;
