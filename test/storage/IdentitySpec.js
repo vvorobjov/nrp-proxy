@@ -30,7 +30,7 @@ describe('BaseIdentity', () => {
   });
 
   //for all the non implemented methods of the base class
-  ['getUserInfo', 'getUserGroups'].forEach(method => {
+  ['getUserInfo', 'getUserGroups', 'getUniqueIdentifier'].forEach(method => {
     it(
       'should throw a non implemented method error when trying to use the base class non-overidden function: ' +
         method,
@@ -71,5 +71,60 @@ describe('FSidentity', () => {
     return identity
       .getUserGroups()
       .should.eventually.deep.equal([{ name: 'hbp-sp10-user-edit-rights' }]);
+  });
+});
+
+describe('Collabidentity', () => {
+  const nock = require('nock');
+  const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24';
+  const Identity = rewire('../../storage/Collab/Identity.js');
+
+  let identity;
+
+  beforeEach(() => {
+    identity = new Identity();
+  });
+
+  it(`should return self user info`, () => {
+    const response = {
+      id: 'default-owner',
+      displayName: 'nrpuser'
+    };
+
+    nock('https://services.humanbrainproject.eu')
+      .get('/idm/v1/api/user/me')
+      .reply(200, response);
+
+    return identity
+      .getUserInfo('me', fakeToken)
+      .should.eventually.deep.equal(response);
+  });
+
+  it(`should return id on getUniqueIdentifier`, () => {
+    const response = {
+      id: 'default-owner',
+      displayName: 'nrpuser'
+    };
+
+    nock('https://services.humanbrainproject.eu')
+      .get('/idm/v1/api/user/me')
+      .reply(200, response);
+
+    return identity
+      .getUniqueIdentifier('sometoken')
+      .should.eventually.equal(response.id);
+  });
+
+  it(`should return default groups`, () => {
+    const groups = [{ name: 'hbp-sp10-user-edit-rights' }],
+      response = {
+        _embedded: { groups: groups }
+      };
+
+    nock('https://services.humanbrainproject.eu')
+      .get('/idm/v1/api/user/me/member-groups?page=0&pageSize=1000')
+      .reply(200, response);
+
+    return identity.getUserGroups().should.eventually.deep.equal(groups);
   });
 });

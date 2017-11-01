@@ -29,28 +29,35 @@ class BaseStorage {
       throw new TypeError('BaseStorage is an abstract class');
   }
   /*eslint-disable no-unused-vars*/
-  listFiles(experiment, token) {
+  listFiles(experiment, token, userId) {
     throw 'not implemented';
   }
-  getFile(filename, experiment, token, byname) {
+  getFile(filename, experiment, token, userId, byname) {
     throw 'not implemented';
   }
-  deleteFile(filename, experiment, token, byname) {
+  deleteFile(filename, experiment, token, userId, byname) {
     throw 'not implemented';
   }
-  deleteFolder(foldername, experiment, token, byname = false) {
+  deleteFolder(foldername, experiment, token, userId, byname = false) {
     throw 'not implemented';
   }
-  createFolder(foldername, experiment, token) {
+  createFolder(foldername, experiment, token, userId) {
     throw 'not implemented';
   }
-  createOrUpdate(filename, fileContent, contentType, experiment, token) {
+  createOrUpdate(
+    filename,
+    fileContent,
+    contentType,
+    experiment,
+    token,
+    userId
+  ) {
     throw 'not implemented';
   }
-  listExperiments(token, contextId, options) {
+  listExperiments(token, userId, contextId, options) {
     throw 'not implemented';
   }
-  createExperiment(newExperiment, token, contextId) {
+  createExperiment(newExperiment, token, userId, contextId) {
     throw 'not implemented';
   }
   /*eslint-enable no-unused-vars*/

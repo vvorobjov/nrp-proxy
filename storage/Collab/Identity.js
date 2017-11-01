@@ -31,9 +31,12 @@ class Identity extends BaseIdentity {
     return 'https://services.humanbrainproject.eu/idm/v1/api';
   }
 
-  constructor(config) {
+  constructor() {
     super();
-    this.config = config;
+  }
+
+  getUniqueIdentifier(token) {
+    return this.getUserInfo('me', token).then(({ id }) => id);
   }
 
   getUserInfo(userId, token) {

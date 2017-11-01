@@ -43,7 +43,7 @@ class Storage extends BaseStorage {
       .then(files => (files.length === 0 ? null : files[0].uuid));
   }
 
-  getFile(filename, experiment, token, byname = false) {
+  getFile(filename, experiment, token, userId, byname = false) {
     return (byname
       ? this.getFileUuid(filename, experiment, token)
       : q.when(filename)
@@ -67,7 +67,14 @@ class Storage extends BaseStorage {
       );
   }
 
-  deleteEntity(filename, experiment, token, byname = false, isFolder = false) {
+  deleteEntity(
+    filename,
+    experiment,
+    token,
+    userId,
+    byname = false,
+    isFolder = false
+  ) {
     return (byname
       ? this.getFileUuid(filename, experiment, token)
       : q.when(filename)
@@ -83,11 +90,11 @@ class Storage extends BaseStorage {
     );
   }
 
-  deleteFile(filename, experiment, token, byname = false) {
+  deleteFile(filename, experiment, token, userId, byname = false) {
     return this.deleteEntity(filename, experiment, token, byname, false);
   }
 
-  deleteFolder(foldername, experiment, token, byname = false) {
+  deleteFolder(foldername, experiment, token, userId, byname = false) {
     return this.deleteEntity(foldername, experiment, token, byname, true);
   }
 
@@ -142,7 +149,7 @@ class Storage extends BaseStorage {
       : q.when(this.config.collabId);
   }
 
-  listExperiments(token, contextId) {
+  listExperiments(token, userId, contextId) {
     return this.getCollabId(token, contextId)
       .then(collabId =>
         CollabConnector.instance.getCollabEntity(token, collabId)
@@ -152,7 +159,7 @@ class Storage extends BaseStorage {
       );
   }
 
-  createExperiment(newExperiment, token, contextId) {
+  createExperiment(newExperiment, token, userId, contextId) {
     return this.getCollabId(token, contextId)
       .then(collabId =>
         CollabConnector.instance.getCollabEntity(token, collabId)

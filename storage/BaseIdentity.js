@@ -29,10 +29,18 @@ class BaseIdentity {
       throw new TypeError('BaseIdentity is an abstract class');
   }
 
-  getUserInfo() {
+  //eslint-disable-next-line no-unused-vars
+  getUniqueIdentifier(token) {
     throw 'not implemented';
   }
-  getUserGroups() {
+
+  //eslint-disable-next-line no-unused-vars
+  getUserInfo(userId, token) {
+    throw 'not implemented';
+  }
+
+  //eslint-disable-next-line no-unused-vars
+  getUserGroups(token) {
     throw 'not implemented';
   }
 }

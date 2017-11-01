@@ -24,15 +24,40 @@
 'use strict';
 
 const q = require('q'),
-  BaseAuthenticator = require('../BaseAuthenticator.js');
+  BaseAuthenticator = require('../BaseAuthenticator.js'),
+  Identity = require('./Identity.js'),
+  identity = new Identity();
 
 class Authenticator extends BaseAuthenticator {
-  constructor() {
-    super();
+  static get TOKEN_CACHE_DURATION_MS() {
+    return 60 * 1000;
   }
 
-  checkToken() {
-    return q.resolve(); //auth is checked by the collab request itself
+  constructor(config) {
+    super();
+    this.config = config;
+    this.authCache = new Map();
+  }
+
+  checkToken(token) {
+    if (this.config.storage == 'Collab') {
+      // No need to check token, it will be done by the underlying Collab storage requests
+      return q.when(true);
+    }
+
+    //do we have the token in cache?
+    if (this.authCache.has(token)) {
+      let cache = this.authCache.get(token);
+      if (Date.now() - cache.time <= Authenticator.TOKEN_CACHE_DURATION_MS) {
+        //cache still time valid
+        return q.when(cache.userinfo);
+      } else this.authCache.delete(token);
+    }
+    //no valid cache, we verify the token by trying to retrieve the user info
+    return identity.getUserInfo('me', token).then(userinfo => {
+      this.authCache.set(token, { time: Date.now(), userinfo });
+      return userinfo;
+    });
   }
 }
 

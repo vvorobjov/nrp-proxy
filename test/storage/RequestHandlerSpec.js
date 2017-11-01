@@ -11,8 +11,10 @@ const fs = require('fs'),
 chai.use(chaiAsPromised);
 
 const StorageRequestHandler = require('../../storage/requestHandler.js');
-let configFile = {};
-configFile.storage = { type: 'FS' };
+let configFile = {
+  storage: 'FS',
+  authentication: 'FS'
+};
 
 //Storage request handler
 describe('Storage request handler', () => {
@@ -24,6 +26,7 @@ describe('Storage request handler', () => {
     fsStorage;
 
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
+    fakeUserId = fakeToken,
     fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168',
     AUTHORIZATION_ERROR = {
       code: 403
@@ -69,7 +72,9 @@ describe('Storage request handler', () => {
 
   //listFiles
   it(`should list all the files contained in a certain experiment`, () => {
-    return expect(storageRequestHandler.listFiles(fakeExperiment, fakeToken))
+    return expect(
+      storageRequestHandler.listFiles(fakeExperiment, fakeToken, fakeUserId)
+    )
       .to.eventually.be.an('array')
       .that.include({
         name: 'fakeFile',
@@ -121,13 +126,14 @@ describe('Storage request handler', () => {
       )
       .then(() => {
         return fsStorage
-          .listFiles(fakeExperiment, fakeToken)
+          .listFiles(fakeExperiment, fakeToken, fakeUserId)
           .then(folderContents => {
             //clean up the tmp file
             fsStorage.deleteFile(
               fakeExperiment + '/tmp',
               fakeExperiment,
-              fakeToken
+              fakeToken,
+              fakeUserId
             );
             return expect(folderContents).to.include({
               name: 'tmp',

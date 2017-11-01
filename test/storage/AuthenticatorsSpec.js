@@ -92,11 +92,42 @@ describe('FSAuthenticator', () => {
 });
 
 describe('CollabAuthenticator', () => {
-  const CollabAuthenticator = require('../../storage/Collab/Authenticator.js');
-  let collabAuth = new CollabAuthenticator();
-  it('should return an empty promise when trying to authenticate', () => {
+  const CollabAuthenticator = require('../../storage/Collab/Authenticator.js'),
+    nock = require('nock');
+
+  it('should resolve to true when trying to authenticate with collab storage', () => {
+    let collabAuth = new CollabAuthenticator({ storage: 'Collab' });
+    return collabAuth.checkToken('emptyToken').should.eventually.equal(true);
+  });
+
+  it('should get user info when trying to authenticate with non collab storage', () => {
+    const response = { id: 'some_id' };
+    let collabAuth = new CollabAuthenticator({ storage: 'FS' });
+    nock('https://services.humanbrainproject.eu')
+      .get('/idm/v1/api/user/me')
+      .reply(200, response);
+
     return collabAuth
       .checkToken('emptyToken')
-      .should.eventually.equal(undefined);
+      .should.eventually.deep.equal(response);
+  });
+
+  it('should not get get user info when data is in cache', () => {
+    const response = { id: 'some_id' };
+    let collabAuth = new CollabAuthenticator({ storage: 'FS' });
+    nock('https://services.humanbrainproject.eu')
+      .get('/idm/v1/api/user/me')
+      .reply(200, response);
+
+    return collabAuth
+      .checkToken('emptyToken')
+      .should.eventually.deep.equal(response)
+      .then(() => {
+        nock.cleanAll();
+        return collabAuth.checkToken('emptyToken');
+      })
+      .should.eventually.deep.equal(response);
+
+    //nock.cleanAll();
   });
 });

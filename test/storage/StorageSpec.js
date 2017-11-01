@@ -56,6 +56,7 @@ describe('FSStorage', () => {
     code: 403
   };
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
+    fakeUserId = fakeToken,
     fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168';
 
   beforeEach(() => {
@@ -73,16 +74,15 @@ describe('FSStorage', () => {
     fsStorage = new RewiredFSStorage();
   });
 
-  //tokenHasAccessToPath
   it(`should return an entry when we check an existing token`, () => {
     return fsStorage
-      .tokenHasAccessToPath(fakeToken, fakeExperiment)
+      .userIdHasAccessToPath(fakeToken, fakeExperiment)
       .should.eventually.contain({ token: fakeToken });
   });
 
   it(`should throw when we check a non-existing token`, () => {
     return assert.isRejected(
-      fsStorage.tokenHasAccessToPath('non-existing-token', fakeExperiment),
+      fsStorage.userIdHasAccessToPath('non-existing-token', fakeExperiment),
       AUTHORIZATION_ERROR
     );
   });
@@ -105,7 +105,7 @@ describe('FSStorage', () => {
 
   //listFiles
   it(`should list all the files contained in a certain experiment`, () => {
-    return expect(fsStorage.listFiles(fakeExperiment, fakeToken))
+    return expect(fsStorage.listFiles(fakeExperiment, fakeToken, fakeUserId))
       .to.eventually.be.an('array')
       .that.include({
         name: 'fakeFile',
@@ -125,7 +125,12 @@ describe('FSStorage', () => {
   //getFile
   it(`should return the contents of a file given a correct experiment and token`, () => {
     return fsStorage
-      .getFile(fakeExperiment + '/fakeFile', fakeExperiment, fakeToken)
+      .getFile(
+        fakeExperiment + '/fakeFile',
+        fakeExperiment,
+        fakeToken,
+        fakeUserId
+      )
       .then(val => {
         var stringContents = String.fromCharCode.apply(
           null,
@@ -137,7 +142,7 @@ describe('FSStorage', () => {
 
   it(`should return the contents of a file by file name`, () => {
     return fsStorage
-      .getFile('fakeFile', fakeExperiment, fakeToken, true)
+      .getFile('fakeFile', fakeExperiment, fakeToken, fakeUserId, true)
       .then(val => {
         var stringContents = String.fromCharCode.apply(
           null,
@@ -164,10 +169,17 @@ describe('FSStorage', () => {
     return q.denodeify(fs.writeFile)(tmpFilePath, 'fakeContent').then(() => {
       //delete the temp file
       return fsStorage
-        .deleteFile(fakeExperiment + '/tmp', fakeExperiment, fakeToken)
+        .deleteFile(
+          fakeExperiment + '/tmp',
+          fakeExperiment,
+          fakeToken,
+          fakeUserId
+        )
         .then(() => {
           //check if the file was indeed deleted
-          return expect(fsStorage.listFiles(fakeExperiment, fakeToken))
+          return expect(
+            fsStorage.listFiles(fakeExperiment, fakeToken, fakeUserId)
+          )
             .to.eventually.be.an('array')
             .that.not.include('tmp');
         });
@@ -183,24 +195,28 @@ describe('FSStorage', () => {
         'emptyContent',
         'text/plain',
         fakeExperiment,
-        fakeToken
+        fakeToken,
+        fakeUserId
       )
       .then(() => {
-        return fsStorage.listFiles(fakeExperiment, fakeToken).then(val => {
-          var folderContents = val;
-          //clean up the tmp file
-          fsStorage.deleteFile(
-            fakeExperiment + '/tmp',
-            fakeExperiment,
-            fakeToken
-          );
-          return expect(folderContents).to.include({
-            name: 'tmp',
-            uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/tmp',
-            size: 12,
-            type: 'file'
+        return fsStorage
+          .listFiles(fakeExperiment, fakeToken, fakeUserId)
+          .then(val => {
+            var folderContents = val;
+            //clean up the tmp file
+            fsStorage.deleteFile(
+              fakeExperiment + '/tmp',
+              fakeExperiment,
+              fakeToken,
+              fakeUserId
+            );
+            return expect(folderContents).to.include({
+              name: 'tmp',
+              uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/tmp',
+              size: 12,
+              type: 'file'
+            });
           });
-        });
       });
   });
 
@@ -211,7 +227,7 @@ describe('FSStorage', () => {
       name: fakeExperiment
     };
     return fsStorage
-      .listExperiments(fakeToken)
+      .listExperiments(fakeToken, fakeUserId)
       .should.eventually.contain(expected);
   });
 });
@@ -254,11 +270,16 @@ describe('Collab Storage', () => {
 
   //helper variables
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
+    fakeUserId = fakeToken,
     fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168',
     baseCollabURL = 'https://services.humanbrainproject.eu/storage/v1/api';
 
   beforeEach(() => {
-    collabStorage = new CollabStorage({ collabId: 'fakeId' });
+    collabStorage = new CollabStorage({
+      collabId: 'fakeId',
+      storage: 'Collab',
+      authentication: 'Collab'
+    });
   });
 
   //Collab connector
@@ -274,10 +295,22 @@ describe('Collab Storage', () => {
     nock('https://services.humanbrainproject.eu')
       .post('/storage/v1/api/file/')
       .reply(200, 'success');
-    collabConnector = CollabConnector.instance;
-    return collabConnector
+
+    return CollabConnector.instance
       .createFile('fakeToken', 'fakeFolder', 'fakeName', 'text/plain')
       .should.eventually.equal('success');
+  });
+
+  it('should retrive teh context collab id', () => {
+    const response = { collab: { id: 'collabId' } };
+
+    nock('https://services.humanbrainproject.eu')
+      .get('/collab/v0/collab/context/fakeContextId/')
+      .reply(200, response);
+
+    return CollabConnector.instance
+      .getContextIdCollab('fakeToken', 'fakeContextId')
+      .should.eventually.equal('collabId');
   });
 
   it('should fail to post a new file', () => {
@@ -367,7 +400,13 @@ describe('Collab Storage', () => {
     };
 
     return collabStorage
-      .getFile('braitenberg_mouse.py', fakeExperiment, fakeToken, true)
+      .getFile(
+        'braitenberg_mouse.py',
+        fakeExperiment,
+        fakeToken,
+        fakeUserId,
+        true
+      )
       .then(res => {
         expect(JSON.parse(res.body)).to.contain(expected);
       });
@@ -448,7 +487,7 @@ describe('Collab Storage', () => {
       parent: 'fbdaba55-2012-40d9-b466-017cff025c36'
     };
 
-    return expect(collabStorage.listExperiments(fakeToken))
+    return expect(collabStorage.listExperiments(fakeToken, fakeUserId))
       .to.eventually.be.an('array')
       .that.include(expected);
   });

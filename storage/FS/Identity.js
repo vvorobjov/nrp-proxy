@@ -27,9 +27,12 @@ const q = require('q'),
   BaseIdentity = require('../BaseIdentity.js');
 let DB = require('./DB.js');
 class Identity extends BaseIdentity {
-  constructor(config) {
+  constructor() {
     super();
-    this.config = config;
+  }
+
+  getUniqueIdentifier(token) {
+    return q.when(token);
   }
 
   getUserInfo(user, token) {

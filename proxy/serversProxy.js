@@ -169,7 +169,6 @@ var mergeData = function(responsesData, configuration) {
 
   //sort available servers by health
   _.forOwn(mergedData, function(exp) {
-    //debugger;
     exp.availableServers = _(exp.availableServers)
       .map(s => _.extend({}, configuration.servers[s], { id: s }))
       .sortBy(

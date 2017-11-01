@@ -35,10 +35,10 @@ let utils = require('./utils.js'),
   rmdir = require('rmdir');
 
 class Storage extends BaseStorage {
-  tokenHasAccessToPath(token, filename) {
+  userIdHasAccessToPath(userId, filename) {
     let experiment = filename.split('/')[0];
     return DB.instance.experiments
-      .findOne({ token: token, experiment: experiment })
+      .findOne({ token: userId, experiment: experiment })
       .then(res => res || q.reject(Authenticator.AUTHORIZATION_ERROR));
   }
 
@@ -51,8 +51,8 @@ class Storage extends BaseStorage {
     return filePath;
   }
 
-  listFiles(experiment, token) {
-    return this.tokenHasAccessToPath(token, experiment)
+  listFiles(experiment, token, userId) {
+    return this.userIdHasAccessToPath(userId, experiment)
       .then(() => this.calculateFilePath('', experiment))
       .then(fullpath => q.all([fullpath, q.denodeify(fs.readdir)(fullpath)]))
       .then(([fullpath, files]) =>
@@ -68,10 +68,10 @@ class Storage extends BaseStorage {
       );
   }
 
-  getFile(filename, experiment, token, byname) {
+  getFile(filename, experiment, token, userId, byname) {
     if (byname) filename = path.join(experiment, filename);
     let basename = path.basename(filename);
-    return this.tokenHasAccessToPath(token, filename)
+    return this.userIdHasAccessToPath(userId, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.readFile)(filePath))
       .then(filecontent => ({
@@ -84,10 +84,10 @@ class Storage extends BaseStorage {
       );
   }
 
-  deleteFile(filename, experiment, token, byname) {
+  deleteFile(filename, experiment, token, userId, byname) {
     if (byname) filename = path.join(experiment, filename);
 
-    return this.tokenHasAccessToPath(token, filename)
+    return this.userIdHasAccessToPath(userId, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.unlink)(filePath))
       .catch(() =>
@@ -95,23 +95,30 @@ class Storage extends BaseStorage {
       );
   }
 
-  deleteFolder(foldername, experiment, token) {
-    return this.tokenHasAccessToPath(token, foldername)
+  deleteFolder(foldername, experiment, token, userId) {
+    return this.userIdHasAccessToPath(userId, foldername)
       .then(() => this.calculateFilePath(experiment, foldername))
       .then(filePath => q.denodeify(rmdir)(filePath))
       .then(() => {});
   }
 
-  createOrUpdate(filename, fileContent, contentType, experiment, token) {
+  createOrUpdate(
+    filename,
+    fileContent,
+    contentType,
+    experiment,
+    token,
+    userId
+  ) {
     filename = path.join(experiment, filename);
-    return this.tokenHasAccessToPath(token, filename)
+    return this.userIdHasAccessToPath(userId, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.writeFile)(filePath, fileContent));
   }
 
-  createFolder(foldername, experiment, token) {
+  createFolder(foldername, experiment, token, userId) {
     const fullFoldername = path.join(experiment, foldername);
-    return this.tokenHasAccessToPath(token, fullFoldername)
+    return this.userIdHasAccessToPath(userId, fullFoldername)
       .then(() => this.calculateFilePath(experiment, fullFoldername))
       .then(folderpath => q.denodeify(fs.mkdir)(folderpath))
       .then(() => ({
@@ -121,26 +128,26 @@ class Storage extends BaseStorage {
       }));
   }
 
-  listExperiments(token, contextId, options = {}) {
+  listExperiments(token, userId, contextId, options = {}) {
     return options.all
       ? q.denodeify(fs.readdir)(utils.storagePath).then(res =>
           res.map(file => ({ uuid: file, name: file }))
         )
       : DB.instance.experiments
-          .find({ token: token })
+          .find({ token: userId })
           .then(res =>
             res.map(f => ({ uuid: f.experiment, name: f.experiment }))
           );
   }
 
-  createExperiment(newExperiment, token) {
+  createExperiment(newExperiment, token, userId) {
     return DB.instance.experiments
       .findOne({ experiment: newExperiment })
       .then(existingExp => {
         if (existingExp) return q.reject('Experiment already exists');
 
         return DB.instance.experiments
-          .insert({ token: token, experiment: newExperiment })
+          .insert({ token: userId, experiment: newExperiment })
           .then(() => this.calculateFilePath('', newExperiment))
           .then(filePath => q.denodeify(fs.mkdir)(filePath))
           .then(() => ({ uuid: newExperiment }));
