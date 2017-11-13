@@ -31,7 +31,7 @@ require('log-prefix')(function() {
   return dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z');
 });
 
-var REQUEST_TIMEOUT = 20 * 1000; //ms
+var REQUEST_TIMEOUT = 50 * 1000; //ms
 
 var SERVER_URLS = {
   EXPERIMENT: '/experiment',
