@@ -24,6 +24,7 @@
 'use strict';
 
 const q = require('q'),
+  _ = require('lodash'),
   BaseStorage = require('../BaseStorage.js'),
   CollabConnector = require('./CollabConnector.js');
 
@@ -92,6 +93,20 @@ class Storage extends BaseStorage {
 
   deleteFile(filename, experiment, token, userId, byname = false) {
     return this.deleteEntity(filename, experiment, token, byname, false);
+  }
+
+  getCustomModel(modelPath, token, userId) {
+    return this.getFile(modelPath, null, token, userId).then(res => res.body);
+  }
+
+  listCustomModels(customFolder, token, userId, contextId) {
+    return this.listExperiments(token, userId, contextId)
+      .then(folders => {
+        let folder = _.find(folders, f => f.name == customFolder);
+        if (!folder) return [];
+        return CollabConnector.instance.folderContent(token, folder.uuid);
+      })
+      .then(files => files.map(f => f.uuid));
   }
 
   deleteFolder(foldername, experiment, token, userId, byname = false) {

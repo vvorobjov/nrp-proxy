@@ -8,7 +8,7 @@ const fs = require('fs'),
   q = require('q'),
   expect = chai.expect;
 
-const modelsPath = 'test/modelsData',
+const modelsPath = 'test/data/models',
   expectedModelsFileName = `${modelsPath}/expectedResponses.json`,
   numberOfBrains = 3,
   models = ['robots', 'environments', 'brains'];

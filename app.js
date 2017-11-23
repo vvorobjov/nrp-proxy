@@ -58,10 +58,10 @@ app.use(function(req, res, next) {
   next();
 });
 
-app.get('/experimentImage/:experiments', function(req, res, next) {
+app.get('/experimentImage/:experiment', function(req, res, next) {
   proxyRequestHandler
-    .getExperimentImage(req.params.experiments)
-    .then(r => res.send(r))
+    .getExperimentImageFile(req.params.experiment)
+    .then(f => res.sendFile(f))
     .catch(next);
 });
 
@@ -109,6 +109,7 @@ let handleError = (res, err) => {
   let errType = Object.prototype.toString.call(err).slice(8, -1);
 
   if (errType === 'String' || errType === 'Error' || !err.code) {
+    if (errType === 'Error') err = err.message;
     console.error('[ERROR] ' + err);
     res.status(500).send(err);
   } else {
@@ -147,6 +148,27 @@ app.get('/storage/experiments', (req, res) => {
       req.get('context-id'),
       req.query /*options*/
     )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/custommodels/:modelType', (req, res) => {
+  if (!~['brains', 'robots', 'environments'].indexOf(req.params.modelType))
+    return handleError(res, `Invalid model type: ${req.params.modelType}`);
+
+  storageRequestHandler
+    .listCustomModels(
+      req.params.modelType,
+      getAuthToken(req),
+      req.get('context-id')
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/custommodel/:modelPath', (req, res) => {
+  storageRequestHandler
+    .getCustomModel(req.params.modelPath, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });

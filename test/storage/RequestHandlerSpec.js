@@ -21,12 +21,14 @@ describe('Storage request handler', () => {
   let RewiredDB,
     RewiredFSAuthenticator,
     RewiredFSStorage,
+    RewiredIdentity,
     fsAuthenticator,
     storageRequestHandler,
-    fsStorage;
+    fsStorage,
+    identity;
 
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
-    fakeUserId = fakeToken,
+    fakeUserId = 'nrpuser',
     fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168',
     AUTHORIZATION_ERROR = {
       code: 403
@@ -42,6 +44,8 @@ describe('Storage request handler', () => {
     RewiredFSStorage = rewire('../../storage/FS/Storage.js');
     RewiredFSStorage.__set__('DB', RewiredDB);
     RewiredFSStorage.__set__('utils', mockUtils);
+    RewiredIdentity = rewire('../../storage/FS/Identity');
+    RewiredIdentity.__set__('DB', RewiredDB);
     mkdirCalls = 0;
 
     var fakeMkdir = (path, callback) => {
@@ -60,8 +64,10 @@ describe('Storage request handler', () => {
     RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator.js');
     RewiredFSAuthenticator.__set__('DB', RewiredDB);
     fsAuthenticator = new RewiredFSAuthenticator();
+    identity = new RewiredIdentity();
     storageRequestHandler.authenticator = fsAuthenticator;
     storageRequestHandler.storage = fsStorage;
+    storageRequestHandler.identity = identity;
   });
 
   it('should authenticate successfully', () => {
@@ -191,6 +197,36 @@ describe('Storage request handler', () => {
       .getLoginPage()
       .should.eventually.contain('storage/FS/login.html');
   });
+
+  // listCustomModels success
+  it(`should correctly return the user custom files`, () => {
+    const expectedResp = [
+      {
+        description: 'Clearpath Robotics Husky A200 - Extended HBP Model',
+        name: 'HBP Clearpath Robotics Husky A200',
+        path: 'nrpuser%2Frobots%2Fhusky_model.zip',
+        thumbnail: undefined
+      }
+    ];
+
+    return storageRequestHandler
+      .listCustomModels('robots', fakeToken)
+      .should.eventually.deep.equal(expectedResp);
+  });
+
+  // getUserInfo success
+  it(`should successfully return the user info`, () => {
+    return storageRequestHandler
+      .getUserInfo('nrpuser', fakeToken)
+      .should.eventually.deep.equal({ id: 'nrpuser', displayName: 'nrpuser' });
+  });
+
+  // getUserGroups success
+  it(`should successfully return the group info`, () => {
+    return storageRequestHandler.getUserGroups(fakeToken).then(resp => {
+      resp[0].should.deep.equal({ name: 'hbp-sp10-user-edit-rights' });
+    });
+  });
 });
 
 describe('Request handler (not mocking the mkdir)', () => {
@@ -227,6 +263,7 @@ describe('Request handler (not mocking the mkdir)', () => {
     fs.existsSync(newPath) || fs.mkdirSync(newPath);
     fsStorage = new RewiredFSStorage();
     storageRequestHandler.storage = fsStorage;
+    storageRequestHandler.getUserIdentifier = () => q.resolve('nrpuser');
 
     return storageRequestHandler
       .createExperiment(fakeExperiment, fakeToken)

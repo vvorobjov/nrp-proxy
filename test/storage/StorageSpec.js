@@ -7,10 +7,15 @@ const fs = require('fs'),
   expect = chai.expect,
   path = require('path'),
   assert = chai.assert,
-  q = require('q');
+  q = require('q'),
+  sinon = require('sinon');
 
 chai.use(chaiAsPromised);
 chai.should();
+
+const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
+  fakeUserId = 'nrpuser',
+  fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168';
 
 describe('BaseStorage', () => {
   const BaseStorage = require('../../storage/BaseStorage.js');
@@ -42,7 +47,8 @@ describe('BaseStorage', () => {
     'listExperiments',
     'createExperiment',
     'deleteFolder',
-    'createFolder'
+    'createFolder',
+    'listCustomModels'
   ].forEach(function(item) {
     it('should throw a non implemented method error when trying to use a base class non-overidden function ', () => {
       return expect(baseClassMock[item]).to.throw('not implemented');
@@ -55,9 +61,6 @@ describe('FSStorage', () => {
   const AUTHORIZATION_ERROR = {
     code: 403
   };
-  const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
-    fakeUserId = fakeToken,
-    fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168';
 
   beforeEach(() => {
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
@@ -76,8 +79,8 @@ describe('FSStorage', () => {
 
   it(`should return an entry when we check an existing token`, () => {
     return fsStorage
-      .userIdHasAccessToPath(fakeToken, fakeExperiment)
-      .should.eventually.contain({ token: fakeToken });
+      .userIdHasAccessToPath(fakeUserId, fakeExperiment)
+      .should.eventually.contain({ token: fakeUserId });
   });
 
   it(`should throw when we check a non-existing token`, () => {
@@ -210,6 +213,7 @@ describe('FSStorage', () => {
               fakeToken,
               fakeUserId
             );
+
             return expect(folderContents).to.include({
               name: 'tmp',
               uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/tmp',
@@ -235,7 +239,6 @@ describe('FSStorage', () => {
 describe('FS Storage (not mocking the mkdir)', () => {
   //createExperiment
   let RewiredDB, RewiredFSStorage, fsStorage;
-  const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24';
   //in this test we create a temporary experiments table and then remove
   //it on the fly, because we cannot delete entries from the database
   it(`should successfully create an experiment given a correct token `, () => {
@@ -555,5 +558,66 @@ describe('Collab Storage', () => {
 
     return expect(collabStorage.getFile('fakeFile', fakeExperiment, fakeToken))
       .to.eventually.be.rejected;
+  });
+
+  it('should return the correct robot from the robots user folder', () => {
+    const foldersMock = [
+      {
+        name: 'robots',
+        uuid: 'testUUID'
+      },
+      {
+        name: 'environments',
+        uuid: 'testUUID2'
+      }
+    ];
+
+    const contentsMock = [
+      {
+        name: 'robot1',
+        uuid: 'fakeUUID1'
+      }
+    ];
+    sinon.stub(CollabStorage.prototype, 'listExperiments').returns(
+      new Promise(function(resolve) {
+        resolve(foldersMock);
+      })
+    );
+    sinon.stub(CollabConnector.prototype, 'folderContent').returns(
+      new Promise(function(resolve) {
+        resolve(contentsMock);
+      })
+    );
+
+    var storage = new CollabStorage();
+    return storage
+      .listCustomModels('robots', fakeToken, fakeUserId, 'contextId')
+      .then(res => {
+        res[0].should.equal('fakeUUID1');
+      });
+  });
+
+  it('should delete an entity correctly', () => {
+    sinon.stub(CollabConnector.prototype, 'deleteEntity').returns(
+      new Promise(function(resolve) {
+        resolve('resultMock');
+      })
+    );
+
+    var storage = new CollabStorage();
+    return storage
+      .deleteFolder('robots', fakeExperiment, fakeToken, fakeUserId, false)
+      .then(res => {
+        return expect(res).to.be.null;
+      });
+  });
+
+  it('should get custom model correctly', () => {
+    nock('https://services.humanbrainproject.eu')
+      .get('/storage/v1/api/file/modelPath/content/')
+      .reply(200, { msg: 'Success!' });
+    return collabStorage
+      .getCustomModel('modelPath', fakeToken, fakeUserId)
+      .then(res => JSON.parse(res).should.deep.equal({ msg: 'Success!' }));
   });
 });

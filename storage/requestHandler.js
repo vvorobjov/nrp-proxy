@@ -24,7 +24,9 @@
 'use strict';
 
 const q = require('q'),
-  path = require('path');
+  path = require('path'),
+  CustomModelService = require('./CustomModelsService'),
+  customModelService = new CustomModelService();
 
 class RequestHandler {
   constructor(config) {
@@ -154,6 +156,36 @@ class RequestHandler {
       .then(() => this.getUserIdentifier(token))
       .then(userId =>
         this.storage.createExperiment(newExperiment, token, userId, contextId)
+      );
+  }
+
+  getCustomModel(modelPath, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId => this.storage.getCustomModel(modelPath, token, userId));
+  }
+
+  listCustomModels(customFolder, token, contextId) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId =>
+        this.storage.listCustomModels(customFolder, token, userId, contextId)
+      )
+      .then(modelsPaths =>
+        q.all(
+          modelsPaths.map(path =>
+            q.all([path, this.getCustomModel(path, token)])
+          )
+        )
+      )
+      .then(models =>
+        q.all(
+          models.map(([path, data]) =>
+            customModelService.getZipModelMetaData(path, data)
+          )
+        )
       );
   }
 

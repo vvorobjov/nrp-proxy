@@ -54,6 +54,14 @@ class BaseStorage {
   ) {
     throw 'not implemented';
   }
+
+  getCustomModel(modelPath, token, userId) {
+    throw 'not implemented';
+  }
+
+  listCustomModels(customFolder, token, userId, contextId) {
+    throw 'not implemented';
+  }
   listExperiments(token, userId, contextId, options) {
     throw 'not implemented';
   }

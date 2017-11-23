@@ -53,6 +53,8 @@ var config = {
     url: URL,
     deactivate: false
   },
+  modelsPath: 'modelsPath',
+  experimentsPath: 'test',
   servers: {}
 };
 
@@ -144,7 +146,11 @@ var experimentList = {
         id: 'geneva2'
       }
     ],
-    configuration: { experimentConfiguration: 'experimentConf1' },
+    configuration: {
+      experimentConfiguration: 'experimentConf1',
+      thumbnail: 'test.png',
+      path: 'data/experiments/experiment1'
+    },
     joinableServers: [
       {
         runningSimulation: {

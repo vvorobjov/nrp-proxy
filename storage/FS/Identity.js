@@ -26,13 +26,21 @@
 const q = require('q'),
   BaseIdentity = require('../BaseIdentity.js');
 let DB = require('./DB.js');
+
 class Identity extends BaseIdentity {
   constructor() {
     super();
   }
 
   getUniqueIdentifier(token) {
-    return q.when(token);
+    return DB.instance.users
+      .findOne({ token })
+      .then(
+        res =>
+          res ||
+          q.reject({ code: 404, msg: 'getUniqueIdentifier: user id not found' })
+      )
+      .then(res => res.user);
   }
 
   getUserInfo(user, token) {
@@ -44,7 +52,10 @@ class Identity extends BaseIdentity {
 
     return DB.instance.users
       .findOne(findCondition)
-      .then(res => res || q.reject({ code: 404, msg: 'user id not found' }))
+      .then(
+        res =>
+          res || q.reject({ code: 404, msg: 'getUserInfo: user id not found' })
+      )
       .then(res => ({
         id: userId || res.user,
         displayName: res.user

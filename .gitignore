@@ -4,3 +4,4 @@ coverage
 config.json*
 .nyc_output
 artifacts
+cache

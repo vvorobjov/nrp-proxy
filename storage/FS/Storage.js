@@ -26,7 +26,8 @@
 const q = require('q'),
   path = require('path'),
   BaseStorage = require('../BaseStorage.js'),
-  Authenticator = require('./Authenticator.js');
+  Authenticator = require('./Authenticator.js'),
+  USER_DATA_FOLDER = 'USER_DATA';
 
 //mocked in the tests thus non const
 let utils = require('./utils.js'),
@@ -93,6 +94,23 @@ class Storage extends BaseStorage {
       .catch(() =>
         q.reject({ code: 204, msg: `Could not find file ${filename}` })
       );
+  }
+
+  getCustomModel(modelPath) {
+    return q
+      .resolve(path.join(USER_DATA_FOLDER, modelPath))
+      .then(relFolderName => this.calculateFilePath('', relFolderName))
+      .then(folderName => q.denodeify(fs.readFile)(folderName));
+  }
+
+  listCustomModels(customFolder, token, userId) {
+    let customModelsRePath = path.join(userId, customFolder);
+    return q
+      .resolve(path.join(USER_DATA_FOLDER, customModelsRePath))
+      .then(relFolderName => this.calculateFilePath('', relFolderName))
+      .then(folderName => q.denodeify(fs.readdir)(folderName))
+      .then(files => files.map(f => path.join(customModelsRePath, f)))
+      .catch(() => []);
   }
 
   deleteFolder(foldername, experiment, token, userId) {

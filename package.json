@@ -6,10 +6,12 @@
   "main": "app.js",
   "dependencies": {
     "body-parser": "^1.17.2",
+    "cxml": "^0.1.1",
     "dateformat": "2.0.0",
     "express": "4.14.1",
     "file-base64": "1.0.0",
     "glob": "7.1.1",
+    "jszip": "^3.1.5",
     "lodash": "4.17.4",
     "log-prefix": "0.0.0",
     "minimist": "^1.2.0",
@@ -28,9 +30,11 @@
   "devDependencies": {
     "chai": "3.5.0",
     "chai-as-promised": "6.0.0",
+    "cxsd": "^0.1.1",
     "eslint": "^4.9.0",
     "eslint-config-prettier": "^2.6.0",
     "eslint-plugin-prettier": "^2.3.1",
+    "http-serve": "^1.0.1",
     "husky": "0.14.3",
     "istanbul": "0.4.5",
     "jenkins-mocha": "4.1.1",
@@ -52,7 +56,9 @@
     "test_istanbul":
       "istanbul cover --report html node_modules/jenkins-mocha/bin/jenkins.js test/*/*",
     "pretest": "npm run lint",
-    "precommit": "lint-staged"
+    "precommit": "lint-staged",
+    "generate_xsd":
+      "rm -rf {xmlns,cache}; node_modules/http-serve/bin/http-serve $HBP/Experiments -p 8998 -s -c-1 & SERVER_PID=$!;sleep 1; node_modules/cxsd/cxsd-cli.js http://127.0.0.1:8998/ExDConfFile.xsd ; kill $SERVER_PID"
   },
   "lint-staged": {
     "*.{js,json}": ["node_modules/prettier/bin/prettier.js --write", "git add"]

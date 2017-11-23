@@ -31,4 +31,21 @@ describe('oidcAuthenticator', function() {
   it('should fail when server request fails', function() {
     return oidcAuthenticator.getToken().should.be.rejected;
   });
+
+  it('should fail when auth deactivate is true', function() {
+    const URL = 'http://localhost';
+    const CLIENT_ID = 'CLIENT_ID';
+    const CLIENT_SECRET = 'CLIENT_SECRET';
+    const auth = {
+      renewInternal: 0,
+      clientId: CLIENT_ID,
+      clientSecret: CLIENT_SECRET,
+      url: URL,
+      deactivate: true
+    };
+
+    oidcAuthenticator.configure(auth);
+    var token = oidcAuthenticator.getToken();
+    return token.should.eventually.equal(false);
+  });
 });

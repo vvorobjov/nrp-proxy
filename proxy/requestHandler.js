@@ -27,6 +27,7 @@ var _ = require('lodash'),
   q = require('q');
 
 var ModelsService = require('./modelsService.js'),
+  ExperimentsService = require('./experimentsService.js'),
   oidcAuthenticator = require('./oidcAuthenticator.js'),
   serversProxy = require('./serversProxy.js');
 
@@ -34,22 +35,26 @@ var experimentList = {};
 var simulationList = [];
 var availableServers = [];
 
-var oidcToken, configuration, modelsService;
+var configuration, modelsService, experimentsService;
 
 function initialize(config) {
-  reloadConfiguration(config);
-  updateExperimentList();
+  reloadConfiguration(config)
+    .then(updateExperimentList)
+    .catch(err => console.error(err));
 }
+
+let resolveReplaceEnvVariables = path =>
+  path.replace(/\$([A-Za-z]*)/g, (m, v) => process.env[v]);
 
 function reloadConfiguration(config) {
   configuration = config;
   if (!configuration)
-    return console.error(
-      'Proxy requestHandler.reloadConfiguration: configuration required'
-    );
+    throw 'Proxy requestHandler.reloadConfiguration: configuration required';
 
-  if (!configuration.refreshInterval)
-    throw "Configuration key 'refreshInterval' is missing in the config file. Please update";
+  ['refreshInterval', 'modelsPath', 'experimentsPath'].forEach(prop => {
+    if (!configuration[prop])
+      throw `Configuration key '${prop}' is missing in the config file. Please update`;
+  });
 
   console.log(
     'Polling Backend Servers for Experiments, Health & Running Simulations every',
@@ -58,13 +63,30 @@ function reloadConfiguration(config) {
   );
 
   oidcAuthenticator.configure(configuration.auth);
+
   _.forEach(configuration.servers, (conf, id) => (conf.id = id));
-  let modelsPath = configuration.modelsPath.replace(
-    /\$([A-Za-z]*)/g,
-    (m, v) => process.env[v]
-  );
+
+  let modelsPath = resolveReplaceEnvVariables(configuration.modelsPath);
   modelsService = new ModelsService(modelsPath);
   modelsService.loadModels();
+
+  let experimentsPath = resolveReplaceEnvVariables(
+    configuration.experimentsPath
+  );
+  experimentsService = new ExperimentsService(experimentsPath);
+  return experimentsService.loadExperiments().then(experiments => {
+    experimentList = _(experiments)
+      .map(exp => [
+        exp.id,
+        {
+          configuration: exp,
+          availableServers: [],
+          joinableServers: []
+        }
+      ])
+      .fromPairs()
+      .value();
+  });
 }
 
 var filterJoinableExperimentByContext = function(experiments) {
@@ -80,27 +102,25 @@ var filterJoinableExperimentByContext = function(experiments) {
 };
 
 function updateExperimentList() {
-  oidcToken = oidcAuthenticator.getToken().then(serversProxy.setToken);
-
-  oidcToken
-    .then(_.partial(serversProxy.getExperimentsAndSimulations, configuration))
-    .then(function(experimentData) {
-      experimentList = experimentData[0];
-      simulationList = experimentData[1];
-      availableServers = experimentData[2];
-      //make sure images are preloaded
-      _(experimentList).forEach((exp, expId) =>
-        serversProxy.getExperimentImage(expId, experimentList, configuration)
-      );
+  oidcAuthenticator
+    .getToken()
+    .then(serversProxy.setToken)
+    .then(() => serversProxy.getExperimentsAndSimulations(configuration))
+    .then(([joinableServers, simulations, serversAvailable]) => {
+      simulationList = simulations;
+      availableServers = serversAvailable;
+      //build experimentList with exp config + joinable servers + available servers
+      _.forOwn(experimentList, exp => {
+        exp.availableServers = availableServers;
+        exp.joinableServers = joinableServers[exp.id] || [];
+      });
     })
-    .fail(function(err) {
-      console.error('Polling Error. Failed to get experiments: ', err);
-    })
-    .finally(function() {
-      setTimeout(function() {
-        updateExperimentList();
-      }, configuration.refreshInterval);
-    });
+    .fail(err =>
+      console.error('Polling Error. Failed to get experiments: ', err)
+    )
+    .finally(() =>
+      setTimeout(updateExperimentList, configuration.refreshInterval)
+    );
 }
 
 function getServer(serverId) {
@@ -143,22 +163,12 @@ function getExperiments() {
   return q.resolve(filterJoinableExperimentByContext(experimentList));
 }
 
-function getExperimentImage(experiments) {
-  experiments = experiments.split(',');
-  return q
-    .all(
-      experiments.map(function(exp) {
-        return serversProxy.getExperimentImage(
-          exp,
-          experimentList,
-          configuration
-        );
-      })
-    )
-    .then(_.fromPairs)
-    .catch(function(err) {
-      console.error('Failed to get experiments images: ', err);
-    });
+function getExperimentImageFile(experimentId) {
+  if (!experimentList[experimentId]) throw ('No experiment id: ', experimentId);
+  let experiment = experimentList[experimentId].configuration;
+  return q.resolve(
+    experimentsService.getExperimentFilePath(experiment, experiment.thumbnail)
+  );
 }
 
 function getModels(modelType) {
@@ -170,10 +180,9 @@ module.exports = {
   initialize,
   getServer,
   getExperiments,
-  getExperimentImage,
+  getExperimentImageFile,
   getAvailableServers,
   getJoinableServers,
-  experimentList,
   filterJoinableExperimentByContext,
   getModels
 };

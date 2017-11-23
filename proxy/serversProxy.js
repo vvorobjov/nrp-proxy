@@ -31,10 +31,9 @@ require('log-prefix')(function() {
   return dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z');
 });
 
-var REQUEST_TIMEOUT = 50 * 1000; //ms
+var REQUEST_TIMEOUT = 20 * 1000; //ms
 
 var SERVER_URLS = {
-  EXPERIMENT: '/experiment',
   HEALTH: '/health/errors',
   SIMULATION: '/simulation'
 };
@@ -116,143 +115,70 @@ var executeRequestForAllServers = function(configuration, urlPostFix) {
   return q.all(serversResponses);
 };
 
-var mergeData = function(responsesData, configuration) {
-  var filterErrors = function(data) {
-    return data.filter(function(e) {
-      return e[1] && !(e[1].data instanceof Error);
-    });
-  };
-  var data = {
-    experiments: filterErrors(responsesData[0]),
-    health: _.fromPairs(filterErrors(responsesData[1])),
-    simulations: _.fromPairs(filterErrors(responsesData[2]))
-  };
-
-  _.forOwn(data.simulations, function(serverSimulations) {
-    serverSimulations.runningSimulation = _.find(serverSimulations, function(
-      s
-    ) {
-      return RUNNING_SIMULATION_STATES.indexOf(s.state) !== -1;
-    });
-  });
-
-  var mergedData = {};
-  data.experiments.forEach(function(expArr) {
-    var serverExperiments = expArr[1].data;
-    var serverId = expArr[0];
-    _.forOwn(serverExperiments, function(exp, expId) {
-      if (!mergedData[expId]) {
-        mergedData[expId] = {
-          configuration: exp,
-          availableServers: [],
-          joinableServers: []
-        };
-      }
-      var responseExp = mergedData[expId];
-      var runningSimulation = data.simulations[serverId].runningSimulation;
-      if (!runningSimulation) {
-        //server is free
-        responseExp.availableServers.push(serverId);
-      } else if (
-        runningSimulation.experimentConfiguration ===
-          responseExp.configuration.experimentConfiguration &&
-        runningSimulation.state !== SIMULATION_STATES.HALTED
-      ) {
-        //server is running this experiment
-        responseExp.joinableServers.push({
-          server: serverId,
-          runningSimulation: runningSimulation
-        });
-      }
-    });
-  });
-
-  //sort available servers by health
-  _.forOwn(mergedData, function(exp) {
-    exp.availableServers = _(exp.availableServers)
-      .map(s => _.extend({}, configuration.servers[s], { id: s }))
-      .sortBy(
-        ({ id }) =>
-          HEALTH_STATUS_PRIORITY[data.health[id] && data.health[id].state] || 9
-      )
-      .value();
-  });
-  return mergedData;
-};
-
 var getExperimentsAndSimulations = function(configuration) {
   return q
     .all([
-      executeRequestForAllServers(configuration, SERVER_URLS.EXPERIMENT),
       executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
       executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
     ])
-    .then(function(response) {
-      var availableServers = response[2].filter(function(e) {
-        return e[1] && !(e[1].data instanceof Error);
-      });
-      var availableServerObjects = availableServers
-        .filter(
-          a =>
-            !a[1].filter(a => RUNNING_SIMULATION_STATES.includes(a.state))
-              .length
+    .then(responses =>
+      //filter out failed responses
+      responses.map(response =>
+        response.filter(
+          result => result[1] && !(result[1].data instanceof Error)
         )
-        .map(a => configuration.servers[a[0]]);
-      return [
-        mergeData(response, configuration),
-        _.fromPairs(availableServers),
-        availableServerObjects
-      ];
+      )
+    )
+    .then(responses =>
+      //map to dictionary<server, response>
+      responses.map(response => _.fromPairs(response))
+    )
+    .then(([health, simulations]) => {
+      //set runningSimulation per simulation server
+      _.forOwn(
+        simulations,
+        serverSimulations =>
+          (serverSimulations.runningSimulation = _.find(
+            serverSimulations,
+            sim => RUNNING_SIMULATION_STATES.includes(sim.state)
+          ))
+      );
+
+      //get servers that are not running a simulation, sorted by health status
+      let availableServers = _(configuration.servers)
+        .filter(
+          (config, serverId) =>
+            simulations[serverId] && !simulations[serverId].runningSimulation
+        )
+        .sortBy(
+          ({ id }) =>
+            HEALTH_STATUS_PRIORITY[health[id] && health[id].state] || 9
+        )
+        .value();
+
+      //build dictionary<expId, server> of joinnable servers
+      let joinableServers = {};
+      _.forOwn(simulations, ({ runningSimulation }, serverId) => {
+        if (
+          runningSimulation &&
+          runningSimulation.state !== SIMULATION_STATES.HALTED
+        ) {
+          if (!joinableServers[runningSimulation.experimentConfiguration])
+            joinableServers[runningSimulation.experimentConfiguration] = [];
+
+          joinableServers[runningSimulation.experimentConfiguration].push({
+            server: serverId,
+            runningSimulation: runningSimulation
+          });
+        }
+      });
+
+      return [joinableServers, simulations, availableServers];
     });
 };
-
-var getExperimentImage = _.memoize(
-  function(experimentId, experiments, configuration) {
-    var exp = experiments[experimentId];
-
-    if (!exp) {
-      console.error(
-        '[GET] Experiment Image: Experiment ID "' +
-          experimentId +
-          '" does not exist!'
-      );
-      return q.when([experimentId, null]);
-    }
-
-    var firstServer =
-      _.head(exp.availableServers) ||
-      _.head(_.map(exp.joinableServers, 'server'));
-    if (!firstServer) {
-      return q.when([experimentId, null]);
-    }
-
-    var url = configuration.servers[firstServer.id].gzweb['nrp-services'];
-    return q.all([
-      experimentId,
-      executeServerRequest(
-        url + SERVER_URLS.EXPERIMENT + '/' + experimentId + '/preview',
-        ''
-      )
-        .then(function(image) {
-          console.log(
-            "Image obtained for ExperimentID: '" + experimentId + "'"
-          );
-          return image['image_as_base64'];
-        })
-        .catch(function(err) {
-          console.error('Failed to load experiment Image: ', err);
-          return q.when(null);
-        })
-    ]);
-  },
-  function(experimentId) {
-    return experimentId;
-  }
-);
 
 module.exports = {
   setToken: setToken,
   getExperimentsAndSimulations: getExperimentsAndSimulations,
-  getExperimentImage: getExperimentImage,
   RUNNING_SIMULATION_STATES: RUNNING_SIMULATION_STATES
 };

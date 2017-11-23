@@ -19,7 +19,7 @@ describe('requestHandler', function() {
     nock.cleanAll();
     testConf.mockResponses();
     testConf.mockSuccessfulOidcResponse();
-    requestHandler.initialize();
+    requestHandler.initialize(testConf.config);
     requestHandler.__set__({
       console: testConf.consoleMock,
       configuration: testConf.config
@@ -100,14 +100,15 @@ describe('requestHandler', function() {
       );
   });
 
-  it('should return experimentImage response', function() {
+  it('should return getExperimentImageFile response', function() {
     var serversProxyGetExperimentImageSpy = sinon.spy();
     revert = requestHandler.__set__({
-      'serversProxy.getExperimentImage': serversProxyGetExperimentImageSpy,
+      'serversProxy.getExperimentImageFile': serversProxyGetExperimentImageSpy,
       experimentList: testConf.experimentList
     });
-    requestHandler.getExperimentImage('experiment1');
-    sinon.assert.calledOnce(serversProxyGetExperimentImageSpy);
+    return requestHandler
+      .getExperimentImageFile('experiment1')
+      .should.eventually.contain('experiment1/test.png');
   });
 
   it('should not find the configuration file and log the error', function() {
@@ -120,8 +121,13 @@ describe('requestHandler', function() {
       },
       configuration: undefined
     });
-    requestHandler.reloadConfiguration();
-    sinon.assert.calledOnce(errorSpy);
+    try {
+      requestHandler.reloadConfiguration();
+    } catch (e) {
+      e.should.equal(
+        'Proxy requestHandler.reloadConfiguration: configuration required'
+      );
+    }
   });
 
   it('should reconfigure oidcAuthenticator on reloadConfiguration', function() {
@@ -132,10 +138,57 @@ describe('requestHandler', function() {
       },
       configuration: undefined
     });
-    requestHandler.reloadConfiguration({
-      refreshInterval: 1000,
-      modelsPath: ''
+    try {
+      requestHandler.reloadConfiguration({
+        refreshInterval: 1000,
+        modelsPath: ''
+      });
+    } catch (e) {
+      e.should.equal(
+        "Configuration key 'modelsPath' is missing in the config file. Please update"
+      );
+    }
+  });
+
+  it('should fail to getExperimentImageFile response', function() {
+    var serversProxyGetExperimentImageSpy = sinon.spy();
+    var errorSpy = sinon.spy();
+    var logSpy = sinon.spy();
+    revert = requestHandler.__set__({
+      console: {
+        error: errorSpy,
+        log: logSpy
+      },
+      configuration: undefined,
+      'serversProxy.getExperimentImageFile': serversProxyGetExperimentImageSpy,
+      experimentList: testConf.experimentList
     });
-    sinon.assert.calledOnce(configureSpy);
+    try {
+      requestHandler.getExperimentImageFile('falseExperiment');
+    } catch (e) {
+      e.should.equal('falseExperiment');
+    }
+  });
+
+  it('should get the models service object correctly', function() {
+    var errorSpy = sinon.spy();
+    var logSpy = sinon.spy();
+    revert = requestHandler.__set__({
+      console: {
+        error: errorSpy,
+        log: logSpy
+      },
+      configuration: undefined,
+      experimentList: testConf.experimentList,
+      modelsService: {
+        getModels: () =>
+          new Promise(function(resolve) {
+            resolve('robot1');
+          })
+      }
+    });
+    return requestHandler
+      .getModels('robots')
+      .then(res => res.should.equal('robot1'));
   });
 });

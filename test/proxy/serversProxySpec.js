@@ -28,7 +28,12 @@ describe('serversProxy', function() {
       testConf.config
     );
     return experiments.then(function(x) {
-      expect(x[0]).to.deep.equal(testConf.experimentList);
+      expect(
+        x[0].experimentConf1[0].runningSimulation.experimentConfiguration
+      ).to.equal(
+        testConf.experimentList.experiment1.configuration
+          .experimentConfiguration
+      );
       expect(_.isEqual(x[1], testConf.serveserverSimulations)).to.equal(true);
     });
   });
@@ -43,47 +48,5 @@ describe('serversProxy', function() {
     testConf.mockFailedResponses();
     var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
     return exp.should.eventually.deep.equal([{}, {}, []]);
-  });
-
-  it('should fail to get experiment image because experiment has neither available nor joinable servers', function() {
-    return serversProxy
-      .getExperimentImage(
-        'experiment3',
-        testConf.experimentList,
-        testConf.config
-      )
-      .should.eventually.deep.equal(['experiment3', null]);
-  });
-
-  it("should fail to get experimentImage because experiment doesn't exist in the list of experiments", function() {
-    return serversProxy
-      .getExperimentImage(
-        'nonExistentExperiment',
-        testConf.experimentList,
-        testConf.config
-      )
-      .should.eventually.deep.equal(['nonExistentExperiment', null]);
-  });
-
-  it('should return experiment image', function() {
-    testConf.mockImageResponses();
-    return serversProxy
-      .getExperimentImage(
-        'experiment1',
-        testConf.experimentList,
-        testConf.config
-      )
-      .should.eventually.deep.equal(['experiment1', 'image']);
-  });
-
-  it('should fail to return the experiment image', function() {
-    testConf.mockFailedImageResponse();
-    return serversProxy
-      .getExperimentImage(
-        'experiment2',
-        testConf.experimentList,
-        testConf.config
-      )
-      .should.eventually.deep.equal(['experiment2', null]);
   });
 });
