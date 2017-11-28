@@ -44,6 +44,11 @@ class BaseStorage {
   createFolder(foldername, experiment, token, userId) {
     throw 'not implemented';
   }
+
+  deleteExperiment(experimentName, parentDir, token, userId) {
+    throw 'not implemented';
+  }
+
   createOrUpdate(
     filename,
     fileContent,

@@ -51,6 +51,10 @@ class DBCollection {
         .toArray((err, res) => (err ? reject(err) : resolve(res)));
     });
   }
+
+  remove(...args) {
+    return q.nbind(this.collection.remove, this.collection)(...args);
+  }
 }
 
 //wraps tingo db

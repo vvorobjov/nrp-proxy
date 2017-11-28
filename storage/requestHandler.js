@@ -100,6 +100,15 @@ class RequestHandler {
       );
   }
 
+  deleteExperiment(experimentName, parentDir, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId =>
+        this.storage.deleteExperiment(experimentName, parentDir, token, userId)
+      );
+  }
+
   deleteFolder(filename, parentDir, token, byname = false) {
     return this.authenticator
       .checkToken(token)
