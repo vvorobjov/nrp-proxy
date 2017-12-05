@@ -27,6 +27,8 @@ const express = require('express'),
   _ = require('lodash'),
   bodyParser = require('body-parser');
 
+require('./migration_scripts/sprint72.js');
+
 const proxyRequestHandler = require('./proxy/requestHandler.js'),
   StorageRequestHandler = require('./storage/requestHandler.js'),
   configurationManager = require('./utils/configurationManager.js'),
