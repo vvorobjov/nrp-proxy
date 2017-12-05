@@ -80,9 +80,8 @@ class ExperimentsService {
         experimentConfiguration: configPath,
         maturity: exc.maturity == 'production' ? 'production' : 'development',
         timeout: exc.timeout || 600,
-        brainProcesses: exc.bibiConf.processes._exists
-          ? exc.bibiConf.processes
-          : undefined,
+        brainProcesses:
+          exc.bibiConf.processes._exists === false ? 1 : exc.bibiConf.processes,
         cameraPose: exc.cameraPose && [
           ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraPosition[p]),
           ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraLookAt[p])

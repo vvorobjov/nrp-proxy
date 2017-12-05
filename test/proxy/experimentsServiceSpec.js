@@ -15,7 +15,7 @@ const expectedExp1 = {
   experimentConfiguration: 'experiment1/ExDTemplateHusky.exc',
   maturity: 'production',
   timeout: 840,
-  brainProcesses: undefined,
+  brainProcesses: 1,
   cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
   visualModel: undefined
 };
@@ -30,7 +30,7 @@ const expectedExp2 = {
   experimentConfiguration: 'experiment2/ExDNao.exc',
   maturity: 'development',
   timeout: 840,
-  brainProcesses: undefined,
+  brainProcesses: 1,
   cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
   visualModel: undefined
 };
