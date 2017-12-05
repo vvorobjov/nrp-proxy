@@ -75,6 +75,7 @@ class ExperimentsService {
         name: exc.name || id,
         thumbnail: exc.thumbnail,
         path: expPath,
+        tags: exc.tags._exists === false ? [] : exc.tags,
         description:
           exc.description || 'No description available for this experiment.',
         experimentConfiguration: configPath,
@@ -86,14 +87,17 @@ class ExperimentsService {
           ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraPosition[p]),
           ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraLookAt[p])
         ],
-        visualModel: exc.visualModel._exists
-          ? [
-              ...['x', 'y', 'z', 'ux', 'uy', 'uz'].map(
-                p => exc.visualModel.visualPose[p]
-              ),
-              exc.scale || 1
-            ]
-          : undefined
+        visualModel:
+          exc.visualModel._exists === false ? undefined : exc.visualModel.src,
+        visualModelParams:
+          exc.visualModel._exists === false
+            ? undefined
+            : [
+                ...['x', 'y', 'z', 'ux', 'uy', 'uz'].map(
+                  p => exc.visualModel.visualPose[p]
+                ),
+                exc.visualModel.scale || 1
+              ]
       }));
   }
 }

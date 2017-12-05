@@ -10,6 +10,7 @@ const expectedExp1 = {
   name: 'Template Husky in empty environment',
   thumbnail: 'ExDTemplateHusky.jpg',
   path: 'experiment1',
+  tags: [],
   description:
     'This experiment loads the Husky robot in an empty world, with an idle brain and basic transfer functions. You are free to edit it.',
   experimentConfiguration: 'experiment1/ExDTemplateHusky.exc',
@@ -17,7 +18,8 @@ const expectedExp1 = {
   timeout: 840,
   brainProcesses: 1,
   cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
-  visualModel: undefined
+  visualModel: undefined,
+  visualModelParams: undefined
 };
 
 const expectedExp2 = {
@@ -25,6 +27,7 @@ const expectedExp2 = {
   name: 'NAO experiment',
   thumbnail: 'ExDNao.jpg',
   path: 'experiment2',
+  tags: [],
   description:
     'This experiment loads the humanoid robot NAO (Aldebaran) and the virtual room environment. In the future, it will be possible to connect NAO to a neuronal controller (NEST) to control single joints of the robot.',
   experimentConfiguration: 'experiment2/ExDNao.exc',
@@ -32,7 +35,8 @@ const expectedExp2 = {
   timeout: 840,
   brainProcesses: 1,
   cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
-  visualModel: undefined
+  visualModel: undefined,
+  visualModelParams: undefined
 };
 
 describe('ExperimentsService', () => {
