@@ -75,6 +75,7 @@ class ExperimentsService {
         name: exc.name || id,
         thumbnail: exc.thumbnail,
         path: expPath,
+        tags: exc.tags._exists === false ? [] : exc.tags,
         description:
           exc.description || 'No description available for this experiment.',
         experimentConfiguration: configPath,
