@@ -48,7 +48,8 @@ describe('BaseStorage', () => {
     'createExperiment',
     'deleteFolder',
     'createFolder',
-    'listCustomModels'
+    'listCustomModels',
+    'deleteExperiment'
   ].forEach(function(item) {
     it('should throw a non implemented method error when trying to use a base class non-overidden function ', () => {
       return expect(baseClassMock[item]).to.throw('not implemented');
@@ -143,16 +144,23 @@ describe('FSStorage', () => {
       });
   });
 
-  it(`should return the contents of a file by file name`, () => {
+  //deleteExperiment
+  it(`should fail to delete an experiment`, () => {
     return fsStorage
-      .getFile('fakeFile', fakeExperiment, fakeToken, fakeUserId, true)
-      .then(val => {
-        var stringContents = String.fromCharCode.apply(
-          null,
-          new Uint8Array(val.body)
-        );
-        return expect(stringContents).to.contain('fakeContent');
-      });
+      .deleteExperiment('fakeExp', 'fakeExp', fakeToken, fakeUserId)
+      .catch(val => expect(val).to.deep.equal({ code: 403 }));
+  });
+
+  it(`should delete an experiment`, () => {
+    sinon.stub(fsStorage, 'deleteFolder').returns(
+      new Promise(function(resolve) {
+        resolve('resultMock');
+      })
+    );
+
+    return fsStorage
+      .deleteExperiment('fakeExp', 'fakeExp', fakeToken, fakeUserId)
+      .then(val => expect(val).to.be.undefined);
   });
 
   it(`should throw an authorization exception when trying to read a file from a non existing folder`, () => {
@@ -609,6 +617,15 @@ describe('Collab Storage', () => {
       .deleteFolder('robots', fakeExperiment, fakeToken, fakeUserId, false)
       .then(res => {
         return expect(res).to.be.null;
+      });
+  });
+
+  it('should delete an entity correctly', () => {
+    var storage = new CollabStorage();
+    return storage
+      .deleteExperiment(fakeExperiment, fakeExperiment, fakeToken, fakeUserId)
+      .then(res => {
+        return expect(res).to.equal('resultMock');
       });
   });
 

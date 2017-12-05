@@ -109,6 +109,10 @@ class Storage extends BaseStorage {
       .then(files => files.map(f => f.uuid));
   }
 
+  deleteExperiment(experiment, exp, token, userId) {
+    return this.deleteEntity(experiment, exp, token, userId, false, true);
+  }
+
   deleteFolder(foldername, experiment, token, userId, byname = false) {
     return this.deleteEntity(foldername, experiment, token, byname, true);
   }

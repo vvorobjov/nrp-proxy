@@ -207,6 +207,16 @@ app.delete('/storage/:experiment/:filename', (req, res) => {
   deleted.then(r => res.send(r)).catch(_.partial(handleError, res));
 });
 
+app.delete('/storage/:experiment', (req, res) => {
+  let args = [req.params.experiment, req.params.experiment, getAuthToken(req)];
+  storageRequestHandler
+    .deleteExperiment(...args)
+    .then(r => {
+      res.send(r);
+    })
+    .catch(_.partial(handleError, res));
+});
+
 app.post('/storage/:experiment/*', (req, res) => {
   if (!req.params['0']) return handleError(res, 'File name is required');
 

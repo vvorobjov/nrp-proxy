@@ -45,7 +45,7 @@ class Storage extends BaseStorage {
 
   calculateFilePath(experiment, filename) {
     //let dirPath = path.join(utils.storagePath, experiment);
-    let filePath = path.join(utils.storagePath, filename);
+    const filePath = path.join(utils.storagePath, filename);
     if (!filePath.startsWith(utils.storagePath))
       //file name attempts at going somewhere else (ie '../../someosfile' or '/usr/someimportantfile')
       return q.reject(Authenticator.AUTHORIZATION_ERROR);
@@ -113,11 +113,21 @@ class Storage extends BaseStorage {
       .catch(() => []);
   }
 
+  deleteExperiment(foldername, experiment, token, userId) {
+    return this.deleteFolder(foldername, experiment, token, userId)
+      .then(() => {
+        return DB.instance.experiments.remove({
+          token: userId,
+          experiment: experiment
+        });
+      })
+      .then(() => {});
+  }
+
   deleteFolder(foldername, experiment, token, userId) {
     return this.userIdHasAccessToPath(userId, foldername)
       .then(() => this.calculateFilePath(experiment, foldername))
-      .then(filePath => q.denodeify(rmdir)(filePath))
-      .then(() => {});
+      .then(filePath => q.denodeify(rmdir)(filePath));
   }
 
   createOrUpdate(

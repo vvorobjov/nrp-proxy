@@ -119,6 +119,12 @@ describe('Storage request handler', () => {
     });
   });
 
+  //deleteFile
+  it(`should succesfully delete an Experiment`, () =>
+    storageRequestHandler
+      .deleteExperiment('fakeExperiment', 'fakeExperiment', fakeToken)
+      .catch(err => expect(err).to.deep.equal({ code: 403 })));
+
   //create or update file
   it(`should create a new file when we call the createOrUpdateFunction`, () => {
     //create a tmp file
