@@ -18,7 +18,8 @@ const expectedExp1 = {
   timeout: 840,
   brainProcesses: undefined,
   cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
-  visualModel: undefined
+  visualModel: undefined,
+  visualModelParams: undefined
 };
 
 const expectedExp2 = {
@@ -34,7 +35,8 @@ const expectedExp2 = {
   timeout: 840,
   brainProcesses: undefined,
   cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
-  visualModel: undefined
+  visualModel: undefined,
+  visualModelParams: undefined
 };
 
 describe('ExperimentsService', () => {
