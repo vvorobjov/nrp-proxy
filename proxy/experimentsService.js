@@ -96,7 +96,9 @@ class ExperimentsService {
                 ...['x', 'y', 'z', 'ux', 'uy', 'uz'].map(
                   p => exc.visualModel.visualPose[p]
                 ),
-                exc.visualModel.scale || 1
+                exc.visualModel.scale._exists === false
+                  ? 1
+                  : exc.visualModel.scale
               ]
       }));
   }
