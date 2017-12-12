@@ -61,7 +61,7 @@ describe('FSAuthenticator', () => {
     return fsAuthenticator
       .login('nrpuser', 'password')
       .should.eventually.equal(fakeToken);
-  });
+  }).timeout(15000);
 
   it(`should return an authorization error when we provide an incorrect password`, () => {
     return assert.isRejected(
