@@ -112,7 +112,8 @@ function updateExperimentList() {
       //build experimentList with exp config + joinable servers + available servers
       _.forOwn(experimentList, exp => {
         exp.availableServers = availableServers;
-        exp.joinableServers = joinableServers[exp.id] || [];
+        exp.joinableServers =
+          joinableServers[exp.configuration.experimentConfiguration] || [];
       });
     })
     .fail(err =>
