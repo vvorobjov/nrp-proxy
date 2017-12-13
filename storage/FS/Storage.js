@@ -27,6 +27,7 @@ const q = require('q'),
   path = require('path'),
   BaseStorage = require('../BaseStorage.js'),
   Authenticator = require('./Authenticator.js'),
+  mime = require('mime-types'),
   USER_DATA_FOLDER = 'USER_DATA';
 
 //mocked in the tests thus non const
@@ -75,11 +76,14 @@ class Storage extends BaseStorage {
     return this.userIdHasAccessToPath(userId, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.readFile)(filePath))
-      .then(filecontent => ({
-        uuid: filename,
-        contentDisposition: `attachment; filename=${basename}`,
-        body: filecontent
-      }))
+      .then(filecontent => {
+        return {
+          uuid: filename,
+          contentType: mime.lookup(filename) || 'text/plain',
+          contentDisposition: `attachment; filename=${basename}`,
+          body: filecontent
+        };
+      })
       .catch(() =>
         q.reject({ code: 204, msg: `Could not find file ${filename}` })
       );
