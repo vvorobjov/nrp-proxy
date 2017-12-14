@@ -204,16 +204,14 @@ app.delete('/storage/:experiment/:filename', (req, res) => {
       ? storageRequestHandler.deleteFolder(...args)
       : storageRequestHandler.deleteFile(...args);
 
-  deleted.then(r => res.send(r)).catch(_.partial(handleError, res));
+  deleted.then(r => res.send(r || '')).catch(_.partial(handleError, res));
 });
 
 app.delete('/storage/:experiment', (req, res) => {
   let args = [req.params.experiment, req.params.experiment, getAuthToken(req)];
   storageRequestHandler
     .deleteExperiment(...args)
-    .then(r => {
-      res.send(r);
-    })
+    .then(r => res.send(r || ''))
     .catch(_.partial(handleError, res));
 });
 
@@ -234,7 +232,7 @@ app.post('/storage/:experiment/*', (req, res) => {
         getAuthToken(req)
       )
   )
-    .then(r => res.send(r))
+    .then(r => res.send(r || ''))
     .catch(_.partial(handleError, res));
 });
 
