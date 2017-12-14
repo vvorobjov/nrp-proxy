@@ -75,6 +75,8 @@ class ExperimentsService {
         name: exc.name || id,
         thumbnail: exc.thumbnail,
         path: expPath,
+        physicsEngine:
+          exc.physicsEngine._exists === false ? 'ode' : exc.physicsEngine,
         tags: exc.tags._exists === false ? [] : exc.tags,
         description:
           exc.description || 'No description available for this experiment.',
