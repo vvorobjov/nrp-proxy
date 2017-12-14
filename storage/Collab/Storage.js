@@ -92,7 +92,14 @@ class Storage extends BaseStorage {
   }
 
   deleteFile(filename, experiment, token, userId, byname = false) {
-    return this.deleteEntity(filename, experiment, token, byname, false);
+    return this.deleteEntity(
+      filename,
+      experiment,
+      token,
+      userId,
+      byname,
+      false
+    );
   }
 
   getCustomModel(modelPath, token, userId) {
