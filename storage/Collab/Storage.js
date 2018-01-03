@@ -121,7 +121,14 @@ class Storage extends BaseStorage {
   }
 
   deleteFolder(foldername, experiment, token, userId, byname = false) {
-    return this.deleteEntity(foldername, experiment, token, byname, true);
+    return this.deleteEntity(
+      foldername,
+      experiment,
+      token,
+      userId,
+      byname,
+      true
+    );
   }
 
   ensurePath(pathparts, parent, contentType, token) {

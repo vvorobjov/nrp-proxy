@@ -616,7 +616,7 @@ describe('Collab Storage', () => {
     return storage
       .deleteFolder('robots', fakeExperiment, fakeToken, fakeUserId, false)
       .then(res => {
-        return expect(res).to.be.null;
+        return expect(res).to.equal('resultMock');
       });
   });
 
