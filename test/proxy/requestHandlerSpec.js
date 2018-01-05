@@ -73,23 +73,10 @@ describe('requestHandler', function() {
   it('should return available servers for a given experiment', function() {
     revert = requestHandler.__set__('experimentList', testConf.experimentList);
     return requestHandler
-      .getAvailableServers('experiment1')
+      .getAvailableServers()
       .should.eventually.deep.equal(
         testConf.experimentList['experiment1'].availableServers
       );
-  });
-
-  it('should fail to get availableServers due to wrong experimentId', function(
-    done
-  ) {
-    requestHandler
-      .getAvailableServers('NonExistentExperiment')
-      .catch(function(data) {
-        expect(data).to.equal(
-          "experimentId: 'NonExistentExperiment' not found\n"
-        );
-        done();
-      });
   });
 
   it('should return server details', function() {

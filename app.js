@@ -81,9 +81,9 @@ app.get('/server/:serverId', function(req, res, next) {
     .catch(next);
 });
 
-app.get('/availableServers/:experimentId?', function(req, res, next) {
+app.get('/availableServers', function(req, res, next) {
   proxyRequestHandler
-    .getAvailableServers(req.params.experimentId)
+    .getAvailableServers()
     .then(r => res.send(r))
     .catch(next);
 });

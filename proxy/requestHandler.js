@@ -80,7 +80,6 @@ function reloadConfiguration(config) {
         exp.id,
         {
           configuration: exp,
-          availableServers: [],
           joinableServers: []
         }
       ])
@@ -111,7 +110,6 @@ function updateExperimentList() {
       availableServers = serversAvailable;
       //build experimentList with exp config + joinable servers + available servers
       _.forOwn(experimentList, exp => {
-        exp.availableServers = availableServers;
         exp.joinableServers =
           joinableServers[exp.configuration.experimentConfiguration] || [];
       });
@@ -152,12 +150,8 @@ function getJoinableServers(experimentId) {
   return deferred.promise;
 }
 
-function getAvailableServers(experimentId) {
-  if (!experimentId) return q.resolve(availableServers);
-  if (experimentList[experimentId])
-    return q.resolve(experimentList[experimentId].availableServers);
-  console.error('Wrong Experiment ID');
-  return q.reject("experimentId: '" + experimentId + "' not found\n");
+function getAvailableServers() {
+  return q.resolve(availableServers);
 }
 
 function getExperiments() {
