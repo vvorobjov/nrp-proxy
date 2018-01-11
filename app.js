@@ -222,6 +222,22 @@ app.get('/storage/custommodels/:modelType', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.post('/storage/custommodels/:modelType/:modelName', (req, res) => {
+  if (!~['brains', 'robots', 'environments'].indexOf(req.params.modelType))
+    return handleError(res, `Invalid model type: ${req.params.modelType}`);
+
+  storageRequestHandler
+    .createZip(
+      getAuthToken(req),
+      req.params.modelType,
+      req.params.modelName,
+      req.body,
+      req.get('context-id')
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
 app.get('/storage/custommodel/:modelPath', (req, res) => {
   storageRequestHandler
     .getCustomModel(req.params.modelPath, getAuthToken(req))

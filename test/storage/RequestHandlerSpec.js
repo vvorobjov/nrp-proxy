@@ -10,7 +10,7 @@ const fs = require('fs'),
   q = require('q');
 chai.use(chaiAsPromised);
 
-const StorageRequestHandler = require('../../storage/requestHandler.js');
+let StorageRequestHandler = rewire('../../storage/requestHandler.js');
 let configFile = {
   storage: 'FS',
   authentication: 'FS'
@@ -244,6 +244,50 @@ describe('Storage request handler', () => {
     return storageRequestHandler.getUserGroups(fakeToken).then(resp => {
       resp[0].should.deep.equal({ name: 'hbp-sp10-user-edit-rights' });
     });
+  });
+
+  // createZip success
+  it(`should successfully create a custom model`, () => {
+    storageRequestHandler.storage.createCustomModel = function() {
+      return q.when('test');
+    };
+    return storageRequestHandler
+      .createCustomModel('robots', fakeToken, 'test.zip', null)
+      .should.eventually.equal('test');
+  });
+
+  // createZip fails
+  it(`should throw when trying to create a corrupt zip`, () => {
+    return assert.isRejected(
+      storageRequestHandler.createZip(
+        fakeToken,
+        'robots',
+        'test.zip',
+        'fakeZip',
+        null
+      ),
+      "Can't find end of central directory"
+    );
+  });
+
+  // createZip succeeds
+  it(`should create a zip`, () => {
+    var fakeCustomModels = {
+      getZipModelMetaData: function() {
+        return q.when('test');
+      },
+      validateZip: function() {
+        return q.when('test');
+      }
+    };
+    StorageRequestHandler.__set__('customModelService', fakeCustomModels);
+    var storageRequestHandler2 = new StorageRequestHandler(configFile);
+    storageRequestHandler2.createCustomModel = function() {
+      return 'success';
+    };
+    return storageRequestHandler2
+      .createZip(fakeToken, 'robots', 'test.zip', 'fakeZip', null)
+      .should.eventually.equal('success');
   });
 });
 

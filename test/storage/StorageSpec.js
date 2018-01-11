@@ -139,14 +139,14 @@ describe('FSStorage', () => {
   it(`should calculate the file path given an existing folder and file name `, () => {
     const expectedPath = path.join(__dirname, '/dbMock/folder1/fakeFile');
     return fsStorage
-      .calculateFilePath('folder1/fakeFile')
+      .calculateFilePath('', 'folder1/fakeFile')
       .should.equal(expectedPath);
   });
 
   it(`should throw an exception when trying to calculate a path
   given a file the user does not have access to`, () => {
     return assert.isRejected(
-      fsStorage.calculateFilePath('../NonExistingFile'),
+      fsStorage.calculateFilePath('', '../NonExistingFile'),
       AUTHORIZATION_ERROR
     );
   });
@@ -684,6 +684,22 @@ describe('Collab Storage', () => {
     return collabStorage
       .getCustomModel('modelPath', fakeToken, fakeUserId)
       .then(res => JSON.parse(res).should.deep.equal({ msg: 'Success!' }));
+  });
+
+  it('should create custom model correctly', () => {
+    nock('https://services.humanbrainproject.eu')
+      .post('/storage/v1/api/file/undefined/content/upload/')
+      .reply(200, { msg: 'Success!' });
+    return collabStorage
+      .createCustomModel(
+        'robots',
+        'data',
+        fakeUserId,
+        'test.zip',
+        fakeToken,
+        'contextId'
+      )
+      .then(res => res.should.deep.equal({ uuid: undefined }));
   });
 
   it('should copy an experiment correctly', () => {

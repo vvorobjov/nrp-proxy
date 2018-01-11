@@ -108,6 +108,20 @@ class Storage extends BaseStorage {
     return this.getFile(modelPath, null, token, userId).then(res => res.body);
   }
 
+  createCustomModel(modelType, modelData, userId, modelName, token, contextId) {
+    return this.listExperiments(token, userId, contextId).then(folders => {
+      let folder = _.find(folders, f => f.name == modelType);
+      if (!folder) return q.reject(`Folder ${modelType} not found`);
+      return this.createOrUpdate(
+        modelName,
+        modelData,
+        'application/zip',
+        folder.uuid,
+        token
+      );
+    });
+  }
+
   listCustomModels(customFolder, token, userId, contextId) {
     return this.listExperiments(token, userId, contextId)
       .then(folders => {

@@ -28,6 +28,8 @@ const q = require('q'),
   CustomModelService = require('./CustomModelsService'),
   ExperimentClonner = require('./ExperimentClonner.js');
 
+let customModelService = new CustomModelService();
+
 class RequestHandler {
   constructor(config) {
     try {
@@ -184,6 +186,31 @@ class RequestHandler {
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
       .then(userId => this.storage.getCustomModel(modelPath, token, userId));
+  }
+
+  createCustomModel(modelType, token, modelName, modelData, contextId) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId =>
+        this.storage.createCustomModel(
+          modelType,
+          modelData,
+          userId,
+          modelName,
+          token,
+          contextId
+        )
+      );
+  }
+
+  createZip(token, modelType, zipName, zip, contextId) {
+    return customModelService
+      .getZipModelMetaData(zipName, zip)
+      .then(res => customModelService.validateZip(res))
+      .then(() =>
+        this.createCustomModel(modelType, token, zipName, zip, contextId)
+      );
   }
 
   listCustomModels(customFolder, token, contextId) {

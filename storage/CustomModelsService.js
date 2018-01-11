@@ -44,6 +44,19 @@ class CustomModelsService {
       }));
   }
 
+  validateZip(zip) {
+    var reject = ['name', 'description']
+      .map(item => {
+        if (!zip[item])
+          return q.reject(
+            `${item} missing from the zip configuration. Please add it to the model.config of the zip`
+          );
+      })
+      .filter(item => item);
+    if (reject.length) return reject[0];
+    else return q.when();
+  }
+
   logThumbnail(zip) {
     let zipfile = zip.file('thumbnail.png');
     if (!zipfile) return;

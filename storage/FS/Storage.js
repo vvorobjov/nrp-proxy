@@ -45,8 +45,16 @@ class Storage extends BaseStorage {
       .then(res => res || q.reject(Authenticator.AUTHORIZATION_ERROR));
   }
 
-  calculateFilePath(relFilePath) {
-    const filePath = path.join(utils.storagePath, relFilePath);
+  calculateFilePath(experiment, filename, model = false) {
+    let filePath;
+    if (model) {
+      filePath = path.join(
+        utils.storagePath,
+        USER_DATA_FOLDER,
+        experiment,
+        filename
+      );
+    } else filePath = path.join(utils.storagePath, filename);
     if (!filePath.startsWith(utils.storagePath))
       //file name attempts at going somewhere else (ie '../../someosfile' or '/usr/someimportantfile')
       return q.reject(Authenticator.AUTHORIZATION_ERROR);
@@ -55,7 +63,7 @@ class Storage extends BaseStorage {
 
   listFiles(experiment, token, userId) {
     return this.userIdHasAccessToPath(userId, experiment)
-      .then(() => this.calculateFilePath(experiment))
+      .then(() => this.calculateFilePath('', experiment))
       .then(fullpath => q.all([fullpath, q.denodeify(fs.readdir)(fullpath)]))
       .then(([fullpath, files]) =>
         files.map(f => {
@@ -74,7 +82,7 @@ class Storage extends BaseStorage {
     if (byname) filename = path.join(experiment, filename);
     let basename = path.basename(filename);
     return this.userIdHasAccessToPath(userId, filename)
-      .then(() => this.calculateFilePath(filename))
+      .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.readFile)(filePath))
       .then(filecontent => {
         return {
@@ -93,7 +101,7 @@ class Storage extends BaseStorage {
     if (byname) filename = path.join(experiment, filename);
 
     return this.userIdHasAccessToPath(userId, filename)
-      .then(() => this.calculateFilePath(filename))
+      .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.unlink)(filePath))
       .catch(() =>
         q.reject({ code: 204, msg: `Could not find file ${filename}` })
@@ -103,15 +111,25 @@ class Storage extends BaseStorage {
   getCustomModel(modelPath) {
     return q
       .resolve(path.join(USER_DATA_FOLDER, modelPath))
-      .then(relFolderName => this.calculateFilePath(relFolderName))
+      .then(relFolderName => this.calculateFilePath('', relFolderName))
       .then(folderName => q.denodeify(fs.readFile)(folderName));
+  }
+
+  createCustomModel(modelType, modelData, userId, modelName) {
+    return q
+      .resolve(
+        this.calculateFilePath(path.join(userId, modelType), modelName, true)
+      )
+      .then(filePath =>
+        q.denodeify(fs.writeFile)(filePath, modelData, { encoding: 'binary' })
+      );
   }
 
   listCustomModels(customFolder, token, userId) {
     let customModelsRePath = path.join(userId, customFolder);
     return q
       .resolve(path.join(USER_DATA_FOLDER, customModelsRePath))
-      .then(relFolderName => this.calculateFilePath(relFolderName))
+      .then(relFolderName => this.calculateFilePath('', relFolderName))
       .then(folderName => q.denodeify(fs.readdir)(folderName))
       .then(files => files.map(f => path.join(customModelsRePath, f)))
       .catch(() => []);
@@ -130,7 +148,7 @@ class Storage extends BaseStorage {
 
   deleteFolder(foldername, experiment, token, userId) {
     return this.userIdHasAccessToPath(userId, foldername)
-      .then(() => this.calculateFilePath(foldername))
+      .then(() => this.calculateFilePath(experiment, foldername))
       .then(filePath => q.denodeify(rmdir)(filePath));
   }
 
@@ -144,14 +162,14 @@ class Storage extends BaseStorage {
   ) {
     filename = path.join(experiment, filename);
     return this.userIdHasAccessToPath(userId, filename)
-      .then(() => this.calculateFilePath(filename))
+      .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.writeFile)(filePath, fileContent));
   }
 
   createFolder(foldername, experiment, token, userId) {
     const fullFoldername = path.join(experiment, foldername);
     return this.userIdHasAccessToPath(userId, fullFoldername)
-      .then(() => this.calculateFilePath(fullFoldername))
+      .then(() => this.calculateFilePath(experiment, fullFoldername))
       .then(folderpath => q.denodeify(fs.mkdir)(folderpath))
       .then(() => ({
         uuid: fullFoldername,
@@ -180,7 +198,7 @@ class Storage extends BaseStorage {
 
         return DB.instance.experiments
           .insert({ token: userId, experiment: newExperiment })
-          .then(() => this.calculateFilePath(newExperiment))
+          .then(() => this.calculateFilePath('', newExperiment))
           .then(filePath => q.denodeify(fs.mkdir)(filePath))
           .then(() => ({ uuid: newExperiment }));
       });
@@ -210,8 +228,8 @@ class Storage extends BaseStorage {
     return q.all(
       contents.map(item =>
         fsExtra.copy(
-          this.calculateFilePath(item.uuid),
-          this.calculateFilePath(path.join(destFolder, item.name))
+          this.calculateFilePath('', item.uuid),
+          this.calculateFilePath('', path.join(destFolder, item.name))
         )
       )
     );

@@ -23,10 +23,10 @@
  * ---LICENSE-END**/
 'use strict';
 
-const q = require('q'),
-  uuid = require('uuid/v4'),
+const uuid = require('uuid/v4'),
   path = require('path'),
-  DB = require(path.join(__dirname, '../storage/FS/DB.js'));
+  DB = require(path.join(__dirname, '../storage/FS/DB.js')),
+  shell = require('shelljs');
 
 let argv = require('minimist')(process.argv.slice(2));
 
@@ -37,6 +37,16 @@ Example: node createFSUser.js --user nrpuser --password password`
   );
   return;
 }
+const STORAGE_PATH_ENV = 'STORAGE_PATH', //STORAGE_PATH variable
+  DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
+
+let storagePath =
+  process.env[STORAGE_PATH_ENV] ||
+  DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v]);
+
+['robots', 'environments', 'brains'].forEach(folder =>
+  shell.mkdir('-p', path.join(storagePath, 'USER_DATA', argv.user, folder))
+);
 
 let token = uuid();
 //we want to check if the user already exists to avoid inserting a duplicate
