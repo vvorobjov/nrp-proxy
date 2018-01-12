@@ -85,6 +85,7 @@ interface _ExD extends BaseType {
 	rngSeed?: number;
 	/** The roslaunch element species the path to a ROSLaunch file that is executed when the experiment is simulated. If no file is specified, no ROSLaunch file is executed at the beginning of an experiment. */
 	rosLaunch?: RosLaunch;
+	/** List of space separated tags that describe the experiment. */
 	tags?: Tags;
 	/** This element references a path to a thumbnail that is used to give the user a forecast to the experiment. */
 	thumbnail: string;

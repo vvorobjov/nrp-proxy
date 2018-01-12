@@ -26,7 +26,8 @@
 const fs = require('fs'),
   q = require('q'),
   path = require('path'),
-  readFile = q.denodeify(fs.readFile);
+  readFile = q.denodeify(fs.readFile),
+  X2JS = new require('x2js');
 
 const cxml = require('cxml');
 var parser = new cxml.Parser();
@@ -67,42 +68,56 @@ class ExperimentsService {
     let id = path.basename(fileName).split('.')[0],
       configPath = path.relative(this.experimentsPath, fileName),
       expPath = path.dirname(configPath);
-    console.log(fileName);
+
     return parser
       .parse(experimentContent, ExDConfig.document)
-      .then(({ ExD: exc }) => ({
-        id: id,
-        name: exc.name || id,
-        thumbnail: exc.thumbnail,
-        path: expPath,
-        physicsEngine:
-          exc.physicsEngine._exists === false ? 'ode' : exc.physicsEngine,
-        tags: exc.tags._exists === false ? [] : exc.tags,
-        description:
-          exc.description || 'No description available for this experiment.',
-        experimentConfiguration: configPath,
-        maturity: exc.maturity == 'production' ? 'production' : 'development',
-        timeout: exc.timeout || 600,
-        brainProcesses:
-          exc.bibiConf.processes._exists === false ? 1 : exc.bibiConf.processes,
-        cameraPose: exc.cameraPose && [
-          ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraPosition[p]),
-          ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraLookAt[p])
-        ],
-        visualModel:
-          exc.visualModel._exists === false ? undefined : exc.visualModel.src,
-        visualModelParams:
-          exc.visualModel._exists === false
-            ? undefined
-            : [
-                ...['x', 'y', 'z', 'ux', 'uy', 'uz'].map(
-                  p => exc.visualModel.visualPose[p]
-                ),
-                exc.visualModel.scale._exists === false
-                  ? 1
-                  : exc.visualModel.scale
-              ]
-      }));
+      .then(({ ExD: exc }) => {
+        return q.all([
+          exc,
+          readFile(
+            path.join(this.experimentsPath, expPath, exc.bibiConf.src),
+            'utf8'
+          ).then(data => new X2JS().xml2js(data))
+        ]);
+      })
+      .then(([exc, { bibi: bibi }]) => {
+        return {
+          id: id,
+          name: exc.name || id,
+          thumbnail: exc.thumbnail,
+          robotPath: path.dirname(bibi.bodyModel),
+          path: expPath,
+          physicsEngine:
+            exc.physicsEngine._exists === false ? 'ode' : exc.physicsEngine,
+          tags: exc.tags._exists === false ? [] : exc.tags,
+          description:
+            exc.description || 'No description available for this experiment.',
+          experimentConfiguration: configPath,
+          maturity: exc.maturity == 'production' ? 'production' : 'development',
+          timeout: exc.timeout || 600,
+          brainProcesses:
+            exc.bibiConf.processes._exists === false
+              ? 1
+              : exc.bibiConf.processes,
+          cameraPose: exc.cameraPose && [
+            ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraPosition[p]),
+            ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraLookAt[p])
+          ],
+          visualModel:
+            exc.visualModel._exists === false ? undefined : exc.visualModel.src,
+          visualModelParams:
+            exc.visualModel._exists === false
+              ? undefined
+              : [
+                  ...['x', 'y', 'z', 'ux', 'uy', 'uz'].map(
+                    p => exc.visualModel.visualPose[p]
+                  ),
+                  exc.visualModel.scale._exists === false
+                    ? 1
+                    : exc.visualModel.scale
+                ]
+        };
+      });
   }
 }
 

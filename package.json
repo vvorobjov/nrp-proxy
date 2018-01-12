@@ -26,6 +26,7 @@
     "sinon": "1.17.5",
     "tingodb": "^0.5.1",
     "uuid": "^3.1.0",
+    "x2js": "^3.1.1",
     "xml2js": "0.4.17"
   },
   "devDependencies": {
@@ -58,8 +59,10 @@
       "istanbul cover --report html node_modules/jenkins-mocha/bin/jenkins.js test/*/*",
     "pretest": "npm run lint",
     "precommit": "lint-staged",
-    "generate_xsd":
-      "rm -rf {xmlns,cache}; node_modules/http-serve/bin/http-serve $HBP/Experiments -p 8998 -s -c-1 & SERVER_PID=$!;sleep 1; node_modules/cxsd/cxsd-cli.js http://127.0.0.1:8998/ExDConfFile.xsd ; kill $SERVER_PID"
+    "generate_experiments_xsd":
+      "rm -rf {xmlns,cache}; node_modules/http-serve/bin/http-serve $HBP/Experiments -p 8998 -s -c-1 & SERVER_PID=$!;sleep 1; node_modules/cxsd/cxsd-cli.js http://127.0.0.1:8998/ExDConfFile.xsd ; kill $SERVER_PID",
+    "generate_config_xsd":
+      "rm -rf {xmlns,cache}; node_modules/http-serve/bin/http-serve $HBP/Models -p 8998 -s -c-1 & SERVER_PID=$!;sleep 1; node_modules/cxsd/cxsd-cli.js http://127.0.0.1:8998/model_configuration.xsd ; kill $SERVER_PID"
   },
   "lint-staged": {
     "*.{js,json}": ["node_modules/prettier/bin/prettier.js --write", "git add"]
