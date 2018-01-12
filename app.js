@@ -257,6 +257,20 @@ app.delete('/storage/:experiment', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.post('/storage/clone/:experiment', (req, res) => {
+  if (!req.params.experiment)
+    return handleError(res, 'Experiment name is required');
+
+  storageRequestHandler
+    .copyExperiment(
+      req.params.experiment,
+      getAuthToken(req),
+      req.get('context-id')
+    )
+    .then(r => res.send(r || ''))
+    .catch(_.partial(handleError, res));
+});
+
 app.post('/storage/:experiment/*', (req, res) => {
   if (!req.params['0']) return handleError(res, 'File name is required');
 

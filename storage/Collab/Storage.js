@@ -28,6 +28,8 @@ const q = require('q'),
   BaseStorage = require('../BaseStorage.js'),
   CollabConnector = require('./CollabConnector.js');
 
+let utils = require('../FS/utils.js');
+
 class Storage extends BaseStorage {
   constructor(config) {
     super();
@@ -200,6 +202,50 @@ class Storage extends BaseStorage {
       .then(entity =>
         CollabConnector.instance.createFolder(token, entity.uuid, newExperiment)
       );
+  }
+
+  copyExperiment(experiment, token, userId, contextId) {
+    return this.listExperiments(token, userId, contextId).then(res => {
+      var copiedExpName = utils.generateUniqueExperimentId(
+        res.filter(exp => exp.uuid == experiment)[0].name,
+        0,
+        res.map(exp => exp.name)
+      );
+      return this.createExperiment(
+        copiedExpName,
+        token,
+        userId,
+        contextId
+      ).then(copiedExp =>
+        this.listFiles(experiment, token, userId)
+          .then(files => [
+            files.map(file =>
+              this.getFile(file.name, experiment, token, userId, true)
+            ),
+            files
+          ])
+          .then(([filesCont, files]) =>
+            q
+              .all(
+                _.zip(filesCont, files).map(file =>
+                  file[0].then(contents =>
+                    this.createOrUpdate(
+                      file[1].name,
+                      contents.body,
+                      file[1].contentType,
+                      copiedExp.uuid,
+                      token
+                    )
+                  )
+                )
+              )
+              .then(() => ({
+                clonedExp: copiedExp.uuid,
+                originalExp: experiment
+              }))
+          )
+      );
+    });
   }
 }
 

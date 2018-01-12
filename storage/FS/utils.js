@@ -31,6 +31,17 @@ let storagePath =
   process.env[STORAGE_PATH_ENV] ||
   DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v]);
 
+let generateUniqueExperimentId = (basename, suffix, existingExperiments) => {
+  var newName = [basename, suffix].join('_');
+  if (existingExperiments.includes(newName)) {
+    suffix += 1;
+    return generateUniqueExperimentId(basename, suffix, existingExperiments);
+  } else {
+    return newName;
+  }
+};
+
 module.exports = {
-  storagePath
+  storagePath,
+  generateUniqueExperimentId
 };

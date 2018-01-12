@@ -184,6 +184,18 @@ describe('Storage request handler', () => {
       .should.eventually.contain(expected);
   });
 
+  //copyExperiment
+  it(`should copy an experiment based on it's id`, () => {
+    storageRequestHandler.storage.copyExperiment = function() {
+      return new Promise(function(resolve) {
+        resolve('success');
+      });
+    };
+    return storageRequestHandler
+      .copyExperiment('Exp_0', fakeToken, 'contextId')
+      .should.eventually.equal('success');
+  });
+
   //getFile
   it(`should return the contents of a file given a correct experiment and token`, () => {
     return storageRequestHandler

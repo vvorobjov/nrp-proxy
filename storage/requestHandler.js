@@ -168,6 +168,15 @@ class RequestHandler {
       );
   }
 
+  copyExperiment(experiment, token, contextId) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId =>
+        this.storage.copyExperiment(experiment, token, userId, contextId)
+      );
+  }
+
   getCustomModel(modelPath, token) {
     return this.authenticator
       .checkToken(token)

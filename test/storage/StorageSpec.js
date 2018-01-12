@@ -49,7 +49,8 @@ describe('BaseStorage', () => {
     'deleteFolder',
     'createFolder',
     'listCustomModels',
-    'deleteExperiment'
+    'deleteExperiment',
+    'getCustomModel'
   ].forEach(function(item) {
     it('should throw a non implemented method error when trying to use a base class non-overidden function ', () => {
       return expect(baseClassMock[item]).to.throw('not implemented');
@@ -62,14 +63,22 @@ describe('FSStorage', () => {
   const AUTHORIZATION_ERROR = {
     code: 403
   };
+  let realUtils = require('../../storage/FS/utils');
 
   beforeEach(() => {
-    const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
+    const mockUtils = {
+      storagePath: path.join(__dirname, 'dbMock'),
+      generateUniqueExperimentId: realUtils.generateUniqueExperimentId
+    };
+    const mockFsExtra = {
+      copy: () => q.when('test')
+    };
     RewiredDB = rewire('../../storage/FS/DB.js');
     RewiredDB.__set__('utils', mockUtils);
     RewiredFSStorage = rewire('../../storage/FS/Storage.js');
     RewiredFSStorage.__set__('DB', RewiredDB);
     RewiredFSStorage.__set__('utils', mockUtils);
+    RewiredFSStorage.__set__('fsExtra', mockFsExtra);
     var empty = (path, callback) => {
       //empty implementation just to check if fs functions are called
       callback();
@@ -84,6 +93,41 @@ describe('FSStorage', () => {
       .should.eventually.contain({ token: fakeUserId });
   });
 
+  //copy experiment
+  it(`should copy an experiment correctly`, () => {
+    fsStorage.createExperiment = function() {
+      return new Promise(function(resolve) {
+        resolve('success');
+      });
+    };
+
+    fsStorage.listFiles = function() {
+      return new Promise(function(resolve) {
+        resolve([
+          {
+            uuid: 'file_1',
+            name: 'file_1'
+          },
+          {
+            uuid: 'file_2',
+            name: 'file_2'
+          }
+        ]);
+      });
+    };
+    sinon.stub(fsStorage, 'copyFolderContents').returns(q.when());
+    return fsStorage
+      .copyExperiment('Exp_0', fakeToken, fakeUserId)
+      .should.eventually.contain({ clonedExp: 'Exp_0_0' });
+  });
+
+  //copy folderContents
+  it(`should copy folder contents`, () => {
+    return fsStorage
+      .copyFolderContents([{ uuid: 'Exp_0', name: 'Exp_0' }], 'test')
+      .should.eventually.deep.equal(['test']);
+  });
+
   it(`should throw when we check a non-existing token`, () => {
     return assert.isRejected(
       fsStorage.userIdHasAccessToPath('non-existing-token', fakeExperiment),
@@ -95,14 +139,14 @@ describe('FSStorage', () => {
   it(`should calculate the file path given an existing folder and file name `, () => {
     const expectedPath = path.join(__dirname, '/dbMock/folder1/fakeFile');
     return fsStorage
-      .calculateFilePath('folder1', 'folder1/fakeFile')
+      .calculateFilePath('folder1/fakeFile')
       .should.equal(expectedPath);
   });
 
   it(`should throw an exception when trying to calculate a path
   given a file the user does not have access to`, () => {
     return assert.isRejected(
-      fsStorage.calculateFilePath('nonExistingfFolder', '../NonExistingFile'),
+      fsStorage.calculateFilePath('../NonExistingFile'),
       AUTHORIZATION_ERROR
     );
   });
@@ -504,7 +548,7 @@ describe('Collab Storage', () => {
   });
 
   //list experiments by contextId
-  it('should list all experiments available to the user', () => {
+  it('should list all experiments available to the user by contextId', () => {
     const fileUuid = '53ab549f-030f-4d0f-ac82-eac66a181092',
       response = JSON.stringify({
         uuid: '53ab549f-030f-4d0f-ac82-eac66a181092',
@@ -577,6 +621,10 @@ describe('Collab Storage', () => {
       {
         name: 'environments',
         uuid: 'testUUID2'
+      },
+      {
+        name: 'Exp_0',
+        uuid: 'Exp_0'
       }
     ];
 
@@ -605,7 +653,7 @@ describe('Collab Storage', () => {
       });
   });
 
-  it('should delete an entity correctly', () => {
+  it('should delete an folder correctly', () => {
     sinon.stub(CollabConnector.prototype, 'deleteEntity').returns(
       new Promise(function(resolve) {
         resolve('resultMock');
@@ -620,7 +668,7 @@ describe('Collab Storage', () => {
       });
   });
 
-  it('should delete an entity correctly', () => {
+  it('should delete an experiment correctly', () => {
     var storage = new CollabStorage();
     return storage
       .deleteExperiment(fakeExperiment, fakeExperiment, fakeToken, fakeUserId)
@@ -636,5 +684,56 @@ describe('Collab Storage', () => {
     return collabStorage
       .getCustomModel('modelPath', fakeToken, fakeUserId)
       .then(res => JSON.parse(res).should.deep.equal({ msg: 'Success!' }));
+  });
+
+  it('should copy an experiment correctly', () => {
+    const contentsMock = [
+      {
+        name: 'robot1',
+        uuid: 'fakeUUID1',
+        contentType: 'test'
+      }
+    ];
+
+    sinon.stub(CollabStorage.prototype, 'createExperiment').returns(
+      new Promise(function(resolve) {
+        resolve('test');
+      })
+    );
+
+    sinon.stub(CollabStorage.prototype, 'listFiles').returns(
+      new Promise(function(resolve) {
+        resolve(contentsMock);
+      })
+    );
+
+    sinon.stub(CollabStorage.prototype, 'getFile').returns(
+      new Promise(function(resolve) {
+        resolve({ body: 'fake_contents' });
+      })
+    );
+
+    sinon.stub(CollabStorage.prototype, 'createOrUpdate').returns(
+      new Promise(function(resolve) {
+        resolve({});
+      })
+    );
+
+    var storage = new CollabStorage();
+    return storage
+      .copyExperiment('Exp_0', fakeToken, fakeUserId, 'contextId')
+      .then(res => {
+        return expect(res.originalExp).to.equal('Exp_0');
+      });
+  });
+});
+
+describe('Utils', () => {
+  const utils = require('../../storage/FS/utils.js');
+
+  it(`should generate a new unique uuid`, () => {
+    return expect(
+      utils.generateUniqueExperimentId('test', 0, ['test_0', 'test_1'])
+    ).to.equal('test_2');
   });
 });
