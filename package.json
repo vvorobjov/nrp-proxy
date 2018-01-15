@@ -48,6 +48,7 @@
     "underscore": "1.8.3"
   },
   "scripts": {
+    "build_doc": "jsdoc app.js -d docs",
     "start": "NODE_ENV=production node app.js",
     "start-dev": "NODE_ENV=development node app.js",
     "prettify":
