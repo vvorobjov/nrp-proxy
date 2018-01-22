@@ -43,7 +43,7 @@ class Authenticator extends BaseAuthenticator {
   }
 
   getLoginPage() {
-    return q.resolve(path.join(__dirname, 'login.html')); //q.denodeify(fs.readFile)(path.join(__dirname, 'login.html'));
+    return q.resolve(path.join(__dirname, 'login.html'));
   }
 
   checkToken(token) {
@@ -52,7 +52,7 @@ class Authenticator extends BaseAuthenticator {
       .then(
         res =>
           res ||
-          q.reject({ code: 302, msg: '/authentication/loginpage?origin=FS' })
+          q.reject({ code: 477, msg: '/authentication/loginpage?origin=FS' })
       );
   }
 }

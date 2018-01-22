@@ -40,7 +40,7 @@ class BaseIdentity {
   }
 
   //eslint-disable-next-line no-unused-vars
-  getUserGroups(token) {
+  getUserGroups(token, userId) {
     throw 'not implemented';
   }
 }
