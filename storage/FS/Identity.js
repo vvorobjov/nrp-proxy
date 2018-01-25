@@ -62,8 +62,10 @@ class Identity extends BaseIdentity {
       }));
   }
 
-  getUserGroups() {
-    return q.when([{ name: 'hbp-sp10-user-edit-rights' }]);
+  getUserGroups(token, userId) {
+    let groups = [{ name: 'hbp-sp10-user-edit-rights' }];
+    if (userId == 'admin') groups.push({ name: 'hbp-sp10-administrators' });
+    return q.when(groups);
   }
 }
 

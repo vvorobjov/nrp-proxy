@@ -32,6 +32,8 @@ require('./migration_scripts/sprint72.js');
 const proxyRequestHandler = require('./proxy/requestHandler.js'),
   StorageRequestHandler = require('./storage/requestHandler.js'),
   configurationManager = require('./utils/configurationManager.js'),
+  AdminService = require('./admin/AdminService'),
+  adminService = new AdminService(),
   app = express();
 
 configurationManager.initialize();
@@ -60,12 +62,50 @@ app.use(function(req, res, next) {
   next();
 });
 
+app.get('/admin/status', (req, res, next) => {
+  adminService
+    .getStatus()
+    .then(r => res.send(r))
+    .catch(next);
+});
+
+let checkAdminRights = (req, res, next) => {
+  return storageRequestHandler
+    .getUserGroups(getAuthToken(req))
+    .then(groups => {
+      if (!groups.some(g => g.name == 'hbp-sp10-administrators'))
+        throw 'Administration rights required';
+    })
+    .then(() => next())
+    .catch(err => {
+      res.status(401).send(err);
+      throw err;
+    });
+};
+app.post('/admin/status/:maintenance', checkAdminRights);
+
+app.post('/admin/status/:maintenance', (req, res, next) =>
+  adminService
+    .setStatus(req.params.maintenance == 'true')
+    .then(r => res.send(r))
+    .catch(next)
+);
+
 app.get('/experimentImage/:experiment', function(req, res, next) {
   proxyRequestHandler
     .getExperimentImageFile(req.params.experiment)
     .then(f => res.sendFile(f))
     .catch(next);
 });
+
+const verifyRunningMode = (req, res, next) => {
+  adminService.getStatus().then(({ maintenance }) => {
+    if (maintenance) res.status(478).end();
+    else next();
+  });
+};
+
+app.get('/experiments', verifyRunningMode);
 
 app.get('/experiments', function(req, res, next) {
   proxyRequestHandler
@@ -142,6 +182,8 @@ let getAuthToken = req => {
     throw 'Authorization header missing';
   return authorization.length > 7 && authorization.substr(7);
 };
+
+app.get('/storage/experiments', verifyRunningMode);
 
 app.get('/storage/experiments', (req, res) => {
   storageRequestHandler

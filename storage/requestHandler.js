@@ -211,7 +211,8 @@ class RequestHandler {
   getUserGroups(token) {
     return this.authenticator
       .checkToken(token)
-      .then(() => this.identity.getUserGroups(token));
+      .then(() => this.getUserIdentifier(token))
+      .then(userId => this.identity.getUserGroups(token, userId));
   }
 }
 

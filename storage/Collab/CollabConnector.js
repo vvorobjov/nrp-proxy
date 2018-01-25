@@ -56,7 +56,7 @@ class CollabConnector {
             err.message.indexOf('invalid_token') >= 0))
       )
         return q.reject({
-          code: 302,
+          code: 477,
           msg:
             'https://services.humanbrainproject.eu/oidc/authorize?response_type=token'
         });

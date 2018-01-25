@@ -32,13 +32,13 @@ const path = require('path'),
 
 let CONFIG_FILE;
 let configuration = q.defer();
+let configFile;
 
 let initialize = () => {
   CONFIG_FILE = path.resolve('./config.json');
 };
 
 let loadConfigFile = () => {
-  let configFile;
   try {
     configFile = JSON.parse(fs.readFileSync(CONFIG_FILE));
     configuration.notify(configFile);
@@ -69,9 +69,21 @@ let watch = () => {
   fs.watch(CONFIG_FILE, onConfigChange);
 };
 
+let getState = key => {
+  return configFile.states && configFile.states[key];
+};
+
+let setState = (key, value) => {
+  if (!configFile.states) configFile.states = {};
+  configFile.states[key] = value;
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(configFile));
+};
+
 module.exports = {
   watch: watch,
   initialize: initialize,
   loadConfigFile: loadConfigFile,
-  configuration: configuration.promise
+  configuration: configuration.promise,
+  getState: getState,
+  setState: setState
 };
