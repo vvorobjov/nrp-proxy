@@ -38,9 +38,21 @@ let initialize = () => {
   CONFIG_FILE = path.resolve('./config.json');
 };
 
+const PATH_CONFIG_PROPERTIES = ['modelsPath', 'experimentsPath'];
+
+let resolveReplaceEnvVariables = path => {
+  return path.replace(/\$([A-Za-z]*)/g, (m, v) => process.env[v]);
+};
+
 let loadConfigFile = () => {
   try {
     configFile = JSON.parse(fs.readFileSync(CONFIG_FILE));
+    for (let pathProp of PATH_CONFIG_PROPERTIES) {
+      if (!configFile[pathProp])
+        throw `${pathProp} is missing from the config file`;
+      configFile[pathProp] = resolveReplaceEnvVariables(configFile[pathProp]);
+    }
+
     configuration.notify(configFile);
     return configFile;
   } catch (err) {

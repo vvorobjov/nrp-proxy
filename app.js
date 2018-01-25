@@ -37,11 +37,11 @@ const proxyRequestHandler = require('./proxy/requestHandler.js'),
   app = express();
 
 configurationManager.initialize();
-let configFile = configurationManager.loadConfigFile();
+let config = configurationManager.loadConfigFile();
 configurationManager.watch();
 
-proxyRequestHandler.initialize(configFile);
-let storageRequestHandler = new StorageRequestHandler(configFile);
+proxyRequestHandler.initialize(config);
+let storageRequestHandler = new StorageRequestHandler(config);
 
 app.use(function(req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -151,8 +151,10 @@ let handleError = (res, err) => {
   let errType = Object.prototype.toString.call(err).slice(8, -1);
 
   if (errType === 'String' || errType === 'Error' || !err.code) {
-    if (errType === 'Error') err = err.message;
-    console.error('[ERROR] ' + err);
+    if (errType === 'Error') {
+      console.error('[ERROR] ' + err + '\n' + err.stack);
+      err = err.message;
+    } else console.error('[ERROR] ' + err);
     res.status(500).send(err);
   } else {
     if (err.code !== 204)
@@ -192,6 +194,13 @@ app.get('/storage/experiments', (req, res) => {
       req.get('context-id'),
       req.query /*options*/
     )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.post('/storage/clone', (req, res) => {
+  return storageRequestHandler
+    .cloneExperiment(getAuthToken(req), req.body.expPath, req.body.contextId)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -329,6 +338,4 @@ configurationManager.configuration.then(null, null, conf =>
 );
 
 //start server
-app.listen(configFile.port, () =>
-  console.log('Listening on port:', configFile.port)
-);
+app.listen(config.port, () => console.log('Listening on port:', config.port));

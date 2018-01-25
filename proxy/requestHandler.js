@@ -43,9 +43,6 @@ function initialize(config) {
     .catch(err => console.error(err));
 }
 
-let resolveReplaceEnvVariables = path =>
-  path.replace(/\$([A-Za-z]*)/g, (m, v) => process.env[v]);
-
 function reloadConfiguration(config) {
   configuration = config;
   if (!configuration)
@@ -66,14 +63,10 @@ function reloadConfiguration(config) {
 
   _.forEach(configuration.servers, (conf, id) => (conf.id = id));
 
-  let modelsPath = resolveReplaceEnvVariables(configuration.modelsPath);
-  modelsService = new ModelsService(modelsPath);
+  modelsService = new ModelsService(configuration.modelsPath);
   modelsService.loadModels();
 
-  let experimentsPath = resolveReplaceEnvVariables(
-    configuration.experimentsPath
-  );
-  experimentsService = new ExperimentsService(experimentsPath);
+  experimentsService = new ExperimentsService(configuration.experimentsPath);
   return experimentsService.loadExperiments().then(experiments => {
     experimentList = _(experiments)
       .map(exp => [
@@ -162,7 +155,10 @@ function getExperimentImageFile(experimentId) {
   if (!experimentList[experimentId]) throw ('No experiment id: ', experimentId);
   let experiment = experimentList[experimentId].configuration;
   return q.resolve(
-    experimentsService.getExperimentFilePath(experiment, experiment.thumbnail)
+    experimentsService.getExperimentFilePath(
+      experiment.path,
+      experiment.thumbnail
+    )
   );
 }
 

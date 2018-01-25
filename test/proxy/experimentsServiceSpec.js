@@ -8,7 +8,7 @@ const experimentsPaths = 'test/data/experiments';
 const expectedExp1 = {
   id: 'ExDTemplateHusky',
   name: 'Template Husky in empty environment',
-  thumbnail: 'ExDTemplateHusky.jpg',
+  thumbnail: 'test.png',
   path: 'experiment1',
   tags: [],
   description:
@@ -17,7 +17,7 @@ const expectedExp1 = {
   maturity: 'production',
   timeout: 840,
   physicsEngine: 'ode',
-  robotPath: 'husky_model',
+  robotPath: 'robots/husky_model',
   brainProcesses: 1,
   cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
   visualModel: undefined,

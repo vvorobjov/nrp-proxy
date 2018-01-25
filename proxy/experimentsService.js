@@ -50,24 +50,22 @@ class ExperimentsService {
     return glob(
       path.join(this.experimentsPath, ExperimentsService.EXC_FILE_PATTERN)
     ).then(excFiles =>
-      q.all(
-        excFiles.map(excFile =>
-          readFile(excFile, 'utf8').then(experimentContent =>
-            this.buildExperiment(excFile, experimentContent)
-          )
-        )
-      )
+      q.all(excFiles.map(excFile => this.buildExperiment(excFile)))
     );
   }
 
-  getExperimentFilePath(experiment, experimentFile) {
-    return path.join(this.experimentsPath, experiment.path, experimentFile);
+  getExperimentFilePath(experimentPath, experimentFile) {
+    return path.join(this.experimentsPath, experimentPath, experimentFile);
   }
 
-  buildExperiment(fileName, experimentContent) {
+  async buildExperiment(fileName) {
+    let experimentContent = await readFile(fileName, 'utf8');
+
     let id = path.basename(fileName).split('.')[0],
       configPath = path.relative(this.experimentsPath, fileName),
       expPath = path.dirname(configPath);
+
+    console.log(`Parsing experiment file ${fileName}`);
 
     return parser
       .parse(experimentContent, ExDConfig.document)

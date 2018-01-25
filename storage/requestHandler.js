@@ -26,7 +26,7 @@
 const q = require('q'),
   path = require('path'),
   CustomModelService = require('./CustomModelsService'),
-  customModelService = new CustomModelService();
+  ExperimentClonner = require('./ExperimentClonner.js');
 
 class RequestHandler {
   constructor(config) {
@@ -52,9 +52,11 @@ class RequestHandler {
         'Identity.js'
       ));
 
+      this.config = config;
       this.authenticator = new Authenticator(config);
       this.storage = new Storage(config);
       this.identity = new Identity(config);
+      this.customModelService = new CustomModelService();
       this.tokenIdentifierCache = new Map();
     } catch (e) {
       console.error('Failed to instantiate storage implementation', e);
@@ -201,7 +203,7 @@ class RequestHandler {
       .then(models =>
         q.all(
           models.map(([path, data]) =>
-            customModelService.getZipModelMetaData(path, data)
+            this.customModelService.getZipModelMetaData(path, data)
           )
         )
       );
@@ -222,6 +224,18 @@ class RequestHandler {
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
       .then(userId => this.identity.getUserGroups(token, userId));
+  }
+
+  async cloneExperiment(token, expPath, contextId) {
+    await this.authenticator.checkToken(token);
+    let userId = await this.getUserIdentifier(token);
+
+    return new ExperimentClonner(this.storage, this.config).cloneExperiment(
+      token,
+      userId,
+      expPath,
+      contextId
+    );
   }
 }
 

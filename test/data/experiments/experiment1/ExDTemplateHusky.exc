@@ -3,12 +3,12 @@
      xmlns="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig"
      xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig ../ExDConfFile.xsd">
     <name>Template Husky in empty environment</name>
-    <thumbnail>ExDTemplateHusky.jpg</thumbnail>
+    <thumbnail>test.png</thumbnail>
     <description>This experiment loads the Husky robot in an empty world, with an idle brain and basic transfer functions. You are free to edit it.</description>
     <timeout>840</timeout>
     <configuration type="3d-settings" src="ExDTemplateHusky.3ds"/>
     <maturity>production</maturity>
-    <environmentModel src="empty_world/empty_world.sdf">
+    <environmentModel src="environments/biologylab_world/model.config">
         <robotPose x="0.0" y="0.0" z="0.5" ux="0.0" uy="0.0" uz="0.0" theta="0.0"/>
     </environmentModel>
     <bibiConf src="template_husky.bibi"/>
