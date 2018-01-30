@@ -105,6 +105,9 @@ const verifyRunningMode = (req, res, next) => {
   });
 };
 
+app.get('/maintenancemode', verifyRunningMode);
+app.get('/maintenancemode', (_, res) => res.send({}));
+
 app.get('/experiments', verifyRunningMode);
 
 app.get('/experiments', function(req, res, next) {
