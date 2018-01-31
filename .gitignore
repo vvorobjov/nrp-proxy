@@ -5,3 +5,4 @@ config.json*
 .nyc_output
 artifacts
 cache
+package-lock.json
