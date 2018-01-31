@@ -203,7 +203,7 @@ app.get('/storage/experiments', (req, res) => {
 
 app.post('/storage/clone', (req, res) => {
   return storageRequestHandler
-    .cloneExperiment(getAuthToken(req), req.body.expPath, req.body.contextId)
+    .cloneExperiment(getAuthToken(req), req.body.expPath, req.get('context-id'))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });

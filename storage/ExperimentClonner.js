@@ -72,7 +72,8 @@ class ExperimentClonner {
     let { uuid: expUUID } = await this.storage.createExperiment(
       expName,
       token,
-      userId
+      userId,
+      contextId
     );
 
     this.experimentFolder = path.dirname(
