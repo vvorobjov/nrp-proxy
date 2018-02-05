@@ -11,6 +11,15 @@ const fs = require('fs'),
 chai.use(chaiAsPromised);
 
 let StorageRequestHandler = rewire('../../storage/requestHandler.js');
+class fakeCloner {
+  constructor() {}
+  cloneExperiment() {}
+}
+const fakeExpCloner = {
+  TemplateExperimentCloner: fakeCloner,
+  NewExperimentCloner: fakeCloner
+};
+StorageRequestHandler.__set__('ExperimentCloner', fakeExpCloner);
 let configFile = {
   storage: 'FS',
   authentication: 'FS'
@@ -74,6 +83,18 @@ describe('Storage request handler', () => {
     return storageRequestHandler
       .authenticate('nrpuser', 'password')
       .should.eventually.equal(fakeToken);
+  });
+
+  it('should clone experiment successfully', () => {
+    return storageRequestHandler
+      .cloneExperiment(fakeToken, 'new', 'contextId')
+      .should.eventually.equal(undefined);
+  });
+
+  it('should clone a new experiment successfully', () => {
+    return storageRequestHandler
+      .cloneNewExperiment(fakeToken, 'new', 'contextId')
+      .should.eventually.equal(undefined);
   });
 
   //listFiles

@@ -208,6 +208,17 @@ app.post('/storage/clone', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.post('/storage/clonenew', (req, res) => {
+  return storageRequestHandler
+    .cloneNewExperiment(
+      getAuthToken(req),
+      req.get('context-id'),
+      req.body.modelsPaths
+    )
+    .then(r => res.send({ newExperiment: r }))
+    .catch(_.partial(handleError, res));
+});
+
 app.get('/storage/custommodels/:modelType', (req, res) => {
   if (!~['brains', 'robots', 'environments'].indexOf(req.params.modelType))
     return handleError(res, `Invalid model type: ${req.params.modelType}`);

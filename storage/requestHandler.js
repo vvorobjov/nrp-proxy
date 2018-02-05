@@ -25,8 +25,10 @@
 
 const q = require('q'),
   path = require('path'),
-  CustomModelService = require('./CustomModelsService'),
-  ExperimentClonner = require('./ExperimentClonner.js');
+  CustomModelService = require('./CustomModelsService');
+
+//mocked in the unit tests
+let ExperimentCloner = require('./ExperimentCloner.js');
 
 let customModelService = new CustomModelService();
 
@@ -60,6 +62,7 @@ class RequestHandler {
       this.identity = new Identity(config);
       this.customModelService = new CustomModelService();
       this.tokenIdentifierCache = new Map();
+      this.newExperimentPath = path.join('template_new', 'TemplateNew.exc');
     } catch (e) {
       console.error('Failed to instantiate storage implementation', e);
     }
@@ -257,12 +260,22 @@ class RequestHandler {
     await this.authenticator.checkToken(token);
     let userId = await this.getUserIdentifier(token);
 
-    return new ExperimentClonner(this.storage, this.config).cloneExperiment(
-      token,
-      userId,
-      expPath,
-      contextId
-    );
+    return new ExperimentCloner.TemplateExperimentCloner(
+      this.storage,
+      this.config
+    ).cloneExperiment(token, userId, expPath, contextId);
+  }
+
+  async cloneNewExperiment(token, contextId, modelsPaths) {
+    await this.authenticator.checkToken(token);
+    let userId = await this.getUserIdentifier(token);
+
+    return new ExperimentCloner.NewExperimentCloner(
+      this.storage,
+      this.config,
+      modelsPaths,
+      this.newExperimentPath
+    ).cloneExperiment(token, userId, this.newExperimentPath, contextId);
   }
 }
 
