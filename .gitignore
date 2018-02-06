@@ -6,3 +6,4 @@ config.json*
 artifacts
 cache
 package-lock.json
+usersLogged.log

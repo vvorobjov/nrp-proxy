@@ -32,6 +32,7 @@ require('./migration_scripts/sprint72.js');
 const proxyRequestHandler = require('./proxy/requestHandler.js'),
   StorageRequestHandler = require('./storage/requestHandler.js'),
   configurationManager = require('./utils/configurationManager.js'),
+  loggerManager = require('./utils/loggerManager.js'),
   AdminService = require('./admin/AdminService'),
   app = express();
 
@@ -186,6 +187,7 @@ let handleError = (res, err) => {
 app.post('/authentication/authenticate', (req, res) => {
   storageRequestHandler
     .authenticate(req.body.user, req.body.password)
+    .then(auth => loggerManager.log(req.body.user) && auth)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
