@@ -41,7 +41,8 @@ var SERVER_URLS = {
 var HEALTH_STATUS_PRIORITY = {
   OK: 1,
   WARNING: 2,
-  CRITICAL: 3
+  CRITICAL: 3,
+  DOWN: 9
 };
 
 var SIMULATION_STATES = {
@@ -115,67 +116,61 @@ var executeRequestForAllServers = function(configuration, urlPostFix) {
   return q.all(serversResponses);
 };
 
-var getExperimentsAndSimulations = function(configuration) {
-  return q
-    .all([
-      executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
-      executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
-    ])
-    .then(responses =>
-      //filter out failed responses
-      responses.map(response =>
-        response.filter(
-          result => result[1] && !(result[1].data instanceof Error)
-        )
-      )
+async function getExperimentsAndSimulations(configuration) {
+  let [health, simulations] = await q.all([
+    executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
+    executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
+  ]);
+
+  //map to dictionary<server, healthStatus>
+  health = _.fromPairs(health);
+
+  //map to dictionary<server, simulationStatus>
+  simulations = _.fromPairs(
+    simulations.filter(
+      simulation => simulation[1] && !(simulation[1].data instanceof Error)
     )
-    .then(responses =>
-      //map to dictionary<server, response>
-      responses.map(response => _.fromPairs(response))
+  );
+
+  //set runningSimulation per simulation server
+  _.forOwn(simulations, serverSimulations => {
+    serverSimulations.runningSimulation = _.find(serverSimulations, sim =>
+      RUNNING_SIMULATION_STATES.includes(sim.state)
+    );
+  });
+
+  //get servers that are not running a simulation, sorted by health status
+  let availableServers = _(configuration.servers)
+    .filter(
+      (config, serverId) =>
+        simulations[serverId] && !simulations[serverId].runningSimulation
     )
-    .then(([health, simulations]) => {
-      //set runningSimulation per simulation server
-      _.forOwn(
-        simulations,
-        serverSimulations =>
-          (serverSimulations.runningSimulation = _.find(
-            serverSimulations,
-            sim => RUNNING_SIMULATION_STATES.includes(sim.state)
-          ))
-      );
+    .sortBy(
+      ({ id }) =>
+        HEALTH_STATUS_PRIORITY[health[id] && health[id].state] ||
+        HEALTH_STATUS_PRIORITY.DOWN
+    )
+    .value();
 
-      //get servers that are not running a simulation, sorted by health status
-      let availableServers = _(configuration.servers)
-        .filter(
-          (config, serverId) =>
-            simulations[serverId] && !simulations[serverId].runningSimulation
-        )
-        .sortBy(
-          ({ id }) =>
-            HEALTH_STATUS_PRIORITY[health[id] && health[id].state] || 9
-        )
-        .value();
+  //build dictionary<expId, server> of joinnable servers
+  let joinableServers = {};
+  _.forOwn(simulations, ({ runningSimulation }, serverId) => {
+    if (
+      runningSimulation &&
+      runningSimulation.state !== SIMULATION_STATES.HALTED
+    ) {
+      if (!joinableServers[runningSimulation.experimentConfiguration])
+        joinableServers[runningSimulation.experimentConfiguration] = [];
 
-      //build dictionary<expId, server> of joinnable servers
-      let joinableServers = {};
-      _.forOwn(simulations, ({ runningSimulation }, serverId) => {
-        if (
-          runningSimulation &&
-          runningSimulation.state !== SIMULATION_STATES.HALTED
-        ) {
-          if (!joinableServers[runningSimulation.experimentConfiguration])
-            joinableServers[runningSimulation.experimentConfiguration] = [];
-
-          joinableServers[runningSimulation.experimentConfiguration].push({
-            server: serverId,
-            runningSimulation: runningSimulation
-          });
-        }
+      joinableServers[runningSimulation.experimentConfiguration].push({
+        server: serverId,
+        runningSimulation: runningSimulation
       });
+    }
+  });
 
-      return [joinableServers, simulations, availableServers];
-    });
-};
+  return [joinableServers, simulations, availableServers, health];
+}
 
 module.exports = {
   setToken: setToken,

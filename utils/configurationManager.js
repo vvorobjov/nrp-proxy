@@ -38,7 +38,11 @@ let initialize = () => {
   CONFIG_FILE = path.resolve('./config.json');
 };
 
-const PATH_CONFIG_PROPERTIES = ['modelsPath', 'experimentsPath'];
+const PATH_CONFIG_PROPERTIES = [
+  'modelsPath',
+  'experimentsPath',
+  'restart-backend-cmd'
+];
 
 let resolveReplaceEnvVariables = path => {
   return path.replace(/\$([A-Za-z]*)/g, (m, v) => process.env[v]);

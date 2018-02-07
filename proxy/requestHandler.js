@@ -32,8 +32,9 @@ var ModelsService = require('./modelsService.js'),
   serversProxy = require('./serversProxy.js');
 
 var experimentList = {};
-var simulationList = [];
+var simulationList = {};
 var availableServers = [];
+let healthStatus = {};
 
 var configuration, modelsService, experimentsService;
 
@@ -98,9 +99,10 @@ function updateExperimentList() {
     .getToken()
     .then(serversProxy.setToken)
     .then(() => serversProxy.getExperimentsAndSimulations(configuration))
-    .then(([joinableServers, simulations, serversAvailable]) => {
+    .then(([joinableServers, simulations, serversAvailable, _healthStatus]) => {
       simulationList = simulations;
       availableServers = serversAvailable;
+      healthStatus = _healthStatus;
       //build experimentList with exp config + joinable servers + available servers
       _.forOwn(experimentList, exp => {
         exp.joinableServers =
@@ -113,6 +115,19 @@ function updateExperimentList() {
     .finally(() =>
       setTimeout(updateExperimentList, configuration.refreshInterval)
     );
+}
+
+function getServersStatus() {
+  const serversStatus = [];
+  for (let key in healthStatus) {
+    serversStatus.push({
+      server: key,
+      health: healthStatus[key],
+      runningSimulation:
+        simulationList[key] && simulationList[key].runningSimulation
+    });
+  }
+  return q.resolve(serversStatus);
 }
 
 function getServer(serverId) {
@@ -173,6 +188,7 @@ module.exports = {
   getExperiments,
   getExperimentImageFile,
   getAvailableServers,
+  getServersStatus,
   getJoinableServers,
   filterJoinableExperimentByContext,
   getModels

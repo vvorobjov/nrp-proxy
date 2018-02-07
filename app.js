@@ -33,7 +33,6 @@ const proxyRequestHandler = require('./proxy/requestHandler.js'),
   StorageRequestHandler = require('./storage/requestHandler.js'),
   configurationManager = require('./utils/configurationManager.js'),
   AdminService = require('./admin/AdminService'),
-  adminService = new AdminService(),
   app = express();
 
 configurationManager.initialize();
@@ -41,7 +40,9 @@ let config = configurationManager.loadConfigFile();
 configurationManager.watch();
 
 proxyRequestHandler.initialize(config);
-let storageRequestHandler = new StorageRequestHandler(config);
+
+const storageRequestHandler = new StorageRequestHandler(config),
+  adminService = new AdminService(config, proxyRequestHandler);
 
 app.use(function(req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -62,13 +63,6 @@ app.use(function(req, res, next) {
   next();
 });
 
-app.get('/admin/status', (req, res, next) => {
-  adminService
-    .getStatus()
-    .then(r => res.send(r))
-    .catch(next);
-});
-
 let checkAdminRights = (req, res, next) => {
   return storageRequestHandler
     .getUserGroups(getAuthToken(req))
@@ -82,11 +76,33 @@ let checkAdminRights = (req, res, next) => {
       throw err;
     });
 };
-app.post('/admin/status/:maintenance', checkAdminRights);
+
+app.post(/^\/admin\//, checkAdminRights);
+
+app.get('/admin/status', (req, res, next) => {
+  adminService
+    .getStatus()
+    .then(r => res.send(r))
+    .catch(next);
+});
 
 app.post('/admin/status/:maintenance', (req, res, next) =>
   adminService
     .setStatus(req.params.maintenance == 'true')
+    .then(r => res.send(r))
+    .catch(next)
+);
+
+app.get('/admin/servers', (req, res, next) =>
+  adminService
+    .getServersStatus()
+    .then(f => res.send(f))
+    .catch(next)
+);
+
+app.post('/admin/restart/:server', (req, res, next) =>
+  adminService
+    .restartServer(req.params.server)
     .then(r => res.send(r))
     .catch(next)
 );

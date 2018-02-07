@@ -26,5 +26,6 @@
     }
   },
   "storage": "FS",
-  "authentication": "FS"
+  "authentication": "FS",
+  "restart-backend-cmd": "inexisting-script"
 }

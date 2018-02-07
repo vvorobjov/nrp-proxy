@@ -25,5 +25,6 @@
       "serverJobLocation": "local"
     }
   },
-  "storage": "FS"
+  "storage": "FS",
+  "restart-backend-cmd": "inexisting-script"
 }

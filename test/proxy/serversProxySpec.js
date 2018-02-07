@@ -6,8 +6,7 @@ chai.use(chaiAsPromised);
 var expect = chai.expect;
 var nock = require('nock');
 var rewire = require('rewire');
-var _ = require('underscore');
-
+const _ = require('lodash');
 var serversProxy = rewire('../../proxy/serversProxy.js');
 var testConf = require('../utils/testConf.js');
 
@@ -41,12 +40,23 @@ describe('serversProxy', function() {
   it('should NOT fail to return experiments due a non-JSON response', function() {
     testConf.mockNonJsonResponses();
     var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
-    return exp.should.eventually.deep.equal([{}, {}, []]);
+
+    return exp.should.eventually.deep.equal([
+      {},
+      {},
+      [],
+      _.fromPairs(testConf.SERVERS.map(s => [s, null]))
+    ]);
   });
 
   it('should NOT fail to return experiments due to a failed response', function() {
     testConf.mockFailedResponses();
     var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
-    return exp.should.eventually.deep.equal([{}, {}, []]);
+    return exp.should.eventually.deep.equal([
+      {},
+      {},
+      [],
+      _.fromPairs(testConf.SERVERS.map(s => [s, null]))
+    ]);
   });
 });
