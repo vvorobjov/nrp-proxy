@@ -58,7 +58,7 @@ class CollabConnector {
         return q.reject({
           code: 477,
           msg:
-            'https://services.humanbrainproject.eu/oidc/authorize?response_type=token'
+            'https://services.humanbrainproject.eu/oidc/authorize?prompt=login&response_type=token'
         });
     } else if (errType === 'String') {
       err = `[Collab error] ${err}`;
