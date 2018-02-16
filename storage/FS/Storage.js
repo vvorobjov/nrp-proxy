@@ -185,9 +185,25 @@ class Storage extends BaseStorage {
         )
       : DB.instance.experiments
           .find({ token: userId })
+          .then(res => this.removeNonExistingExperiment(res, userId))
           .then(res =>
             res.map(f => ({ uuid: f.experiment, name: f.experiment }))
           );
+  }
+
+  removeNonExistingExperiment(experiments, userId) {
+    return experiments
+      .map(f => {
+        if (!fs.existsSync(path.join(utils.storagePath, f.experiment))) {
+          DB.instance.experiments.remove({
+            token: userId,
+            experiment: f.experiment
+          });
+          f = undefined;
+        }
+        return f;
+      })
+      .filter(item => item != undefined);
   }
 
   createExperiment(newExperiment, token, userId) {

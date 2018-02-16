@@ -241,6 +241,13 @@ describe('FSStorage', () => {
     });
   });
 
+  it('should remove a folder from the database if the folder does not exist in the FS', () => {
+    var mockExpList = [{ experiment: 'nonExisting' }];
+    var fsSpy = sinon.spy(fs, 'existsSync');
+    fsStorage.removeNonExistingExperiment(mockExpList, fakeUserId);
+    return expect(fsSpy.called).to.equal(true);
+  });
+
   //createOrUpdate
   it(`should create a new file when we call the createOrUpdateFunction`, () => {
     //create a tmp file
