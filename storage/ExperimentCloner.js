@@ -26,7 +26,8 @@
 const path = require('path'),
   q = require('q'),
   X2JS = new require('x2js'),
-  _ = require('lodash');
+  _ = require('lodash'),
+  pd = require('pretty-data').pd;
 
 //constants below are overriden in unit tests
 let fs = require('fs-extra'),
@@ -179,7 +180,7 @@ class ExperimentCloner {
     let bibiConf = experimentConf.ExD.bibiConf._src;
     experiment.bibiConf._src = 'bibi_configuration.bibi';
 
-    fs.writeFileSync(expFile, new X2JS().js2xml(experimentConf));
+    fs.writeFileSync(expFile, pd.xml(new X2JS().js2xml(experimentConf)));
     this.downloadedFiles.push(q.resolve(expFile));
 
     return bibiConf;
@@ -216,7 +217,7 @@ class ExperimentCloner {
 
     let bibiFile = path.join(this.tmpFolder.name, 'bibi_configuration.bibi');
 
-    fs.writeFileSync(bibiFile, new X2JS().js2xml(bibi));
+    fs.writeFileSync(bibiFile, pd.xml(new X2JS().js2xml(bibi)));
     this.downloadedFiles.push(q.resolve(bibiFile));
   }
 
@@ -336,8 +337,8 @@ class NewExperimentCloner extends ExperimentCloner {
       .replace('_', ' ');
     // Change the name to be more meaningful
     experimentConf.ExD.name = `New ${robotModelConfig.robotModelConfig.model
-      .name} 
-      in ${envModelConfig.model.name} 
+      .name}
+      in ${envModelConfig.model.name}
       with ${brainName} experiment`;
 
     const expFilePath = path.join(
