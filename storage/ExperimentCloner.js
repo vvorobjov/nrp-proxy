@@ -27,7 +27,8 @@ const path = require('path'),
   q = require('q'),
   X2JS = new require('x2js'),
   _ = require('lodash'),
-  pd = require('pretty-data').pd;
+  pd = require('pretty-data').pd,
+  CustomModelsService = require('../storage/CustomModelsService.js');
 
 //constants below are overriden in unit tests
 let fs = require('fs-extra'),
@@ -89,9 +90,14 @@ class ExperimentCloner {
       path.join(this.config.experimentsPath, expPath)
     );
 
-    let bibiConf = await this.flattenExperiment(expPath);
+    let bibiConf = await this.flattenExperiment(
+      expPath,
+      expUUID,
+      token,
+      userId
+    );
 
-    await this.flattenBibiConf(bibiConf);
+    await this.flattenBibiConf(bibiConf, expUUID, token, userId);
 
     let files = await this.readDownloadedFiles();
 
@@ -137,11 +143,16 @@ class ExperimentCloner {
     return files;
   }
 
-  async flattenExperiment(expPath) {
+  async flattenExperiment(expPath, expUUID, token, userId) {
     //copies the experiment files into a a temporary flatten structure
     console.log('Flattening experiment');
 
-    let fullExpPath = await this.getExperimentFileFullPath(expPath);
+    let fullExpPath = await this.getExperimentFileFullPath(
+      expPath,
+      expUUID,
+      token,
+      userId
+    );
 
     let experimentConf = await readFile(fullExpPath, 'utf8').then(expContent =>
       new X2JS().xml2js(expContent)
@@ -162,11 +173,21 @@ class ExperimentCloner {
     this.downloadFile(experiment.thumbnail);
     experiment.thumbnail = path.basename(experiment.thumbnail);
 
-    this.downloadFile(experiment.environmentModel._src, this.config.modelsPath);
-    experiment.environmentModel._src = path.basename(
-      experiment.environmentModel._src
-    );
+    // if the model is zipped we don't need to do all this
+    if (
+      this.expModelsPaths === undefined ||
+      this.expModelsPaths.environmentPath === undefined ||
+      this.expModelsPaths.environmentPath.custom === undefined
+    ) {
+      this.downloadFile(
+        experiment.environmentModel._src,
+        this.config.modelsPath
+      );
 
+      experiment.environmentModel._src = path.basename(
+        experiment.environmentModel._src
+      );
+    }
     if (ensureArrayProp(experiment, 'configuration'))
       for (let conf of experiment.configuration) this.downloadFile(conf._src);
 
@@ -186,9 +207,14 @@ class ExperimentCloner {
     return bibiConf;
   }
 
-  async flattenBibiConf(bibiConfFile) {
+  async flattenBibiConf(bibiConfFile, expUUID, token, userId) {
     //copies the bibi files into a a temporary flatten structure
-    let bibiFullPath = await this.getBibiFullPath(bibiConfFile);
+    let bibiFullPath = await this.getBibiFullPath(
+      bibiConfFile,
+      expUUID,
+      token,
+      userId
+    );
     let bibi = await readFile(bibiFullPath, 'utf8').then(bibiContent =>
       new X2JS().xml2js(bibiContent)
     );
@@ -243,7 +269,7 @@ class TemplateExperimentCloner extends ExperimentCloner {
 class NewExperimentCloner extends ExperimentCloner {
   constructor(storage, config, modelsPaths, newExperimentPath) {
     super(storage, config);
-    this.expModelsPaths = modelsPaths;
+    this.expModelsPaths = modelsPaths; //_.mapValues(modelsPaths,model=> model.path = decodeURIComponent(model.path));
     this.brainModelPath = 'brain_model';
     this.templateExc = newExperimentPath;
     this.newExpConfigurationPath = path.join(
@@ -260,7 +286,7 @@ class NewExperimentCloner extends ExperimentCloner {
 
   async getRobotConfigPath() {
     const robotRelPath = _.takeRight(
-      this.expModelsPaths.robotPath.split(path.sep),
+      this.expModelsPaths.robotPath.path.split(path.sep),
       2
     );
 
@@ -281,6 +307,27 @@ class NewExperimentCloner extends ExperimentCloner {
     };
   }
 
+  async handleZippedModel(token, expUUID, userId) {
+    const customModelsService = new CustomModelsService();
+    const zipedModelContents = await this.storage.getCustomModel(
+      this.expModelsPaths.environmentPath.path,
+      token,
+      userId
+    );
+    const sdfContents = await customModelsService.extractModelSDFFromZip(
+      zipedModelContents
+    );
+    await this.storage.createOrUpdate(
+      sdfContents.name,
+      sdfContents.data,
+      'application/text',
+      expUUID,
+      token,
+      userId
+    );
+    return sdfContents.name;
+  }
+
   async getBibiFullPath() {
     let bibi = await readFile(this.newExpBibiPath, 'utf8').then(bibiContent =>
       new X2JS().xml2js(bibiContent)
@@ -292,7 +339,7 @@ class NewExperimentCloner extends ExperimentCloner {
       robotModelConfig.robotModelConfig.model.sdf.__text
     );
 
-    const brainFilePath = path.basename(this.expModelsPaths.brainPath);
+    const brainFilePath = path.basename(this.expModelsPaths.brainPath.path);
     bibi.bibi.brainModel.file = path.join(this.brainModelPath, brainFilePath);
 
     const bibiFullPath = path.join(
@@ -303,38 +350,55 @@ class NewExperimentCloner extends ExperimentCloner {
     return bibiFullPath;
   }
 
-  async getExperimentFileFullPath() {
+  async getExperimentFileFullPath(expPath, expUUID, token, userId) {
+    let envRelPath = '';
+    let envConfigPath = '';
+    let envModelConfig = {};
     let experimentConf = await readFile(
       this.newExpConfigurationPath,
       'utf8'
     ).then(expContent => new X2JS().xml2js(expContent));
 
-    const envRelPath = _.takeRight(
-      this.expModelsPaths.environmentPath.split(path.sep),
-      2
-    );
+    //handle zipped models
+    if (this.expModelsPaths.environmentPath.custom) {
+      envRelPath = await this.handleZippedModel(token, expUUID, userId);
+      experimentConf.ExD.environmentModel._src = envRelPath;
+      experimentConf.ExD.environmentModel._customModelPath = path.basename(
+        this.expModelsPaths.environmentPath.path
+      );
+      envModelConfig.model = {};
+      envModelConfig.model.name = path
+        .basename(envRelPath, '.sdf')
+        .split('_')
+        .join(' ');
+    } else {
+      envRelPath = _.takeRight(
+        this.expModelsPaths.environmentPath.path.split(path.sep),
+        2
+      );
 
-    const envConfigPath = path.join(
-      this.config.modelsPath,
-      envRelPath[0],
-      envRelPath[1]
-    );
+      envConfigPath = path.join(
+        this.config.modelsPath,
+        envRelPath[0],
+        envRelPath[1]
+      );
 
-    let envModelConfig = await readFile(
-      envConfigPath,
-      'utf8'
-    ).then(envContent => new X2JS().xml2js(envContent));
+      envModelConfig = await readFile(envConfigPath, 'utf8').then(envContent =>
+        new X2JS().xml2js(envContent)
+      );
 
-    experimentConf.ExD.environmentModel._src = path.join(
-      envRelPath[0],
-      envModelConfig.model.sdf.__text
-    );
+      experimentConf.ExD.environmentModel._src = path.join(
+        envRelPath[0],
+        envModelConfig.model.sdf.__text
+      );
+    }
 
     const robotModelConfig = await this.getRobotConfigPath();
-    const brainName = this.expModelsPaths.brainPath
+    const brainName = this.expModelsPaths.brainPath.path
       .split(path.sep)[1]
       .split('.')[0]
-      .replace('_', ' ');
+      .split('_')
+      .join(' ');
     // Change the name to be more meaningful
     experimentConf.ExD.name = `New ${robotModelConfig.robotModelConfig.model
       .name}

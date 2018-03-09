@@ -244,7 +244,7 @@ describe('Storage request handler', () => {
         description: 'Clearpath Robotics Husky A200 - Extended HBP Model',
         name: 'HBP Clearpath Robotics Husky A200',
         path: 'nrpuser%2Frobots%2Fhusky_model.zip',
-        thumbnail: undefined
+        thumbnail: 'data:image/png;base64,dGVzdA=='
       }
     ];
 

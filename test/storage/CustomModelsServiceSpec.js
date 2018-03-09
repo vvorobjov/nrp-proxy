@@ -10,7 +10,7 @@ describe('CustomModelsService', () => {
   it('should reject if a zip is not setup correctly', () => {
     return assert.isRejected(
       customModelsService.validateZip('empty'),
-      'name missing from the zip configuration'
+      'name missing from the model zip file. Please add it to the model.config of the model zip file in the root directory'
     );
   });
 

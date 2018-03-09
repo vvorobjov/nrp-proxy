@@ -32,7 +32,7 @@ class CustomModelsService {
     let zipfile = zip.file('model.config');
     if (!zipfile)
       return q.reject(
-        `zip is expected to have a 'model.config' at the root level`
+        `The model zip file is expected to have a 'model.config' file at the root level which contains the meta-data of the model.`
       );
 
     return zipfile
@@ -40,7 +40,8 @@ class CustomModelsService {
       .then(q.denodeify(xml2js))
       .then(({ model: xml }) => ({
         name: xml.name && xml.name[0].trim(),
-        description: xml.description && xml.description[0].trim()
+        description: xml.description && xml.description[0].trim(),
+        sdf: xml.sdf[0]._
       }));
   }
 
@@ -49,7 +50,7 @@ class CustomModelsService {
       .map(item => {
         if (!zip[item])
           return q.reject(
-            `${item} missing from the zip configuration. Please add it to the model.config of the zip`
+            `${item} missing from the model zip file. Please add it to the model.config of the model zip file in the root directory`
           );
       })
       .filter(item => item);
@@ -80,6 +81,21 @@ class CustomModelsService {
           q.reject(`Failed to load model '${filePath}'.\nErr: ${err}`)
         )
     );
+  }
+
+  extractModelSDFFromZip(fileContent) {
+    return JSZip.loadAsync(fileContent).then(async zip => {
+      let modelConfig = await this.logConfig(zip);
+      let modelData = zip.file(modelConfig.sdf);
+      if (!modelData)
+        return q.reject(
+          `The model zip file should have a file called ${modelData} at its root level`
+        );
+      return {
+        data: await modelData.async('string'),
+        name: modelData.name
+      };
+    });
   }
 }
 

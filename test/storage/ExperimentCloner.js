@@ -3,8 +3,19 @@
 const chai = require('chai'),
   sinon = require('sinon'),
   rewire = require('rewire'),
-  expect = chai.expect;
+  expect = chai.expect,
+  path = require('path'),
+  fs = require('fs');
 
+var zippedModelPath = path.join(
+  __dirname,
+  'dbMock',
+  'USER_DATA',
+  'nrpuser',
+  'robots',
+  'husky_model.zip'
+);
+var zip = fs.readFileSync(zippedModelPath);
 class StorageMock {
   async listExperiments() {
     return [{ name: 'experiment1' }];
@@ -16,6 +27,10 @@ class StorageMock {
 
   async createOrUpdate() {
     return {};
+  }
+
+  async getCustomModel() {
+    return zip;
   }
 }
 
@@ -96,9 +111,12 @@ describe('Experiment cloner', () => {
     // sinon.stub(newCloner, 'getBibiFullPath').returns('test/data/experiments/template_new/TemplateNew.bibi');
     var revert = ExperimentCloner.__set__('tmp', tmpMock);
     const mockModelsPaths = {
-        brainPath: 'brains/extended_braitenberg.py',
-        environmentPath: 'environments/biologylab_world/model.config',
-        robotPath: 'robots/icub_model/model.config'
+        brainPath: { path: 'brains/extended_braitenberg.py', custom: false },
+        environmentPath: {
+          path: 'environments/biologylab_world/model.config',
+          custom: false
+        },
+        robotPath: { path: 'robots/icub_model/model.config', custom: false }
       },
       newCloner = new ExperimentCloner.NewExperimentCloner(
         storageMock,
@@ -118,8 +136,51 @@ describe('Experiment cloner', () => {
     expect(downloadFile.callCount).to.equal(7);
 
     expect(fsMock.writeFileSync.callCount).to.equal(6);
-    expect(fsMock.readFileSync.callCount).to.equal(17);
-    expect(fsMock.copy.callCount).to.equal(13);
+    expect(fsMock.readFileSync.callCount).to.equal(16);
+    expect(fsMock.copy.callCount).to.equal(12);
+
+    expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
+    expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
+      'experiment1_0'
+    );
+    expect(res).to.equal((await storageMock.createExperiment()).uuid);
+    expect(res).to.equal('new_exp_uuid');
+    revert();
+  });
+
+  it(`should correctly clone a new experiment with zipped model`, async () => {
+    // sinon.stub(newCloner, 'getExperimentFileFullPath').returns('test/data/experiments/template_new/TemplateNew.exc');
+    // sinon.stub(newCloner, 'getBibiFullPath').returns('test/data/experiments/template_new/TemplateNew.bibi');
+    var revert = ExperimentCloner.__set__('tmp', tmpMock);
+    const mockModelsPaths = {
+        brainPath: { path: 'brains/extended_braitenberg.py', custom: false },
+        environmentPath: {
+          path: 'environments/biologylab_world/model.zip',
+          custom: true
+        },
+        robotPath: { path: 'robots/icub_model/model.config', custom: false }
+      },
+      newCloner = new ExperimentCloner.NewExperimentCloner(
+        storageMock,
+        config,
+        mockModelsPaths,
+        'template_new/TemplateNew.exc'
+      );
+
+    const res = await newCloner.cloneExperiment(
+      'faketoken',
+      'fakeusrid',
+      'template_new/TemplateNew.exc',
+      'fakeContextId'
+    );
+
+    expect(createUniqueExperimentId.callCount).to.equal(1);
+    expect(createExperiment.callCount).to.equal(5);
+    expect(downloadFile.callCount).to.equal(7);
+
+    expect(fsMock.writeFileSync.callCount).to.equal(10);
+    expect(fsMock.readFileSync.callCount).to.equal(23);
+    expect(fsMock.copy.callCount).to.equal(17);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
