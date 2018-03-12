@@ -200,6 +200,8 @@ app.get('/authentication/loginpage', (req, res) => {
 });
 
 let getAuthToken = req => {
+  if (config.auth.demoToken) return config.auth.demoToken;
+
   let authorization = req.get('authorization');
   if (!authorization || authorization.length < 7)
     throw 'Authorization header missing';
