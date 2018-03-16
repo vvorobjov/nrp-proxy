@@ -34,6 +34,7 @@ const proxyRequestHandler = require('./proxy/requestHandler.js'),
   configurationManager = require('./utils/configurationManager.js'),
   loggerManager = require('./utils/loggerManager.js'),
   AdminService = require('./admin/AdminService'),
+  ActivityLogger = require('./activity_logs/ActivityLogger'),
   app = express();
 
 configurationManager.initialize();
@@ -43,7 +44,8 @@ configurationManager.watch();
 proxyRequestHandler.initialize(config);
 
 const storageRequestHandler = new StorageRequestHandler(config),
-  adminService = new AdminService(config, proxyRequestHandler);
+  adminService = new AdminService(config, proxyRequestHandler),
+  activityLogger = new ActivityLogger(config['activity-logs']);
 
 app.use(function(req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -381,6 +383,24 @@ app.get('/identity/me/groups', (req, res) => {
     .getUserGroups(getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
+});
+
+app.post('/activity_log/:activity', async (req, res) => {
+  let userInfo = await storageRequestHandler.getUserInfo(
+    'me',
+    getAuthToken(req)
+  );
+
+  try {
+    let r = await activityLogger.log(
+      req.params.activity,
+      userInfo.displayName,
+      req.body
+    );
+    res.send(r);
+  } catch (err) {
+    res.status(401).send(err);
+  }
 });
 
 configurationManager.configuration.then(null, null, conf =>
