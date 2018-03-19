@@ -105,7 +105,9 @@ class Storage extends BaseStorage {
   }
 
   getCustomModel(modelPath, token, userId) {
-    return this.getFile(modelPath, null, token, userId).then(res => res.body);
+    return this.getFile(modelPath.uuid, null, token, userId).then(
+      res => res.body
+    );
   }
 
   createCustomModel(modelType, modelData, userId, modelName, token, contextId) {
@@ -129,7 +131,7 @@ class Storage extends BaseStorage {
         if (!folder) return [];
         return CollabConnector.instance.folderContent(token, folder.uuid);
       })
-      .then(files => files.map(f => f.uuid));
+      .then(files => files.map(f => ({ uuid: f.uuid, fileName: f.name })));
   }
 
   deleteExperiment(experiment, exp, token, userId) {

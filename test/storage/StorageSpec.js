@@ -656,7 +656,7 @@ describe('Collab Storage', () => {
     return storage
       .listCustomModels('robots', fakeToken, fakeUserId, 'contextId')
       .then(res => {
-        res[0].should.equal('fakeUUID1');
+        res[0].should.deep.equal({ uuid: 'fakeUUID1', fileName: 'robot1' });
       });
   });
 
@@ -689,7 +689,7 @@ describe('Collab Storage', () => {
       .get('/storage/v1/api/file/modelPath/content/')
       .reply(200, { msg: 'Success!' });
     return collabStorage
-      .getCustomModel('modelPath', fakeToken, fakeUserId)
+      .getCustomModel({ uuid: 'modelPath' }, fakeToken, fakeUserId)
       .then(res => JSON.parse(res).should.deep.equal({ msg: 'Success!' }));
   });
 

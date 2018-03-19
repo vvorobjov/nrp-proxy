@@ -7,7 +7,7 @@ const chai = require('chai'),
   path = require('path'),
   fs = require('fs');
 
-var zippedModelPath = path.join(
+var zippedRobotPath = path.join(
   __dirname,
   'dbMock',
   'USER_DATA',
@@ -15,7 +15,7 @@ var zippedModelPath = path.join(
   'robots',
   'husky_model.zip'
 );
-var zip = fs.readFileSync(zippedModelPath);
+var robotZip = fs.readFileSync(zippedRobotPath);
 class StorageMock {
   async listExperiments() {
     return [{ name: 'experiment1' }];
@@ -30,7 +30,7 @@ class StorageMock {
   }
 
   async getCustomModel() {
-    return zip;
+    return robotZip;
   }
 }
 
@@ -136,8 +136,8 @@ describe('Experiment cloner', () => {
     expect(downloadFile.callCount).to.equal(7);
 
     expect(fsMock.writeFileSync.callCount).to.equal(6);
-    expect(fsMock.readFileSync.callCount).to.equal(16);
-    expect(fsMock.copy.callCount).to.equal(12);
+    expect(fsMock.readFileSync.callCount).to.equal(17);
+    expect(fsMock.copy.callCount).to.equal(13);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
@@ -153,12 +153,15 @@ describe('Experiment cloner', () => {
     // sinon.stub(newCloner, 'getBibiFullPath').returns('test/data/experiments/template_new/TemplateNew.bibi');
     var revert = ExperimentCloner.__set__('tmp', tmpMock);
     const mockModelsPaths = {
-        brainPath: { path: 'brains/extended_braitenberg.py', custom: false },
+        brainPath: {
+          path: 'brains/extended_braitenberg/extended_braitenberg.zip',
+          custom: true
+        },
         environmentPath: {
           path: 'environments/biologylab_world/model.zip',
           custom: true
         },
-        robotPath: { path: 'robots/icub_model/model.config', custom: false }
+        robotPath: { path: 'robots/icub_model/icub.zip', custom: true }
       },
       newCloner = new ExperimentCloner.NewExperimentCloner(
         storageMock,
@@ -179,8 +182,8 @@ describe('Experiment cloner', () => {
     expect(downloadFile.callCount).to.equal(7);
 
     expect(fsMock.writeFileSync.callCount).to.equal(10);
-    expect(fsMock.readFileSync.callCount).to.equal(23);
-    expect(fsMock.copy.callCount).to.equal(17);
+    expect(fsMock.readFileSync.callCount).to.equal(21);
+    expect(fsMock.copy.callCount).to.equal(15);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(

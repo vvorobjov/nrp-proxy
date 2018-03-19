@@ -109,8 +109,10 @@ class Storage extends BaseStorage {
   }
 
   getCustomModel(modelPath) {
+    // Unfortunately we have to do that since the backend sends an unparsed json
+    if (typeof modelPath !== 'object') modelPath = JSON.parse(modelPath);
     return q
-      .resolve(path.join(USER_DATA_FOLDER, modelPath))
+      .resolve(path.join(USER_DATA_FOLDER, modelPath.uuid))
       .then(relFolderName => this.calculateFilePath('', relFolderName))
       .then(folderName => q.denodeify(fs.readFile)(folderName));
   }
@@ -131,7 +133,12 @@ class Storage extends BaseStorage {
       .resolve(path.join(USER_DATA_FOLDER, customModelsRePath))
       .then(relFolderName => this.calculateFilePath('', relFolderName))
       .then(folderName => q.denodeify(fs.readdir)(folderName))
-      .then(files => files.map(f => path.join(customModelsRePath, f)))
+      .then(files =>
+        files.map(f => ({
+          uuid: path.join(customModelsRePath, f),
+          fileName: path.join(customModelsRePath, f)
+        }))
+      )
       .catch(() => []);
   }
 

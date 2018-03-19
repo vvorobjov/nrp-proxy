@@ -233,7 +233,11 @@ class RequestHandler {
       .then(models =>
         q.all(
           models.map(([path, data]) =>
-            this.customModelService.getZipModelMetaData(path, data)
+            this.customModelService.getZipModelMetaData(
+              path.uuid,
+              data,
+              path.fileName
+            )
           )
         )
       );

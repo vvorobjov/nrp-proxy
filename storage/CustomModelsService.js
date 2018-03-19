@@ -41,7 +41,8 @@ class CustomModelsService {
       .then(({ model: xml }) => ({
         name: xml.name && xml.name[0].trim(),
         description: xml.description && xml.description[0].trim(),
-        sdf: xml.sdf[0]._
+        sdf: xml.sdf ? xml.sdf[0]._ : undefined,
+        brain: xml.brain ? xml.brain[0] : undefined
       }));
   }
 
@@ -67,7 +68,7 @@ class CustomModelsService {
       .then(data => 'data:image/png;base64,' + data);
   }
 
-  getZipModelMetaData(filePath, fileContent) {
+  getZipModelMetaData(filePath, fileContent, fileName = undefined) {
     return JSZip.loadAsync(fileContent).then(zip =>
       q
         .all([this.logConfig(zip), this.logThumbnail(zip)])
@@ -75,7 +76,8 @@ class CustomModelsService {
           name: config.name,
           description: config.description,
           thumbnail: thumbnail,
-          path: encodeURIComponent(filePath) //escape slashes
+          path: encodeURIComponent(filePath), //escape slashes
+          fileName: fileName
         }))
         .catch(err =>
           q.reject(`Failed to load model '${filePath}'.\nErr: ${err}`)
@@ -83,17 +85,26 @@ class CustomModelsService {
     );
   }
 
-  extractModelSDFFromZip(fileContent) {
+  extractModelMetadataFromZip(fileContent, brain = undefined) {
     return JSZip.loadAsync(fileContent).then(async zip => {
       let modelConfig = await this.logConfig(zip);
-      let modelData = zip.file(modelConfig.sdf);
+      let modelData;
+      if (brain) {
+        modelData = zip.file(modelConfig.brain);
+      } else {
+        modelData = zip.file(modelConfig.sdf);
+      }
       if (!modelData)
         return q.reject(
-          `The model zip file should have a file called ${modelData} at its root level`
+          `There is a problem with the ${modelConfig.name} zip file. Make sure that the file (py or sdf) the model.config points to is in the zip.`
         );
       return {
         data: await modelData.async('string'),
-        name: modelData.name
+        name: modelData.name,
+        modelConfig: await zip
+          .file('model.config')
+          .async('string')
+          .then(q.denodeify(xml2js))
       };
     });
   }
