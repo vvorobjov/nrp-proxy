@@ -57,6 +57,24 @@ DB.instance.users.find({ user: argv.user }).then(res => {
       .then(() => console.log(`New user '${argv.user}' created`))
       .catch(err => console.error('Failed to create new user:', err));
   } else {
-    console.log(`User '${argv.user}' already exists, skipping insertion`);
+    if (res[0].password != argv.password) {
+      // new password so lets remove old user and add new user with new password
+      DB.instance.users
+        .remove(res)
+        .then(() =>
+          DB.instance.users
+            .insert({ user: argv.user, password: argv.password, token: token })
+            .then(() => console.log(`Updated user '${argv.user}' password`))
+            .catch(err =>
+              console.error('Failed to update password for user:', err)
+            )
+        )
+        .catch(err =>
+          console.error('Failed to update password for user:', err)
+        );
+    } else {
+      console.error('Username with this password already exists');
+      process.exit(1);
+    }
   }
 });
