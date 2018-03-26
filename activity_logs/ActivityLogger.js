@@ -36,7 +36,7 @@ class ActivityLogger {
 
   async log(activity, userName, data) {
     if (!this.config || !this.config[activity])
-      return q.reject(`No acvtivity log defined for activity '${activity}'.`);
+      return q.reject(`No activity log defined for activity '${activity}'.`);
     const fileName = this.config[activity];
     let logContent = await stringify([
       [new Date().toGMTString(), userName, ..._.map(data)]

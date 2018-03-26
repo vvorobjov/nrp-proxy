@@ -399,7 +399,7 @@ app.post('/activity_log/:activity', async (req, res) => {
     );
     res.send(r);
   } catch (err) {
-    res.status(401).send(err);
+    res.status(202).send(err);
   }
 });
 
