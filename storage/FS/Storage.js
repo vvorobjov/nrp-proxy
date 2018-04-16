@@ -72,7 +72,8 @@ class Storage extends BaseStorage {
             name: f,
             uuid: path.join(experiment, f),
             size: stat.size,
-            type: stat.isDirectory() ? 'folder' : 'file'
+            type: stat.isDirectory() ? 'folder' : 'file',
+            modifiedOn: stat.mtime
           };
         })
       );

@@ -36,6 +36,7 @@
   "devDependencies": {
     "chai": "3.5.0",
     "chai-as-promised": "6.0.0",
+    "chai-subset": "^1.6.0",
     "concat-stream": "^1.6.0",
     "cxsd": "^0.1.1",
     "eslint": "^4.16.0",

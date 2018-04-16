@@ -65,6 +65,13 @@ describe('FSStorage', () => {
   };
   let realUtils = require('../../storage/FS/utils');
 
+  const originalStatSync = fs.statSync;
+  const fakeStatSync = file => {
+    const stat = originalStatSync(file);
+    stat.mtime = new Date('Tue Apr 17 2018 09:38:40 GMT+0200 (CEST)');
+    return stat;
+  };
+
   beforeEach(() => {
     const mockUtils = {
       storagePath: path.join(__dirname, 'dbMock'),
@@ -79,6 +86,7 @@ describe('FSStorage', () => {
     RewiredFSStorage.__set__('DB', RewiredDB);
     RewiredFSStorage.__set__('utils', mockUtils);
     RewiredFSStorage.__set__('fsExtra', mockFsExtra);
+    RewiredFSStorage.__set__('fs.statSync', fakeStatSync);
     var empty = (path, callback) => {
       //empty implementation just to check if fs functions are called
       callback();
@@ -152,15 +160,18 @@ describe('FSStorage', () => {
   });
 
   //listFiles
-  it(`should list all the files contained in a certain experiment`, () => {
-    return expect(fsStorage.listFiles(fakeExperiment, fakeToken, fakeUserId))
-      .to.eventually.be.an('array')
-      .that.include({
-        name: 'fakeFile',
-        uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/fakeFile',
-        size: 11,
-        type: 'file'
-      });
+  it(`should list all the files contained in a certain experiment`, async () => {
+    const files = await fsStorage.listFiles(
+      fakeExperiment,
+      fakeToken,
+      fakeUserId
+    );
+    return expect(files[0]).to.containSubset({
+      name: 'fakeFile',
+      uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/fakeFile',
+      size: 11,
+      type: 'file'
+    });
   });
 
   it(`should throw authorization exception when calling the listFiles function with wrong parameters`, () => {
@@ -273,11 +284,14 @@ describe('FSStorage', () => {
               fakeUserId
             );
 
-            return expect(folderContents).to.include({
+            return expect(
+              folderContents[folderContents.length - 1]
+            ).to.containSubset({
               name: 'tmp',
               uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/tmp',
               size: 12,
-              type: 'file'
+              type: 'file',
+              modifiedOn: new Date('Tue Apr 17 2018 09:38:40 GMT+0200 (CEST)')
             });
           });
       });

@@ -7,8 +7,10 @@ const fs = require('fs'),
   expect = chai.expect,
   path = require('path'),
   assert = chai.assert,
-  q = require('q');
+  q = require('q'),
+  chaiSubset = require('chai-subset');
 chai.use(chaiAsPromised);
+chai.use(chaiSubset);
 
 let StorageRequestHandler = rewire('../../storage/requestHandler.js');
 class fakeCloner {
@@ -43,6 +45,13 @@ describe('Storage request handler', () => {
       code: 403
     };
 
+  const originalStatSync = fs.statSync;
+  const fakeStatSync = file => {
+    const stat = originalStatSync(file);
+    stat.mtime = new Date('Tue Apr 17 2018 09:38:40 GMT+0200 (CEST)');
+    return stat;
+  };
+
   let mkdirCalls = 0;
   let rmdirCalls = 0;
   beforeEach(() => {
@@ -67,6 +76,7 @@ describe('Storage request handler', () => {
       callback();
     };
 
+    RewiredFSStorage.__set__('fs.statSync', fakeStatSync);
     RewiredFSStorage.__set__('fs.mkdir', fakeMkdir);
     RewiredFSStorage.__set__('rmdir', fakeRmdir);
     fsStorage = new RewiredFSStorage();
@@ -98,17 +108,19 @@ describe('Storage request handler', () => {
   });
 
   //listFiles
-  it(`should list all the files contained in a certain experiment`, () => {
-    return expect(
-      storageRequestHandler.listFiles(fakeExperiment, fakeToken, fakeUserId)
-    )
-      .to.eventually.be.an('array')
-      .that.include({
-        name: 'fakeFile',
-        uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/fakeFile',
-        size: 11,
-        type: 'file'
-      });
+  it(`should list all the files contained in a certain experiment`, async () => {
+    const files = await storageRequestHandler.listFiles(
+      fakeExperiment,
+      fakeToken,
+      fakeUserId
+    );
+    return expect(files[0]).to.containSubset({
+      name: 'fakeFile',
+      uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/fakeFile',
+      size: 11,
+      type: 'file',
+      modifiedOn: new Date('Tue Apr 17 2018 09:38:40 GMT+0200 (CEST)')
+    });
   });
 
   it(`should throw authorization exception when calling the listFiles function with wrong parameters`, () => {
@@ -168,7 +180,9 @@ describe('Storage request handler', () => {
               fakeToken,
               fakeUserId
             );
-            return expect(folderContents).to.include({
+            return expect(
+              folderContents[folderContents.length - 1]
+            ).to.containSubset({
               name: 'tmp',
               uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/tmp',
               size: 12,
