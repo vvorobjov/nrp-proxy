@@ -207,6 +207,11 @@ class RequestHandler {
       );
   }
 
+  async getCustomModelConfig(modelPath, token) {
+    const customModel = await this.getCustomModel(modelPath, token);
+    return customModelService.extractFileFromZip(customModel, 'model.config');
+  }
+
   createZip(token, modelType, zipName, zip, contextId) {
     return customModelService
       .getZipModelMetaData(zipName, zip)

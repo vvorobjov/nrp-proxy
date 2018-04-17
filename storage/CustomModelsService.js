@@ -24,8 +24,8 @@
 'use strict';
 
 const xml2js = require('xml2js').parseString,
-  q = require('q'),
-  JSZip = require('jszip');
+  q = require('q');
+let JSZip = require('jszip');
 
 class CustomModelsService {
   logConfig(zip) {
@@ -83,6 +83,17 @@ class CustomModelsService {
           q.reject(`Failed to load model '${filePath}'.\nErr: ${err}`)
         )
     );
+  }
+
+  extractFileFromZip(fileContent, fileName) {
+    return JSZip.loadAsync(fileContent).then(async zip => {
+      let modelData = zip.file(fileName);
+      if (!modelData)
+        return q.reject(
+          `The model zip file should have a file called ${fileName} at its root level`
+        );
+      return await modelData.async('string');
+    });
   }
 
   extractModelMetadataFromZip(fileContent, brain = undefined) {

@@ -55,9 +55,13 @@ class ModelLoader {
 
   loadModels(modelsPath) {
     let loadModel = f =>
-      this.parseFile(f).then(
-        m => m && (m.path = path.relative(modelsPath, f)) && m
-      );
+      this.parseFile(f).then(m => {
+        if (m) {
+          m.path = path.relative(modelsPath, f);
+          m.id = m.path.split(path.sep)[1];
+        }
+        return m;
+      });
 
     return (this.models = q.denodeify(glob)(
       path.join(modelsPath, this.filePattern)
@@ -176,6 +180,13 @@ class ModelsService {
     if (this.moduleLoaders[modelType])
       return q.resolve(this.moduleLoaders[modelType].modelList);
     return q.reject(`Model ${modelType} not found`);
+  }
+
+  async getModelConfig(modelType, modelId) {
+    const models = await this.getModels(modelType);
+    const model = models.find(m => m.id == modelId);
+    if (!model) throw `No ${modelType} named ${modelId} was found.`;
+    return path.join(this.modelsPath, model.path);
   }
 }
 

@@ -178,4 +178,14 @@ describe('requestHandler', function() {
       .getModels('robots')
       .then(res => res.should.equal('robot1'));
   });
+
+  it('should get the getModelConfig service object correctly', async () => {
+    revert = requestHandler.__set__({
+      modelsService: {
+        getModelConfig: () => Promise.resolve('robotConfig')
+      }
+    });
+    const robotConfig = await requestHandler.getModelConfig('robots');
+    robotConfig.should.equal('robotConfig');
+  });
 });

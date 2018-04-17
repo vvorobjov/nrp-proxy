@@ -306,6 +306,32 @@ describe('Storage request handler', () => {
     );
   });
 
+  it('should get the getCustomModelConfig service object correctly', async () => {
+    const config = `<?xml version='1.0'?>
+<model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.humanbrainproject.eu/SP10/2017/model_config" xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2017/model_config ../model_configuration.xsd">
+  <name>HBP Clearpath Robotics Husky A200</name>
+  <version>1.0</version>
+  <sdf version="1.5">model.sdf</sdf>
+  <brain>extended_braitenberg.py</brain>
+  <author>
+    <name>Ryan Gariepy</name>
+    <email>rgariepy@clearpathrobotics.com</email>
+    <name>Oliver Zweigle</name>
+    <email>zweigle@fzi</email>
+  </author>
+
+  <description>
+    Clearpath Robotics Husky A200 - Extended HBP Model
+  </description>
+</model>
+`;
+    const robotConfig = await storageRequestHandler.getCustomModelConfig(
+      { uuid: 'nrpuser/robots/husky_model.zip' },
+      fakeToken
+    );
+    robotConfig.should.equal(config);
+  });
+
   // createZip succeeds
   it(`should create a zip`, () => {
     var fakeCustomModels = {

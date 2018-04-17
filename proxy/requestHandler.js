@@ -181,6 +181,10 @@ function getModels(modelType) {
   return modelsService && modelsService.getModels(modelType);
 }
 
+const getModelConfig = (modelType, modelId) => {
+  return modelsService && modelsService.getModelConfig(modelType, modelId);
+};
+
 module.exports = {
   reloadConfiguration,
   initialize,
@@ -191,5 +195,6 @@ module.exports = {
   getServersStatus,
   getJoinableServers,
   filterJoinableExperimentByContext,
-  getModels
+  getModels,
+  getModelConfig
 };

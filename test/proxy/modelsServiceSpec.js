@@ -37,6 +37,22 @@ describe('ModelsService', () => {
       .getModels('wrong_model')
       .should.rejectedWith('Model wrong_model not found');
   });
+
+  it(`should calculate model config from models path and specific model path`, async () => {
+    const robotconfig = await modelsService.getModelConfig(
+      'robots',
+      'lauron_model'
+    );
+    robotconfig.should.contain(
+      '/test/data/models/robots/lauron_model/model.config'
+    );
+  });
+
+  it(`should throw if model not found`, async () => {
+    modelsService
+      .getModelConfig('robots', 'fake_model')
+      .should.eventually.throw('BaseStorage is an abstract class');
+  });
 });
 
 describe('ModelsService errors', () => {

@@ -164,6 +164,13 @@ app.get('/models/:modelType', function(req, res, next) {
     .catch(next);
 });
 
+app.get('/models/:modelType/:modelId/config', function(req, res, next) {
+  proxyRequestHandler
+    .getModelConfig(req.params.modelType, req.params.modelId)
+    .then(config => res.sendFile(config))
+    .catch(next);
+});
+
 // storage API
 app.use(bodyParser.json({ limit: '200mb' }));
 app.use(bodyParser.raw({ limit: '200mb' }));
@@ -274,6 +281,13 @@ app.post('/storage/custommodels/:modelType/:modelName', (req, res) => {
 app.get('/storage/custommodel/:modelPath', (req, res) => {
   storageRequestHandler
     .getCustomModel(req.params.modelPath, getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/custommodelconfig/:modelPath', (req, res) => {
+  storageRequestHandler
+    .getCustomModelConfig({ uuid: req.params.modelPath }, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
