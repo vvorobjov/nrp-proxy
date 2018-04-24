@@ -217,15 +217,7 @@ class Storage extends BaseStorage {
       )
       .then(entity =>
         CollabConnector.instance.createFolder(token, entity.uuid, newExperiment)
-      )
-      .then(experiment => {
-        CollabConnector.instance.createFolder(
-          token,
-          experiment.uuid,
-          'resources'
-        );
-        return experiment;
-      });
+      );
   }
 
   copyExperiment(experiment, token, userId, contextId) {
