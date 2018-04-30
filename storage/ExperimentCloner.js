@@ -229,15 +229,18 @@ class ExperimentCloner {
       this.expModelsPaths.robotPath === undefined ||
       this.expModelsPaths.robotPath.custom === false
     ) {
-      this.downloadFile(bibiConf.bodyModel, this.config.modelsPath);
+      if (typeof bibiConf.bodyModel == 'string') {
+        bibiConf.bodyModel = {
+          __text: path.basename(bibiConf.bodyModel),
+          _assetPath: path.dirname(bibiConf.bodyModel),
+          _customAsset: false
+        };
+      }
 
       this.downloadFile(
-        'model.config',
-        path.dirname(path.join(this.config.modelsPath, bibiConf.bodyModel)),
-        'robot.config'
+        path.join(bibiConf.bodyModel._assetPath, bibiConf.bodyModel.__text),
+        this.config.modelsPath
       );
-
-      bibiConf.bodyModel = path.basename(bibiConf.bodyModel);
     }
 
     if (
@@ -368,26 +371,23 @@ class NewExperimentCloner extends ExperimentCloner {
       expUUID,
       userId
     );
-    if (this.expModelsPaths.robotPath.custom) {
-      bibi.bibi.bodyModel = robotModelConfig.robotRelPath;
-      const customModelPath = path.basename(this.expModelsPaths.robotPath.path);
-      if (
-        typeof bibi.bibi.bodyModel === 'string' ||
-        bibi.bibi.bodyModel instanceof String
-      ) {
-        bibi.bibi.bodyModel = {
-          __text: bibi.bibi.bodyModel,
-          _customModelPath: customModelPath
-        };
-      } else {
-        bibi.bibi.bodyModel._customModelPath = customModelPath;
-      }
-    } else {
-      bibi.bibi.bodyModel = path.join(
-        robotModelConfig.robotRelPath,
-        robotModelConfig.robotModelConfig.model.sdf.__text
-      );
-    }
+
+    const customAsset = this.expModelsPaths.robotPath.custom,
+      bodyModel = customAsset
+        ? robotModelConfig.robotRelPath
+        : // : path.join(
+          //     robotModelConfig.robotRelPath,
+          robotModelConfig.robotModelConfig.model.sdf.__text,
+      //)
+      assetPath = customAsset
+        ? path.basename(this.expModelsPaths.robotPath.path)
+        : path.dirname(this.expModelsPaths.robotPath.path);
+
+    bibi.bibi.bodyModel = {
+      __text: bodyModel,
+      _customAsset: customAsset,
+      _assetPath: assetPath
+    };
 
     if (this.expModelsPaths.brainPath.custom) {
       brainFilePath = await this.handleZippedModel(

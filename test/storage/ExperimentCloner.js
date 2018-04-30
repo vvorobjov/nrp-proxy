@@ -96,11 +96,11 @@ describe('Experiment cloner', () => {
 
     expect(createUniqueExperimentId.callCount).to.equal(1);
     expect(createExperiment.callCount).to.equal(1);
-    expect(downloadFile.callCount).to.equal(7);
+    expect(downloadFile.callCount).to.equal(6);
 
     expect(fsMock.writeFileSync.callCount).to.equal(2);
-    expect(fsMock.readFileSync.callCount).to.equal(9);
-    expect(fsMock.copy.callCount).to.equal(7);
+    expect(fsMock.readFileSync.callCount).to.equal(8);
+    expect(fsMock.copy.callCount).to.equal(6);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
@@ -136,11 +136,11 @@ describe('Experiment cloner', () => {
 
     expect(createUniqueExperimentId.callCount).to.equal(1);
     expect(createExperiment.callCount).to.equal(3);
-    expect(downloadFile.callCount).to.equal(7);
+    expect(downloadFile.callCount).to.equal(6);
 
     expect(fsMock.writeFileSync.callCount).to.equal(6);
-    expect(fsMock.readFileSync.callCount).to.equal(17);
-    expect(fsMock.copy.callCount).to.equal(13);
+    expect(fsMock.readFileSync.callCount).to.equal(15);
+    expect(fsMock.copy.callCount).to.equal(11);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
@@ -182,11 +182,11 @@ describe('Experiment cloner', () => {
 
     expect(createUniqueExperimentId.callCount).to.equal(1);
     expect(createExperiment.callCount).to.equal(5);
-    expect(downloadFile.callCount).to.equal(7);
+    expect(downloadFile.callCount).to.equal(6);
 
     expect(fsMock.writeFileSync.callCount).to.equal(10);
-    expect(fsMock.readFileSync.callCount).to.equal(21);
-    expect(fsMock.copy.callCount).to.equal(15);
+    expect(fsMock.readFileSync.callCount).to.equal(19);
+    expect(fsMock.copy.callCount).to.equal(13);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
