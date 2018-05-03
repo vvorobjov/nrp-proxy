@@ -24,16 +24,18 @@
 'use strict';
 
 const xml2js = require('xml2js').parseString,
-  q = require('q');
-let JSZip = require('jszip');
+  q = require('q'),
+  JSZip = require('jszip'),
+  path = require('path');
 
 class CustomModelsService {
-  logConfig(zip) {
-    let zipfile = zip.file('model.config');
-    if (!zipfile)
-      return q.reject(
-        `The model zip file is expected to have a 'model.config' file at the root level which contains the meta-data of the model.`
-      );
+  logConfig(zip, basename) {
+    const exception = q.reject(
+      `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
+    );
+
+    let zipfile = zip.file(path.join(basename, 'model.config'));
+    if (!zipfile) return exception;
 
     return zipfile
       .async('string')
@@ -51,7 +53,7 @@ class CustomModelsService {
       .map(item => {
         if (!zip[item])
           return q.reject(
-            `${item} missing from the model zip file. Please add it to the model.config of the model zip file in the root directory`
+            `${item} missing from the model zip file. Please add it to the model.config of the model zip file inside the root directory`
           );
       })
       .filter(item => item);
@@ -59,8 +61,8 @@ class CustomModelsService {
     else return q.when();
   }
 
-  logThumbnail(zip) {
-    let zipfile = zip.file('thumbnail.png');
+  logThumbnail(zip, basename) {
+    let zipfile = zip.file(path.join(basename, 'thumbnail.png'));
     if (!zipfile) return;
 
     return zipfile
@@ -69,9 +71,16 @@ class CustomModelsService {
   }
 
   getZipModelMetaData(filePath, fileContent, fileName = undefined) {
-    return JSZip.loadAsync(fileContent).then(zip =>
-      q
-        .all([this.logConfig(zip), this.logThumbnail(zip)])
+    return JSZip.loadAsync(fileContent).then(zip => {
+      const exception = q.reject(
+        `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
+      );
+
+      const basename = this.getZipBasename(zip);
+      if (!basename || basename == 'model.config') return exception;
+
+      return q
+        .all([this.logConfig(zip, basename), this.logThumbnail(zip, basename)])
         .then(([config, thumbnail]) => ({
           name: config.name,
           description: config.description,
@@ -81,29 +90,43 @@ class CustomModelsService {
         }))
         .catch(err =>
           q.reject(`Failed to load model '${filePath}'.\nErr: ${err}`)
-        )
-    );
+        );
+    });
   }
 
   extractFileFromZip(fileContent, fileName) {
     return JSZip.loadAsync(fileContent).then(async zip => {
-      let modelData = zip.file(fileName);
+      const basename = this.getZipBasename(zip);
+      let modelData = zip.file(path.join(basename, fileName));
       if (!modelData)
         return q.reject(
-          `The model zip file should have a file called ${fileName} at its root level`
+          `The model zip file should have a file called ${fileName} inside the root folder`
         );
       return await modelData.async('string');
     });
   }
 
+  getZipBasename(zip) {
+    return zip
+      .filter((relativePath, file) => file.name.includes('model.config'))[0]
+      .name.split(path.sep)[0];
+  }
+
   extractModelMetadataFromZip(fileContent, brain = undefined) {
     return JSZip.loadAsync(fileContent).then(async zip => {
-      let modelConfig = await this.logConfig(zip);
+      const exception = q.reject(
+        `Error: Zip structure is wrong. Could not find model.config.`
+      );
+
+      const basename = this.getZipBasename(zip);
+      if (!basename || basename == 'model.config') return exception;
+
+      let modelConfig = await this.logConfig(zip, basename);
       let modelData;
       if (brain) {
-        modelData = zip.file(modelConfig.brain);
+        modelData = zip.file(path.join(basename, modelConfig.brain));
       } else {
-        modelData = zip.file(modelConfig.sdf);
+        modelData = zip.file(path.join(basename, modelConfig.sdf));
       }
       if (!modelData)
         return q.reject(
@@ -111,9 +134,9 @@ class CustomModelsService {
         );
       return {
         data: await modelData.async('string'),
-        name: modelData.name,
+        name: modelData.name.split(path.sep)[1],
         modelConfig: await zip
-          .file('model.config')
+          .file(path.join(basename, 'model.config'))
           .async('string')
           .then(q.denodeify(xml2js))
       };

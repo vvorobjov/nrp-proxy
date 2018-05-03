@@ -32,6 +32,9 @@ class StorageMock {
   async getCustomModel() {
     return robotZip;
   }
+  async deleteExperiment() {
+    return {};
+  }
 }
 
 const fsMock = {
