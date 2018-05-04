@@ -145,6 +145,7 @@ async function getExperimentsAndSimulations(configuration) {
       (config, serverId) =>
         simulations[serverId] && !simulations[serverId].runningSimulation
     )
+    .shuffle()
     .sortBy(
       ({ id }) =>
         HEALTH_STATUS_PRIORITY[health[id] && health[id].state] ||

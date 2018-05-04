@@ -70,13 +70,14 @@ describe('requestHandler', function() {
       .should.eventually.deep.equal(myobj);
   });
 
-  it('should return available servers for a given experiment', function() {
+  it('should return available servers for a given experiment', async () => {
     revert = requestHandler.__set__('experimentList', testConf.experimentList);
-    return requestHandler
-      .getAvailableServers()
-      .should.eventually.deep.equal(
-        testConf.experimentList['experiment1'].availableServers
-      );
+    let availableServers = await requestHandler.getAvailableServers();
+    const sortServers = servers =>
+      [...servers].sort((a, b) => a.id.localeCompare(b.id));
+    expect(sortServers(availableServers)).to.deep.equal(
+      sortServers(testConf.experimentList['experiment1'].availableServers)
+    );
   });
 
   it('should return server details', function() {
