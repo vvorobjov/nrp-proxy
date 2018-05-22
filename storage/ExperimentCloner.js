@@ -254,7 +254,10 @@ class ExperimentCloner {
 
     if (ensureArrayProp(bibiConf, 'transferFunction'))
       for (let tf of bibiConf.transferFunction)
-        if (tf._src) this.downloadFile(tf._src);
+        if (tf._src) {
+          this.downloadFile(tf._src);
+          tf._src = path.basename(tf._src); // flattens file path in .bibi file
+        }
 
     let bibiFile = path.join(this.tmpFolder.name, 'bibi_configuration.bibi');
 
