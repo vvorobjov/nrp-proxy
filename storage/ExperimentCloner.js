@@ -225,9 +225,10 @@ class ExperimentCloner {
         this.downloadFile(conf._src);
       }
     if (
-      this.expModelsPaths === undefined ||
-      this.expModelsPaths.robotPath === undefined ||
-      this.expModelsPaths.robotPath.custom === false
+      bibiConf.bodyModel &&
+      (this.expModelsPaths === undefined ||
+        this.expModelsPaths.robotPath === undefined ||
+        this.expModelsPaths.robotPath.custom === false)
     ) {
       if (typeof bibiConf.bodyModel == 'string') {
         bibiConf.bodyModel = {
@@ -244,9 +245,10 @@ class ExperimentCloner {
     }
 
     if (
-      this.expModelsPaths === undefined ||
-      this.expModelsPaths.brainPath === undefined ||
-      this.expModelsPaths.brainPath.custom === false
+      bibiConf.brainModel &&
+      (this.expModelsPaths === undefined ||
+        this.expModelsPaths.brainPath === undefined ||
+        this.expModelsPaths.brainPath.custom === false)
     ) {
       this.downloadFile(bibiConf.brainModel.file, this.config.modelsPath);
       bibiConf.brainModel.file = path.basename(bibiConf.brainModel.file);
@@ -304,6 +306,8 @@ class NewExperimentCloner extends ExperimentCloner {
 
   async getRobotConfigPath(token, expUUID, userId) {
     let robotRelPath, robotConfigPath, robotModelConfig;
+    if (!this.expModelsPaths.robotPath) return null;
+
     if (this.expModelsPaths.robotPath.custom) {
       robotRelPath = await this.handleZippedModel(
         token,
@@ -375,38 +379,47 @@ class NewExperimentCloner extends ExperimentCloner {
       userId
     );
 
-    const customAsset = this.expModelsPaths.robotPath.custom,
-      bodyModel = customAsset
-        ? robotModelConfig.robotRelPath
-        : // : path.join(
-          //     robotModelConfig.robotRelPath,
-          robotModelConfig.robotModelConfig.model.sdf.__text,
-      //)
-      assetPath = customAsset
-        ? path.basename(this.expModelsPaths.robotPath.path)
-        : path.dirname(this.expModelsPaths.robotPath.path);
+    if (this.expModelsPaths.robotPath) {
+      const customAsset = this.expModelsPaths.robotPath.custom,
+        bodyModel = customAsset
+          ? robotModelConfig.robotRelPath
+          : // : path.join(
+            //     robotModelConfig.robotRelPath,
+            robotModelConfig.robotModelConfig.model.sdf.__text,
+        //)
+        assetPath = customAsset
+          ? path.basename(this.expModelsPaths.robotPath.path)
+          : path.dirname(this.expModelsPaths.robotPath.path);
 
-    bibi.bibi.bodyModel = {
-      __text: bodyModel,
-      _customAsset: customAsset,
-      _assetPath: assetPath
-    };
-
-    if (this.expModelsPaths.brainPath.custom) {
-      brainFilePath = await this.handleZippedModel(
-        token,
-        expUUID,
-        userId,
-        'brainPath'
-      );
-      bibi.bibi.brainModel.file = brainFilePath.name;
-      bibi.bibi.brainModel._customModelPath = path.basename(
-        this.expModelsPaths.brainPath.path
-      );
+      bibi.bibi.bodyModel = {
+        __text: bodyModel,
+        _customAsset: customAsset,
+        _assetPath: assetPath
+      };
     } else {
-      brainFilePath = path.basename(this.expModelsPaths.brainPath.path);
-      bibi.bibi.brainModel.file = path.join(this.brainModelPath, brainFilePath);
+      delete bibi.bibi.bodyModel;
     }
+
+    if (this.expModelsPaths.brainPath) {
+      if (this.expModelsPaths.brainPath.custom) {
+        brainFilePath = await this.handleZippedModel(
+          token,
+          expUUID,
+          userId,
+          'brainPath'
+        );
+        bibi.bibi.brainModel.file = brainFilePath.name;
+        bibi.bibi.brainModel._customModelPath = path.basename(
+          this.expModelsPaths.brainPath.path
+        );
+      } else {
+        brainFilePath = path.basename(this.expModelsPaths.brainPath.path);
+        bibi.bibi.brainModel.file = path.join(
+          this.brainModelPath,
+          brainFilePath
+        );
+      }
+    } else delete bibi.bibi.brainModel;
 
     const bibiFullPath = path.join(
       this.tmpFolder.name,
@@ -440,7 +453,7 @@ class NewExperimentCloner extends ExperimentCloner {
       experimentConf,
       robotModelConfig,
       envModelConfig,
-      this.expModelsPaths.brainPath.name
+      this.expModelsPaths.brainPath && this.expModelsPaths.brainPath.name
     );
 
     const expFilePath = path.join(
@@ -459,13 +472,18 @@ class NewExperimentCloner extends ExperimentCloner {
     brainName
   ) {
     let robotName;
-    if (this.expModelsPaths.robotPath.custom) {
-      robotName = robotModelConfig.robotModelConfig.model.name[0];
-    } else {
-      robotName = robotModelConfig.robotModelConfig.model.name;
+    if (robotModelConfig) {
+      if (this.expModelsPaths.robotPath.custom) {
+        robotName = robotModelConfig.robotModelConfig.model.name[0];
+      } else {
+        robotName = robotModelConfig.robotModelConfig.model.name;
+      }
     }
-    experimentConf.ExD.name = `New ${robotName} in ${envModelConfig.model.name}
-    with ${brainName} experiment`;
+
+    experimentConf.ExD.name = `New ${robotName
+      ? `${robotName} in `
+      : ''} ${envModelConfig.model.name}
+    ${brainName ? `with ${brainName}` : ''} experiment`;
     return experimentConf;
   }
 
