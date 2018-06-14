@@ -28,7 +28,8 @@ const path = require('path'),
   X2JS = new require('x2js'),
   _ = require('lodash'),
   pd = require('pretty-data').pd,
-  CustomModelsService = require('../storage/CustomModelsService.js');
+  CustomModelsService = require('../storage/CustomModelsService.js'),
+  exec = require('child_process').exec;
 
 //constants below are overriden in unit tests
 let fs = require('fs-extra'),
@@ -207,6 +208,20 @@ class ExperimentCloner {
     return bibiConf;
   }
 
+  async copyH5File(pythonModuleName) {
+    //in case we have an h5 file we have to copy it over as well
+    const pathToPythonScript = path.join(__dirname, 'h5FileExtractor.py');
+    try {
+      let h5FileName = (await q.denodeify(exec)(
+        `python ${pathToPythonScript} ${pythonModuleName}`
+      ))[1];
+      const brainModelPath = path.join(this.config.modelsPath, 'brain_model');
+      if (h5FileName) this.downloadFile(h5FileName, brainModelPath);
+    } catch (err) {
+      console.log('No h5 file to copy');
+    }
+  }
+
   async flattenBibiConf(bibiConfFile, expUUID, token, userId) {
     //copies the bibi files into a a temporary flatten structure
     let bibiFullPath = await this.getBibiFullPath(
@@ -252,6 +267,7 @@ class ExperimentCloner {
     ) {
       this.downloadFile(bibiConf.brainModel.file, this.config.modelsPath);
       bibiConf.brainModel.file = path.basename(bibiConf.brainModel.file);
+      await this.copyH5File(bibiConf.brainModel.file);
     }
 
     if (ensureArrayProp(bibiConf, 'transferFunction'))
