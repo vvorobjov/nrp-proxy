@@ -36,12 +36,18 @@ class StorageMock {
   async deleteExperiment() {
     return {};
   }
+
+  async createFolder() {
+    return {};
+  }
 }
 
 const fsMock = {
   writeFileSync: sinon.spy(),
   readFileSync: sinon.spy(),
   copy: sinon.stub().returns(Promise.resolve()),
+  existsSync: sinon.stub().returns(true),
+  readdir: sinon.stub().returns(['pythonfile.py']),
   readdirSync: sinon
     .stub()
     .returns([
@@ -108,7 +114,7 @@ describe('Experiment cloner', () => {
         if (tf._src) {
           expect(tf._src).to.equal(path.basename(tf._src));
         }
-    expect(fsMock.readFileSync.callCount).to.equal(9);
+    expect(fsMock.readFileSync.callCount).to.equal(13);
     expect(fsMock.copy.callCount).to.equal(7);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
@@ -148,7 +154,7 @@ describe('Experiment cloner', () => {
     expect(downloadFile.callCount).to.equal(7);
 
     expect(fsMock.writeFileSync.callCount).to.equal(6);
-    expect(fsMock.readFileSync.callCount).to.equal(16);
+    expect(fsMock.readFileSync.callCount).to.equal(24);
     expect(fsMock.copy.callCount).to.equal(12);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
@@ -194,7 +200,7 @@ describe('Experiment cloner', () => {
     expect(downloadFile.callCount).to.equal(7);
 
     expect(fsMock.writeFileSync.callCount).to.equal(10);
-    expect(fsMock.readFileSync.callCount).to.equal(20);
+    expect(fsMock.readFileSync.callCount).to.equal(32);
     expect(fsMock.copy.callCount).to.equal(14);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');

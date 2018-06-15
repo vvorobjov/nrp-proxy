@@ -103,7 +103,37 @@ class ExperimentCloner {
 
     await this.uploadDownloadedFiles(files, expUUID, token, userId);
 
+    await this.copyResourcesFolder(
+      this.experimentFolder,
+      expName,
+      expUUID,
+      token,
+      userId
+    );
+
     return expUUID;
+  }
+
+  async copyResourcesFolder(experimentFolder, expName, expUUID, token, userId) {
+    let resExpPath = path.join(this.experimentFolder, 'resources');
+    let resPath = path.join(expUUID, 'resources');
+    if (fs.existsSync(path.join(experimentFolder, 'resources'))) {
+      var files = await this.downloadResourcesfiles(resExpPath);
+      await this.storage.createFolder('resources', expName, token, userId);
+      await this.uploadDownloadedFiles(files, resPath, token, userId);
+    }
+  }
+
+  async downloadResourcesfiles(resExpPath) {
+    var files = (await fs.readdirSync(resExpPath)).map(file => {
+      let filePath = path.join(resExpPath, file);
+      return {
+        name: file,
+        contentType: 'text/plain',
+        content: fs.readFileSync(filePath)
+      };
+    });
+    return files;
   }
 
   uploadDownloadedFiles(files, expUUID, token, userId) {
