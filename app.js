@@ -80,6 +80,12 @@ let checkAdminRights = (req, res, next) => {
     });
 };
 
+let isAdmin = req => {
+  return storageRequestHandler
+    .getUserGroups(getAuthToken(req))
+    .then(groups => groups.some(g => g.name == 'hbp-sp10-administrators'));
+};
+
 app.post(/^\/admin\//, checkAdminRights);
 
 app.get('/admin/status', (req, res, next) => {
@@ -118,9 +124,12 @@ app.get('/experimentImage/:experiment', function(req, res, next) {
 });
 
 const verifyRunningMode = (req, res, next) => {
-  adminService.getStatus().then(({ maintenance }) => {
-    if (maintenance) res.status(478).end();
-    else next();
+  isAdmin(req).then(answer => {
+    adminService.getStatus().then(({ maintenance }) => {
+      // Non-admin users are deprived of all services in maintenance mode
+      if (maintenance && !answer) res.status(478).end();
+      else next();
+    });
   });
 };
 
