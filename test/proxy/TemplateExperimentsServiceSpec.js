@@ -43,8 +43,8 @@ const expectedExp2 = {
   visualModelParams: undefined
 };
 
-describe('ExperimentsService', () => {
-  let ExperimentsService = require('../../proxy/experimentsService.js'),
+describe('TemplateExperimentsService', () => {
+  let ExperimentsService = require('../../proxy/TemplateExperimentsService.js'),
     experimentsService = new ExperimentsService(experimentsPaths);
 
   it('should construct an experiments Service instance with the correct path', () => {
