@@ -31,6 +31,7 @@ require('./migration_scripts/sprint72.js');
 
 const proxyRequestHandler = require('./proxy/requestHandler.js'),
   StorageRequestHandler = require('./storage/requestHandler.js'),
+  ExperimentServiceFactory = require('./proxy/ExperimentServiceFactory'),
   configurationManager = require('./utils/configurationManager.js'),
   loggerManager = require('./utils/loggerManager.js'),
   AdminService = require('./admin/AdminService'),
@@ -45,7 +46,10 @@ proxyRequestHandler.initialize(config);
 
 const storageRequestHandler = new StorageRequestHandler(config),
   adminService = new AdminService(config, proxyRequestHandler),
-  activityLogger = new ActivityLogger(config['activity-logs']);
+  activityLogger = new ActivityLogger(config['activity-logs']),
+  experimentServiceFactory = new ExperimentServiceFactory(
+    storageRequestHandler
+  );
 
 app.use(function(req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -55,14 +59,6 @@ app.use(function(req, res, next) {
     'accept, Authorization, Context-Id, Content-Type'
   );
   res.setHeader('Access-Control-Expose-Headers', 'uuid, content-disposition');
-  next();
-});
-
-app.use(function(req, res, next) {
-  if (req.method !== 'OPTIONS')
-    console.log(
-      `[REQUEST from ${req.connection.remoteAddress}] ${req.method} ${req.url}`
-    );
   next();
 });
 
@@ -390,6 +386,46 @@ app.put('/storage/:experiment', (req, res) => {
       getAuthToken(req),
       req.get('context-id')
     )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/experiment/:experiment/brain', async (req, res) => {
+  experimentServiceFactory
+    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .getBrain()
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.put('/experiment/:experiment/brain', async (req, res) => {
+  experimentServiceFactory
+    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .setBrain(req.body.brain, req.body.populations)
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/experiment/:experiment/transferFunctions', async (req, res) => {
+  experimentServiceFactory
+    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .getTransferFunctions()
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/experiment/:experiment/stateMachines', async (req, res) => {
+  experimentServiceFactory
+    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .getStateMachines()
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.put('/experiment/:experiment/stateMachines', async (req, res) => {
+  experimentServiceFactory
+    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .setStateMachines(req.body.stateMachines)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
