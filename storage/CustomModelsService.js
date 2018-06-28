@@ -76,21 +76,27 @@ class CustomModelsService {
         `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
       );
 
-      const basename = this.getZipBasename(zip);
-      if (!basename || basename == 'model.config') return exception;
-
-      return q
-        .all([this.logConfig(zip, basename), this.logThumbnail(zip, basename)])
-        .then(([config, thumbnail]) => ({
-          name: config.name,
-          description: config.description,
-          thumbnail: thumbnail,
-          path: encodeURIComponent(filePath), //escape slashes
-          fileName: fileName
-        }))
-        .catch(err =>
-          q.reject(`Failed to load model '${filePath}'.\nErr: ${err}`)
-        );
+      try {
+        const basename = this.getZipBasename(zip);
+        if (!basename || basename == 'model.config') return exception;
+        return q
+          .all([
+            this.logConfig(zip, basename),
+            this.logThumbnail(zip, basename)
+          ])
+          .then(([config, thumbnail]) => ({
+            name: config.name,
+            description: config.description,
+            thumbnail: thumbnail,
+            path: encodeURIComponent(filePath), //escape slashes
+            fileName: fileName
+          }))
+          .catch(err =>
+            q.reject(`Failed to load model '${filePath}'.\nErr: ${err}`)
+          );
+      } catch (err) {
+        return exception;
+      }
     });
   }
 
