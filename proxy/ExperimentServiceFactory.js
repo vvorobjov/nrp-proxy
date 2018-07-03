@@ -25,6 +25,8 @@
 
 const path = require('path'),
   _ = require('lodash'),
+  pd = require('pretty-data').pd,
+  xmlFormat = xml => pd.xml(xml),
   X2JS = new require('x2js');
 
 class ExperimentServiceFactory {
@@ -124,7 +126,7 @@ class ExperimentService {
       ..._.map(stateMachines, (sm, id) =>
         promises.push(this.saveFile(`${id}.exd`, sm))
       ),
-      this.saveFile(excFileName, new X2JS().js2xml(excFile))
+      this.saveFile(excFileName, xmlFormat(new X2JS().js2xml(excFile)))
     ]).then(() => ({}));
   }
 
@@ -171,17 +173,17 @@ class ExperimentService {
 
     bibi.brainModel.populations = populations.map(pop => {
       if (pop.list) {
-        return Promise.resolve({
+        return {
           _population: pop.name,
           __prefix: bibi.brainModel.__prefix,
           '_xsi:type':
             (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
             'List',
           element: pop.list.map(nb => ({
-            __prefix: 'ns1',
+            __prefix: bibi.brainModel.__prefix,
             __text: `${nb}`
           }))
-        });
+        };
       } else {
         return {
           _population: pop.name,
@@ -198,7 +200,7 @@ class ExperimentService {
 
     return Promise.all([
       this.saveFile(brainModelFile, brain),
-      this.saveFile(bibiFileName, new X2JS().js2xml(bibiFile))
+      this.saveFile(bibiFileName, xmlFormat(new X2JS().js2xml(bibiFile)))
     ]).then(() => ({}));
   }
 
@@ -209,17 +211,43 @@ class ExperimentService {
     if (transferFunctions && !Array.isArray(transferFunctions))
       transferFunctions = [transferFunctions];
 
-    let tfsResponse = { active: {}, data: {} };
+    let tfsResponse = { data: {} };
 
     return Promise.all(
       transferFunctions.map(tf =>
         this.getFile(tf._src).then(tfFile => {
           let tfId = path.basename(tf._src);
           tfsResponse.data[tfId] = tfFile.toString();
-          tfsResponse.active[tfId];
         })
       )
     ).then(() => tfsResponse);
+  }
+
+  async saveTransferFunctions(transferFunctions) {
+    let [bibiFile, bibiFileName] = await this.getBibi();
+    let bibi = bibiFile.bibi;
+
+    let tfs = transferFunctions.map(tfCode => {
+      let tfName = /def +([^\\( ]*)/gm.exec(tfCode);
+      if (tfName) tfName = tfName[1];
+      return [`${tfName}.py`, tfCode];
+    });
+
+    bibi.transferFunction = tfs.map(([tfName]) => {
+      return {
+        _src: tfName,
+        __prefix: bibi.__prefix,
+        '_xsi:type':
+          (bibi.__prefix ? `${bibi.__prefix}:` : '') + 'PythonTransferFunction'
+      };
+    });
+
+    let tfFiles = tfs.map(([tfName, tfCode]) => this.saveFile(tfName, tfCode));
+
+    return Promise.all([
+      ...tfFiles,
+      this.saveFile(bibiFileName, xmlFormat(new X2JS().js2xml(bibiFile)))
+    ]).then(() => ({}));
   }
 }
 

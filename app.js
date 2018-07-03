@@ -407,14 +407,6 @@ app.put('/experiment/:experiment/brain', async (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/experiment/:experiment/transferFunctions', async (req, res) => {
-  experimentServiceFactory
-    .createExperimentService(req.params.experiment, getAuthToken(req))
-    .getTransferFunctions()
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
-});
-
 app.get('/experiment/:experiment/stateMachines', async (req, res) => {
   experimentServiceFactory
     .createExperimentService(req.params.experiment, getAuthToken(req))
@@ -427,6 +419,22 @@ app.put('/experiment/:experiment/stateMachines', async (req, res) => {
   experimentServiceFactory
     .createExperimentService(req.params.experiment, getAuthToken(req))
     .setStateMachines(req.body.stateMachines)
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/experiment/:experiment/transferFunctions', (req, res) => {
+  experimentServiceFactory
+    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .getTransferFunctions()
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.put('/experiment/:experiment/transferFunctions', (req, res) => {
+  experimentServiceFactory
+    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .saveTransferFunctions(req.body.transferFunctions)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
