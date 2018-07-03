@@ -71,8 +71,9 @@ class ExperimentCloner {
     return `${dirname}_${suffix}`;
   }
 
-  async cloneExperiment(token, userId, expPath, contextId) {
+  async cloneExperiment(token, userId, expPath, contextId, defaultName) {
     //clones the experiment
+
     let expName = await this.createUniqueExperimentId(
       token,
       userId,
@@ -95,7 +96,8 @@ class ExperimentCloner {
       expPath,
       expUUID,
       token,
-      userId
+      userId,
+      defaultName
     );
 
     await this.flattenBibiConf(bibiConf, expUUID, token, userId);
@@ -174,7 +176,7 @@ class ExperimentCloner {
     return files;
   }
 
-  async flattenExperiment(expPath, expUUID, token, userId) {
+  async flattenExperiment(expPath, expUUID, token, userId, defaultName) {
     //copies the experiment files into a a temporary flatten structure
     console.log('Flattening experiment');
 
@@ -182,7 +184,8 @@ class ExperimentCloner {
       expPath,
       expUUID,
       token,
-      userId
+      userId,
+      defaultName
     );
 
     let experimentConf = await readFile(fullExpPath, 'utf8').then(expContent =>
@@ -475,7 +478,13 @@ class NewExperimentCloner extends ExperimentCloner {
     return bibiFullPath;
   }
 
-  async getExperimentFileFullPath(expPath, expUUID, token, userId) {
+  async getExperimentFileFullPath(
+    expPath,
+    expUUID,
+    token,
+    userId,
+    defaultName
+  ) {
     let experimentConf = await readFile(
       this.newExpConfigurationPath,
       'utf8'
@@ -494,13 +503,15 @@ class NewExperimentCloner extends ExperimentCloner {
       userId
     );
 
-    // Change the name to be more meaningful
-    experimentConf = this.changeExperimentName(
-      experimentConf,
-      robotModelConfig,
-      envModelConfig,
-      this.expModelsPaths.brainPath && this.expModelsPaths.brainPath.name
-    );
+    if (defaultName) experimentConf.ExD.name = defaultName;
+    else
+      // Change the name to be more meaningful
+      experimentConf = this.changeExperimentName(
+        experimentConf,
+        robotModelConfig,
+        envModelConfig,
+        this.expModelsPaths.brainPath && this.expModelsPaths.brainPath.name
+      );
 
     const expFilePath = path.join(
       this.tmpFolder.name,
