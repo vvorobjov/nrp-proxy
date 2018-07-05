@@ -81,6 +81,10 @@ class ModelLoader {
 }
 
 class BrainsModelLoader extends ModelLoader {
+  static get maturity_regexp() {
+    return /\n+maturity *: *([^\n]*)/gi;
+  }
+
   get modelType() {
     return 'brains';
   }
@@ -96,10 +100,25 @@ class BrainsModelLoader extends ModelLoader {
   parseFile(file) {
     return q.denodeify(fs.readFile)(file, 'utf8')
       .then(fileContent => this.parseFileContent(fileContent))
-      .then(desc => {
+      .then(docString => {
+        let name = path.basename(file, path.extname(file)),
+          description = docString,
+          maturity = 'development',
+          maturityDocString = BrainsModelLoader.maturity_regexp.exec(docString);
+
+        if (maturityDocString) {
+          // doc string contains a maturity level, split it into adequate fields
+          if (maturityDocString[1] == 'production') maturity = 'production';
+          description = docString.replace(
+            BrainsModelLoader.maturity_regexp,
+            ''
+          );
+        }
+
         return {
-          name: path.basename(file, path.extname(file)),
-          description: desc
+          name,
+          description,
+          maturity
         };
       })
       .catch(err => console.error(`Failed to read  ${file}. Error: ${err}`));
@@ -112,7 +131,7 @@ class XmlConfigModelLoader extends ModelLoader {
   }
 
   parseFile(file) {
-    const props2read = ['name', 'description', 'thumbnail'];
+    const props2read = ['name', 'description', 'thumbnail', 'maturity'];
 
     let loadThumbnail = (model, directory) => {
       if (!model.thumbnail) return model;
@@ -127,16 +146,18 @@ class XmlConfigModelLoader extends ModelLoader {
 
     return q.denodeify(fs.readFile)(file, 'utf8')
       .then(q.denodeify(xml2js))
-      .then(json =>
-        _.fromPairs(
+      .then(json => {
+        let mapped = _.fromPairs(
           props2read.map(p => [
             p,
             _(json.model[p])
               .join(',')
               .trim() || null
           ])
-        )
-      )
+        );
+        if (mapped.maturity != 'production') mapped.maturity = 'development';
+        return mapped;
+      })
       .then(model => loadThumbnail(model, path.dirname(file)))
       .catch(err => console.error(`Failed to read  ${file}. Error: ${err}`));
   }

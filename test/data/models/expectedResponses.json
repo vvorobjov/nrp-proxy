@@ -2,6 +2,7 @@
   "robots": [
     {
       "id": "lauron_model",
+      "maturity": "development",
       "name": "HBP FZI LauronV",
       "description":
         "Six-legged walking robot LauronV - Extended HBP Model - FZI Forschungszentrum Informatik",
@@ -11,6 +12,7 @@
     },
     {
       "id": "nao_model",
+      "maturity": "development",
       "name": "NAO",
       "description": "A model of the turtlebot",
       "path": "robots/nao_model/model.config",
@@ -20,6 +22,7 @@
   "environments": [
     {
       "id": "biologylab_world",
+      "maturity": "development",
       "name": "Biology lab environment",
       "description":
         "Environment for performing mouse experiments in a Y-Maze, on a table, within a realistic biology lab.",
@@ -28,6 +31,7 @@
     },
     {
       "id": "spacebotcup_world",
+      "maturity": "development",
       "name": "FZI SpaceBotCup Environment",
       "description":
         "Unstructured environment modelled for the SpaceBotCup robotics challenge.",
@@ -37,6 +41,7 @@
     },
     {
       "id": "virtual_room",
+      "maturity": "development",
       "name": "HBP Virtual Room",
       "description":
         "A room extending the Display Wall's room of the Lausanne offices beyond the display screen.",
@@ -47,12 +52,14 @@
   "brains": [
     {
       "id": "arm_reinforcement_learning.py",
+      "maturity": "development",
       "name": "arm_reinforcement_learning",
       "description": "",
       "path": "brains/arm_reinforcement_learning.py"
     },
     {
       "id": "braitenberg.py",
+      "maturity": "development",
       "name": "braitenberg",
       "description":
         "This file contains the setup of the neuronal network running the Husky experiment with neuronal image recognition",
@@ -60,6 +67,7 @@
     },
     {
       "id": "eye_movements_simple.py",
+      "maturity": "development",
       "name": "eye_movements_simple",
       "description":
         "This brain defines 4 convolutions over the corners of an input layer\nAll weights are hardcoded and equals",
