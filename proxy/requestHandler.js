@@ -27,7 +27,7 @@ var _ = require('lodash'),
   q = require('q');
 
 var ModelsService = require('./modelsService.js'),
-  ExperimentsService = require('./experimentsService.js'),
+  TemplateExperimentsService = require('./TemplateExperimentsService'),
   oidcAuthenticator = require('./oidcAuthenticator.js'),
   serversProxy = require('./serversProxy.js');
 
@@ -36,7 +36,7 @@ var simulationList = {};
 var availableServers = [];
 let healthStatus = {};
 
-var configuration, modelsService, experimentsService;
+var configuration, modelsService, templateExperimentsService;
 
 function initialize(config) {
   reloadConfiguration(config)
@@ -67,8 +67,10 @@ function reloadConfiguration(config) {
   modelsService = new ModelsService(configuration.modelsPath);
   modelsService.loadModels();
 
-  experimentsService = new ExperimentsService(configuration.experimentsPath);
-  return experimentsService.loadExperiments().then(experiments => {
+  templateExperimentsService = new TemplateExperimentsService(
+    configuration.experimentsPath
+  );
+  return templateExperimentsService.loadExperiments().then(experiments => {
     experimentList = _(experiments)
       .map(exp => [
         exp.id,
@@ -170,7 +172,7 @@ function getExperimentImageFile(experimentId) {
   if (!experimentList[experimentId]) throw ('No experiment id: ', experimentId);
   let experiment = experimentList[experimentId].configuration;
   return q.resolve(
-    experimentsService.getExperimentFilePath(
+    templateExperimentsService.getExperimentFilePath(
       experiment.path,
       experiment.thumbnail
     )
