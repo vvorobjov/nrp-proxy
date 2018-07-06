@@ -76,7 +76,8 @@
   }, 
   "repository": {
     "type": "git", 
-    "url": "ssh://bbpcode.epfl.ch/neurorobotics/nrpBackendProxy"
+    "url": "ssh://bbpcode.epfl.ch/neurorobotics/nrpBackendProxy",
+    "issueurl": "https://bitbucket.org/hbpneurorobotics/neurorobotics-platform/issues/new"
   }, 
   "keywords": [
     "Proxy"
