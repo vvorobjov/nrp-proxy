@@ -275,7 +275,7 @@ class RequestHandler {
     ).cloneExperiment(token, userId, expPath, contextId);
   }
 
-  async cloneNewExperiment(token, contextId, modelsPaths) {
+  async cloneNewExperiment(token, contextId, modelsPaths, defaultName) {
     await this.authenticator.checkToken(token);
     let userId = await this.getUserIdentifier(token);
 
@@ -284,7 +284,13 @@ class RequestHandler {
       this.config,
       modelsPaths,
       this.newExperimentPath
-    ).cloneExperiment(token, userId, this.newExperimentPath, contextId);
+    ).cloneExperiment(
+      token,
+      userId,
+      this.newExperimentPath,
+      contextId,
+      defaultName
+    );
   }
 }
 
