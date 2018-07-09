@@ -133,7 +133,8 @@ class ExperimentService {
     let brainModelFile = bibi.brainModel.file.toString();
     let brain = (await this.getFile(brainModelFile.toString())).toString();
 
-    if (!Array.isArray(bibi.brainModel.populations))
+    if (!bibi.brainModel.populations) bibi.brainModel.populations = [];
+    else if (!Array.isArray(bibi.brainModel.populations))
       bibi.brainModel.populations = [bibi.brainModel.populations];
 
     return Promise.resolve({
