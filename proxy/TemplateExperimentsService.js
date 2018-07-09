@@ -83,7 +83,7 @@ class ExperimentsService {
           id: id,
           name: exc.name || id,
           thumbnail: exc.thumbnail,
-          robotPath: path.dirname(bibi.bodyModel),
+          robotPath: path.dirname(bibi.bodyModel.__text || bibi.bodyModel),
           path: expPath,
           physicsEngine:
             exc.physicsEngine._exists === false ? 'ode' : exc.physicsEngine,
