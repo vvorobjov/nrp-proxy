@@ -28,7 +28,8 @@ const q = require('q'),
   BaseStorage = require('../BaseStorage.js'),
   Authenticator = require('./Authenticator.js'),
   mime = require('mime-types'),
-  USER_DATA_FOLDER = 'USER_DATA';
+  USER_DATA_FOLDER = 'USER_DATA',
+  INTERNALS = ['FS_db', USER_DATA_FOLDER];
 
 //mocked in the tests thus non const
 let utils = require('./utils.js'),
@@ -191,17 +192,19 @@ class Storage extends BaseStorage {
       }));
   }
 
-  listExperiments(token, userId, contextId, options = {}) {
-    return options.all
-      ? q.denodeify(fs.readdir)(utils.storagePath).then(res =>
-          res.map(file => ({ uuid: file, name: file }))
-        )
-      : DB.instance.experiments
+  listExperiments(token, userId) {
+    return q.denodeify(fs.readdir)(utils.storagePath)
+      .then(folders => this.addNonRegisteredExperiments(folders, userId))
+      .then(folders => {
+        return DB.instance.experiments
           .find({ token: userId })
-          .then(res => this.removeNonExistingExperiment(res, userId))
-          .then(res =>
-            res.map(f => ({ uuid: f.experiment, name: f.experiment }))
+          .then(entries =>
+            entries.filter(e => this.unregisterDeletedExperiments(e, folders))
+          )
+          .then(entries =>
+            entries.map(e => ({ uuid: e.experiment, name: e.experiment }))
           );
+      });
   }
 
   listExperimentsSharedByUser(userId) {
@@ -210,19 +213,27 @@ class Storage extends BaseStorage {
       .then(res => res.map(f => ({ uuid: f.experiment, name: f.experiment })));
   }
 
-  removeNonExistingExperiment(experiments, userId) {
-    return experiments
-      .map(f => {
-        if (!fs.existsSync(path.join(utils.storagePath, f.experiment))) {
-          DB.instance.experiments.remove({
+  async addNonRegisteredExperiments(folders, userId) {
+    let folderActions = folders.map(e =>
+      DB.instance.experiments.findOne({ experiment: e }).then(found => {
+        if (found === null && INTERNALS.indexOf(e) === -1) {
+          return DB.instance.experiments.insert({
             token: userId,
-            experiment: f.experiment
+            experiment: e
           });
-          f = undefined;
         }
-        return f;
       })
-      .filter(item => item != undefined);
+    );
+    await Promise.all(folderActions);
+    return folders;
+  }
+
+  unregisterDeletedExperiments(experimentEntry, folders) {
+    const isDeletedFolder = folders.indexOf(experimentEntry.experiment) === -1;
+    if (isDeletedFolder) {
+      DB.instance.experiments.remove(experimentEntry);
+    }
+    return !isDeletedFolder;
   }
 
   createExperiment(newExperiment, token, userId) {

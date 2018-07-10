@@ -83,15 +83,26 @@ class ExperimentService {
   }
 
   async getConfig() {
-    let exc = (await this.getExc())[0].ExD;
+    let exc = await this.getFile('experiment_configuration.exc'); // throws an exception if the .exc file is not found (Error 204)
+    exc = exc.toString();
+    let ExD = new X2JS().xml2js(exc).ExD;
+
+    let bibiConfSrc;
+    try {
+      let bibi = await this.getBibi();
+      bibiConfSrc = bibi[1];
+    } catch (err) {
+      bibiConfSrc = undefined;
+    }
 
     let config = {
-      timeout: exc.timeout || 600,
-      name: exc.name || 'No Name available',
-      description: exc.description || 'No description available',
-      maturity: exc.maturity == 'production' ? exc.maturity : 'development',
+      timeout: ExD.timeout,
+      name: ExD.name,
+      thumbnail: ExD.thumbnail,
+      description: ExD.description,
+      maturity: ExD.maturity == 'production' ? ExD.maturity : 'development',
       cameraPose:
-        exc.cameraPose &&
+        ExD.cameraPose &&
         [
           'cameraPosition._x',
           'cameraPosition._y',
@@ -99,10 +110,14 @@ class ExperimentService {
           'cameraLookAt._x',
           'cameraLookAt._y',
           'cameraLookAt._z'
-        ].map(prop => Number(_.get(exc.cameraPose, prop))),
+        ].map(prop => Number(_.get(ExD.cameraPose, prop))),
       brainProcesses:
-        exc.bibiConf._processes && Number(exc.bibiConf._processes),
-      physicsEngine: exc.physicsEngine
+        ExD.bibiConf && ExD.bibiConf._processes
+          ? Number(ExD.bibiConf._processes)
+          : undefined,
+      physicsEngine: ExD.physicsEngine,
+      experimentFile: exc,
+      bibiConfSrc: bibiConfSrc
     };
 
     if (exc.visualModel) {
