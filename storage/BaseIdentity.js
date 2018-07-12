@@ -38,7 +38,14 @@ class BaseIdentity {
   getUserInfo(userId, token) {
     throw 'not implemented';
   }
-
+  //eslint-disable-next-line no-unused-vars
+  getUsersList() {
+    throw 'not implemented';
+  }
+  //eslint-disable-next-line no-unused-vars
+  getUserToken(user) {
+    throw 'not implemented';
+  }
   //eslint-disable-next-line no-unused-vars
   getUserGroups(token, userId) {
     throw 'not implemented';

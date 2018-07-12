@@ -1,3 +1,6 @@
 {"k":"0000000078","o":"0000000116","v":"001"}
 {"_id":2,"_uid":2,"_dt":1499268772503,"_s":"4ec50404fee31a6ddde1320ba15421d6"}
 {"user":"nrpuser","password":"password","token":"a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24","_id":{"$wrap":"$oid","v":2}}
+{"k":"0000000078","o":"0000000114","v":"001"}
+{"_id":3,"_uid":3,"_dt":1526046280114,"_s":"d9b81cb96dd74da007524d65b1478f7d"}
+{"user":"admin","password":"password","token":"1d3409e4-8a4e-409d-b6c7-58dacc4b833e","_id":{"$wrap":"$oid","v":3}}

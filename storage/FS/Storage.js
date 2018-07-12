@@ -41,7 +41,12 @@ class Storage extends BaseStorage {
   userIdHasAccessToPath(userId, filename) {
     let experiment = filename.split('/')[0];
     return DB.instance.experiments
-      .findOne({ token: userId, experiment: experiment })
+      .findOne({
+        $or: [
+          { $and: [{ token: userId, experiment: experiment }] },
+          { $and: [{ experiment: experiment, shared_users: { $in: userId } }] }
+        ]
+      })
       .then(res => res || q.reject(Authenticator.AUTHORIZATION_ERROR));
   }
 
@@ -199,6 +204,12 @@ class Storage extends BaseStorage {
           );
   }
 
+  listExperimentsSharedByUser(userId) {
+    return DB.instance.experiments
+      .find({ shared_users: { $in: userId } })
+      .then(res => res.map(f => ({ uuid: f.experiment, name: f.experiment })));
+  }
+
   removeNonExistingExperiment(experiments, userId) {
     return experiments
       .map(f => {
@@ -225,6 +236,19 @@ class Storage extends BaseStorage {
           .then(() => this.calculateFilePath('', newExperiment))
           .then(filePath => q.denodeify(fs.mkdir)(filePath))
           .then(() => ({ uuid: newExperiment }));
+      });
+  }
+
+  addExperimentSharedUserByUser(newExperiment, userId) {
+    return DB.instance.experiments
+      .findOne({ experiment: newExperiment })
+      .then(existingExp => {
+        if (existingExp)
+          return DB.instance.experiments.update(
+            { _id: existingExp._id },
+            { $addToSet: { shared_users: userId } }
+          );
+        return q.reject('Experiment does not exist');
       });
   }
 
