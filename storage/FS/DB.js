@@ -39,7 +39,9 @@ class DBCollection {
   insert(...args) {
     return q.nbind(this.collection.insert, this.collection)(...args);
   }
-
+  update(...args) {
+    return q.nbind(this.collection.update, this.collection)(...args);
+  }
   findOne(...args) {
     return q.nbind(this.collection.findOne, this.collection)(...args);
   }

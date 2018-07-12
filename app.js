@@ -235,6 +235,13 @@ app.get('/storage/experiments', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.get('/storage/sharedexperiments', (req, res) => {
+  storageRequestHandler
+    .listExperimentsSharedByUser(getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
 app.post('/storage/clone', (req, res) => {
   return storageRequestHandler
     .cloneExperiment(getAuthToken(req), req.body.expPath, req.get('context-id'))
@@ -398,7 +405,16 @@ app.get('/experiment/:experimentId/config', async (req, res) => {
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
-
+app.post('/storage/shared', (req, res) => {
+  storageRequestHandler
+    .addExperimentSharedUserByUser(
+      req.body.experimentId,
+      req.body.userId,
+      getAuthToken(req)
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
 app.get('/experiment/:experiment/brain', async (req, res) => {
   experimentServiceFactory
     .createExperimentService(req.params.experiment, getAuthToken(req))
@@ -460,7 +476,12 @@ app.get('/identity/me/groups', (req, res) => {
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
-
+app.get('/identity/me/users', (req, res) => {
+  storageRequestHandler
+    .getUsersList(getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
 app.post('/activity_log/:activity', async (req, res) => {
   let userInfo = await storageRequestHandler.getUserInfo(
     'me',

@@ -30,7 +30,13 @@ describe('BaseIdentity', () => {
   });
 
   //for all the non implemented methods of the base class
-  ['getUserInfo', 'getUserGroups', 'getUniqueIdentifier'].forEach(method => {
+  [
+    'getUserInfo',
+    'getUserGroups',
+    'getUniqueIdentifier',
+    'getUsersList',
+    'getUserToken'
+  ].forEach(method => {
     it(
       'should throw a non implemented method error when trying to use the base class non-overidden function: ' +
         method,
@@ -43,6 +49,7 @@ describe('BaseIdentity', () => {
 
 describe('FSidentity', () => {
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24';
+  const fakeName = 'nrpuser';
   let identity;
 
   beforeEach(() => {
@@ -52,6 +59,17 @@ describe('FSidentity', () => {
     const Identity = rewire('../../storage/FS/Identity.js');
     Identity.__set__('DB', DB);
     identity = new Identity();
+  });
+
+  it(`should return self user token`, () => {
+    return identity.getUserToken(fakeName).should.eventually.deep.equal({
+      token: fakeToken
+    });
+  });
+  it(`should return self user info`, () => {
+    var expectedResult = [{ name: 'nrpuser' }, { name: 'admin' }];
+
+    return identity.getUsersList().should.eventually.deep.equal(expectedResult);
   });
 
   it(`should return self user info`, () => {

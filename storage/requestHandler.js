@@ -165,6 +165,12 @@ class RequestHandler {
             : exps.filter(e => !SPECIAL_FOLDERS.has(e.name))
       );
   }
+  listExperimentsSharedByUser(token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId => this.storage.listExperimentsSharedByUser(userId));
+  }
 
   createExperiment(newExperiment, token, contextId) {
     return this.authenticator
@@ -172,6 +178,15 @@ class RequestHandler {
       .then(() => this.getUserIdentifier(token))
       .then(userId =>
         this.storage.createExperiment(newExperiment, token, userId, contextId)
+      );
+  }
+
+  addExperimentSharedUserByUser(newExperiment, userId, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.identity.getUserToken(userId))
+      .then(() =>
+        this.storage.addExperimentSharedUserByUser(newExperiment, userId)
       );
   }
 
@@ -263,6 +278,11 @@ class RequestHandler {
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
       .then(userId => this.identity.getUserGroups(token, userId));
+  }
+  getUsersList(token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.identity.getUsersList(token));
   }
 
   async cloneExperiment(token, expPath, contextId) {

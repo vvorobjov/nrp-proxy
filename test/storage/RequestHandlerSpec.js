@@ -152,6 +152,32 @@ describe('Storage request handler', () => {
     });
   });
 
+  it(`should get the list of the users`, () => {
+    var expectedResult = [{ name: 'nrpuser' }, { name: 'admin' }];
+    return storageRequestHandler.getUsersList(fakeToken).then(userList => {
+      expect(userList).to.deep.equal(expectedResult);
+    });
+  });
+
+  it(`should create a new shared Experiment when we call the addExperimentSharedUserByUser`, () => {
+    var expectedResult = [{ uuid: fakeExperiment, name: fakeExperiment }];
+    var adminToken = '1d3409e4-8a4e-409d-b6c7-58dacc4b833e';
+    return storageRequestHandler
+      .addExperimentSharedUserByUser(
+        fakeExperiment,
+        'admin',
+        fakeToken,
+        'contextId'
+      )
+      .then(() => {
+        return storageRequestHandler
+          .listExperimentsSharedByUser(adminToken)
+          .then(folderContents => {
+            expect(folderContents).to.deep.equal(expectedResult);
+          });
+      });
+  });
+
   //deleteFile
   it(`should succesfully delete an Experiment`, () =>
     storageRequestHandler

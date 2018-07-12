@@ -43,6 +43,34 @@ class Identity extends BaseIdentity {
       .then(res => res.user);
   }
 
+  getUsersList() {
+    return DB.instance.users
+      .find({})
+      .then(
+        users =>
+          users ||
+          q.reject({ code: 404, msg: 'getUsersList: error getting the users' })
+      )
+      .then(users =>
+        users.map(f => {
+          return { name: f.user };
+        })
+      );
+  }
+
+  getUserToken(user) {
+    let findCondition = { user };
+    return DB.instance.users
+      .findOne(findCondition)
+      .then(
+        res =>
+          res || q.reject({ code: 404, msg: 'getUserInfo: user id not found' })
+      )
+      .then(res => ({
+        token: res.token
+      }));
+  }
+
   getUserInfo(user, token) {
     let findCondition, userId;
     if (user === 'me' || user === 'default-owner') {
