@@ -278,11 +278,13 @@ class ExperimentCloner {
         this.expModelsPaths.robotPath === undefined ||
         this.expModelsPaths.robotPath.custom === false)
     ) {
-      if (typeof bibiConf.bodyModel == 'string') {
+      if (bibiConf.bodyModel._assetPath == undefined) {
+        let bodyModelFile = bibiConf.bodyModel.__text || bibiConf.bodyModel;
         bibiConf.bodyModel = {
-          __text: path.basename(bibiConf.bodyModel),
-          _assetPath: path.dirname(bibiConf.bodyModel),
-          _customAsset: false
+          __text: path.basename(bodyModelFile),
+          _assetPath: path.dirname(bodyModelFile),
+          _customAsset: false,
+          __prefix: bibiConf.__prefix
         };
       }
 
@@ -298,9 +300,15 @@ class ExperimentCloner {
         this.expModelsPaths.brainPath === undefined ||
         this.expModelsPaths.brainPath.custom === false)
     ) {
-      this.downloadFile(bibiConf.brainModel.file, this.config.modelsPath);
-      bibiConf.brainModel.file = path.basename(bibiConf.brainModel.file);
-      await this.copyH5File(bibiConf.brainModel.file);
+      let brainFile =
+        bibiConf.brainModel.file.__text || bibiConf.brainModel.file;
+      this.downloadFile(brainFile, this.config.modelsPath);
+      bibiConf.brainModel.file = {
+        __text: path.basename(brainFile),
+        __prefix: bibiConf.__prefix
+      };
+
+      await this.copyH5File(brainFile);
     }
 
     if (ensureArrayProp(bibiConf, 'transferFunction'))
