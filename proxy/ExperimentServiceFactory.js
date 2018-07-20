@@ -251,7 +251,7 @@ class ExperimentService {
   async getTransferFunctions() {
     let bibi = (await this.getBibi())[0].bibi;
 
-    let transferFunctions = bibi.transferFunction;
+    let transferFunctions = bibi.transferFunction || [];
     if (transferFunctions && !Array.isArray(transferFunctions))
       transferFunctions = [transferFunctions];
 
@@ -261,6 +261,7 @@ class ExperimentService {
       transferFunctions.map(tf =>
         this.getFile(tf._src).then(tfFile => {
           let tfId = path.basename(tf._src);
+          tfId = tfId.split('.')[0];
           tfsResponse.data[tfId] = tfFile.toString();
         })
       )
@@ -277,14 +278,17 @@ class ExperimentService {
       return [`${tfName}.py`, tfCode];
     });
 
-    bibi.transferFunction = tfs.map(([tfName]) => {
-      return {
-        _src: tfName,
-        __prefix: bibi.__prefix,
-        '_xsi:type':
-          (bibi.__prefix ? `${bibi.__prefix}:` : '') + 'PythonTransferFunction'
-      };
-    });
+    if (tfs && tfs.length)
+      bibi.transferFunction = tfs.map(([tfName]) => {
+        return {
+          _src: tfName,
+          __prefix: bibi.__prefix,
+          '_xsi:type':
+            (bibi.__prefix ? `${bibi.__prefix}:` : '') +
+            'PythonTransferFunction'
+        };
+      });
+    else delete bibi.transferFunction;
 
     let tfFiles = tfs.map(([tfName, tfCode]) => this.saveFile(tfName, tfCode));
 
