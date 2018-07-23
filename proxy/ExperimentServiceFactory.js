@@ -82,6 +82,50 @@ class ExperimentService {
     return [new X2JS().xml2js(bibi.toString()), exc.bibiConf._src];
   }
 
+  async getConfig() {
+    let exc = (await this.getExc())[0].ExD;
+
+    let config = {
+      timeout: exc.timeout || 600,
+      name: exc.name || 'No Name available',
+      description: exc.description || 'No description available',
+      maturity: exc.maturity == 'production' ? exc.maturity : 'development',
+      cameraPose:
+        exc.cameraPose &&
+        [
+          'cameraPosition._x',
+          'cameraPosition._y',
+          'cameraPosition._z',
+          'cameraLookAt._x',
+          'cameraLookAt._y',
+          'cameraLookAt._z'
+        ].map(prop => Number(_.get(exc.cameraPose, prop))),
+      brainProcesses:
+        exc.bibiConf._processes && Number(exc.bibiConf._processes),
+      physicsEngine: exc.physicsEngine
+    };
+
+    if (exc.visualModel) {
+      let pose = exc.visualModel.visualPose,
+        roll = Number(pose._roll || pose._ux),
+        pitch = Number(pose._pitch || pose._uy),
+        yaw = Number(pose._yaw || pose._uz),
+        scale = Number(exc.visualModel._scale || 1.0);
+
+      config.visualModel = exc.visualModel._src;
+
+      config.visualModelParams = [
+        ...['_x', '_y', '_z'].map(prop => Number(_.get(pose, prop))),
+        roll,
+        pitch,
+        yaw,
+        scale
+      ];
+    }
+
+    return config;
+  }
+
   async getStateMachines() {
     let exc = (await this.getExc())[0].ExD;
 

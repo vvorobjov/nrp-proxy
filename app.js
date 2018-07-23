@@ -391,6 +391,14 @@ app.put('/storage/:experiment', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.get('/experiment/:experimentId/config', async (req, res) => {
+  experimentServiceFactory
+    .createExperimentService(req.params.experimentId, getAuthToken(req))
+    .getConfig()
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
 app.get('/experiment/:experiment/brain', async (req, res) => {
   experimentServiceFactory
     .createExperimentService(req.params.experiment, getAuthToken(req))
