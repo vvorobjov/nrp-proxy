@@ -3,6 +3,7 @@
 const fs = require('fs'),
   chai = require('chai'),
   chaiAsPromised = require('chai-as-promised'),
+  chaiSubset = require('chai-subset'),
   rewire = require('rewire'),
   expect = chai.expect,
   path = require('path'),
@@ -11,6 +12,7 @@ const fs = require('fs'),
   sinon = require('sinon');
 
 chai.use(chaiAsPromised);
+chai.use(chaiSubset);
 chai.should();
 
 const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
@@ -78,7 +80,8 @@ describe('FSStorage', () => {
       generateUniqueExperimentId: realUtils.generateUniqueExperimentId
     };
     const mockFsExtra = {
-      copy: () => q.when('test')
+      copy: () => q.when('test'),
+      ensureDir: () => q.resolve()
     };
     RewiredDB = rewire('../../storage/FS/DB.js');
     RewiredDB.__set__('utils', mockUtils);

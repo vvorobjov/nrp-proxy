@@ -5,8 +5,7 @@ const chai = require('chai'),
   rewire = require('rewire'),
   expect = chai.expect,
   path = require('path'),
-  fs = require('fs'),
-  X2JS = new require('x2js');
+  fs = require('fs');
 
 var zippedRobotPath = path.join(
   __dirname,
@@ -46,6 +45,7 @@ const fsMock = {
   writeFileSync: sinon.spy(),
   readFileSync: sinon.spy(),
   copy: sinon.stub().returns(Promise.resolve()),
+  ensureDir: sinon.stub().returns(Promise.resolve()),
   existsSync: sinon.stub().returns(true),
   readdir: sinon.stub().returns(['pythonfile.py']),
   readdirSync: sinon
@@ -106,14 +106,6 @@ describe('Experiment cloner', () => {
     expect(downloadFile.callCount).to.equal(7);
 
     expect(fsMock.writeFileSync.callCount).to.equal(2);
-    // Check that paths to transfer functions have been "flattened"
-    var bibiConf = new X2JS().xml2js(fsMock.writeFileSync.lastCall.args[1]);
-    bibiConf = bibiConf.bibi;
-    if (bibiConf['transferFunction'])
-      for (let tf of bibiConf.transferFunction)
-        if (tf._src) {
-          expect(tf._src).to.equal(path.basename(tf._src));
-        }
     expect(fsMock.readFileSync.callCount).to.equal(13);
     expect(fsMock.copy.callCount).to.equal(7);
 
