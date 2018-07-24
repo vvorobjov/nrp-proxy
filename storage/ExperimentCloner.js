@@ -164,8 +164,10 @@ class ExperimentCloner {
         ? 'application/octet-stream'
         : 'text/plain';
 
+      const pathRelativeToTemp = f.substring(this.tmpFolder.name.length + 1); //remove tmpFolder path (plus a slash) from f
+
       return {
-        name: path.basename(f),
+        name: pathRelativeToTemp,
         content: fs.readFileSync(f),
         contentType: mimetype
       };
@@ -200,12 +202,10 @@ class ExperimentCloner {
       ensureArrayProp(experiment.experimentControl, 'stateMachine');
       for (let sm of experiment.experimentControl.stateMachine) {
         this.downloadFile(sm._src);
-        sm._src = path.basename(sm._src);
       }
     }
 
     this.downloadFile(experiment.thumbnail);
-    experiment.thumbnail = path.basename(experiment.thumbnail);
 
     // if the model is zipped we don't need to do all this
     if (
@@ -215,7 +215,8 @@ class ExperimentCloner {
     ) {
       this.downloadFile(
         experiment.environmentModel._src,
-        this.config.modelsPath
+        this.config.modelsPath,
+        path.basename(experiment.environmentModel._src)
       );
 
       experiment.environmentModel._src = path.basename(
@@ -279,19 +280,15 @@ class ExperimentCloner {
         this.expModelsPaths.robotPath.custom === false)
     ) {
       if (bibiConf.bodyModel._assetPath == undefined) {
-        let bodyModelFile = bibiConf.bodyModel.__text || bibiConf.bodyModel;
+        const bodyModelFile = bibiConf.bodyModel.__text || bibiConf.bodyModel;
         bibiConf.bodyModel = {
-          __text: path.basename(bodyModelFile),
+          __text: bodyModelFile,
           _assetPath: path.dirname(bodyModelFile),
           _customAsset: false,
           __prefix: bibiConf.__prefix
         };
       }
-
-      this.downloadFile(
-        path.join(bibiConf.bodyModel._assetPath, bibiConf.bodyModel.__text),
-        this.config.modelsPath
-      );
+      this.downloadFile(bibiConf.bodyModel.__text, this.config.modelsPath);
     }
 
     if (
@@ -302,7 +299,13 @@ class ExperimentCloner {
     ) {
       let brainFile =
         bibiConf.brainModel.file.__text || bibiConf.brainModel.file;
-      this.downloadFile(brainFile, this.config.modelsPath);
+
+      this.downloadFile(
+        brainFile,
+        this.config.modelsPath,
+        path.basename(brainFile)
+      );
+
       bibiConf.brainModel.file = {
         __text: path.basename(brainFile),
         __prefix: bibiConf.__prefix
@@ -315,7 +318,6 @@ class ExperimentCloner {
       for (let tf of bibiConf.transferFunction)
         if (tf._src) {
           this.downloadFile(tf._src);
-          tf._src = path.basename(tf._src); // flattens file path in .bibi file
         }
 
     let bibiFile = path.join(this.tmpFolder.name, 'bibi_configuration.bibi');
@@ -325,10 +327,14 @@ class ExperimentCloner {
   }
 
   downloadFile(srcFile, srcDir = this.experimentFolder, dstFile = srcFile) {
-    //downloads a file
-    let dstPath = path.join(this.tmpFolder.name, path.basename(dstFile));
+    const dstPath = path.join(this.tmpFolder.name, dstFile);
+
     this.downloadedFiles.push(
-      fs.copy(path.join(srcDir, srcFile), dstPath).then(() => dstPath)
+      fs
+        .ensureDir(path.dirname(dstPath))
+        .then(() =>
+          fs.copy(path.join(srcDir, srcFile), dstPath).then(() => dstPath)
+        )
     );
   }
 }

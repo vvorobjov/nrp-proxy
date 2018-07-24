@@ -177,6 +177,9 @@ class Storage extends BaseStorage {
     filename = path.join(experiment, filename);
     return this.userIdHasAccessToPath(userId, filename)
       .then(() => this.calculateFilePath(experiment, filename))
+      .then(filePath =>
+        fsExtra.ensureDir(path.dirname(filePath)).then(() => filePath)
+      )
       .then(filePath => q.denodeify(fs.writeFile)(filePath, fileContent));
   }
 
@@ -286,9 +289,16 @@ class Storage extends BaseStorage {
   copyFolderContents(contents, destFolder) {
     return q.all(
       contents.map(item =>
-        fsExtra.copy(
-          this.calculateFilePath('', item.uuid),
-          this.calculateFilePath('', path.join(destFolder, item.name))
+        (item.type === 'folder'
+          ? fsExtra.ensureDir(
+              this.calculateFilePath('', path.join(destFolder, item.name))
+            )
+          : q.resolve()
+        ).then(() =>
+          fsExtra.copy(
+            this.calculateFilePath('', item.uuid),
+            this.calculateFilePath('', path.join(destFolder, item.name))
+          )
         )
       )
     );
