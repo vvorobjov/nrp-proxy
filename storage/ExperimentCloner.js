@@ -74,7 +74,9 @@ class ExperimentCloner {
   async cloneExperiment(token, userId, expPath, contextId, defaultName) {
     //clones the experiment
 
-    let expName = await this.createUniqueExperimentId(
+    var expName;
+
+    expName = await this.createUniqueExperimentId(
       token,
       userId,
       expPath,
@@ -87,34 +89,38 @@ class ExperimentCloner {
       userId,
       contextId
     );
+    try {
+      this.experimentFolder = path.dirname(
+        path.join(this.config.experimentsPath, expPath)
+      );
 
-    this.experimentFolder = path.dirname(
-      path.join(this.config.experimentsPath, expPath)
-    );
+      let bibiConf = await this.flattenExperiment(
+        expPath,
+        expUUID,
+        token,
+        userId,
+        defaultName
+      );
 
-    let bibiConf = await this.flattenExperiment(
-      expPath,
-      expUUID,
-      token,
-      userId,
-      defaultName
-    );
+      await this.flattenBibiConf(bibiConf, expUUID, token, userId);
 
-    await this.flattenBibiConf(bibiConf, expUUID, token, userId);
+      let files = await this.readDownloadedFiles();
 
-    let files = await this.readDownloadedFiles();
+      await this.uploadDownloadedFiles(files, expUUID, token, userId);
 
-    await this.uploadDownloadedFiles(files, expUUID, token, userId);
+      await this.copyResourcesFolder(
+        this.experimentFolder,
+        expName,
+        expUUID,
+        token,
+        userId
+      );
 
-    await this.copyResourcesFolder(
-      this.experimentFolder,
-      expName,
-      expUUID,
-      token,
-      userId
-    );
-
-    return expUUID;
+      return expUUID;
+    } catch (e) {
+      this.storage.deleteExperiment(expName, expName, token, userId);
+      throw e;
+    }
   }
 
   async copyResourcesFolder(experimentFolder, expName, expUUID, token, userId) {
