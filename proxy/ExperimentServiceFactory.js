@@ -191,6 +191,7 @@ class ExperimentService {
 
   async getBrain() {
     let bibi = (await this.getBibi())[0].bibi;
+    if (!bibi.brainModel) return null;
     let brainModelFile = bibi.brainModel.file.toString();
     let brain = (await this.getFile(brainModelFile.toString())).toString();
 
@@ -198,9 +199,28 @@ class ExperimentService {
     else if (!Array.isArray(bibi.brainModel.populations))
       bibi.brainModel.populations = [bibi.brainModel.populations];
 
+    let robots = [];
+    if (!bibi.bodyModel) bibi.bodyModel = [];
+    else if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
+
+    if (bibi.bodyModel.length == 1 && !bibi.bodyModel[0]._robotId) {
+      robots.push('robot');
+    } else if (bibi.bodyModel.length) {
+      bibi.bodyModel.forEach(function(model) {
+        if (!model._robotId) {
+          console.error(
+            'Multiple bodyModels has been defined with same or no names.' +
+              'Please check bibi config file.'
+          );
+        }
+        robots.push(model._robotId);
+      });
+    }
+
     return Promise.resolve({
       brain: brain,
       brainType: path.extname(brainModelFile).substr(1),
+      robots: robots,
       populations: _.reduce(
         bibi.brainModel.populations,
         (acc, pop) => {
