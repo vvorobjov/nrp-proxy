@@ -52,6 +52,20 @@ describe('Storage request handler', () => {
     return stat;
   };
 
+  const originalLstatSync = fs.lstatSync;
+  const fakeLstatSync = directory => {
+    const dir = originalLstatSync(directory);
+    dir.isDirectory = () => true;
+    return dir;
+  };
+
+  const fakeReadDirSync = () => [
+    'experiment_configuration.exc',
+    'ExDXMLExample.jpg',
+    'all_neurons_spike_monitor.py',
+    'bibi_configuration.bibi'
+  ];
+
   let mkdirCalls = 0;
   let rmdirCalls = 0;
   beforeEach(() => {
@@ -79,6 +93,8 @@ describe('Storage request handler', () => {
     RewiredFSStorage.__set__('fs.statSync', fakeStatSync);
     RewiredFSStorage.__set__('fs.mkdir', fakeMkdir);
     RewiredFSStorage.__set__('rmdir', fakeRmdir);
+    RewiredFSStorage.__set__('fs.lstatSync', fakeLstatSync);
+    RewiredFSStorage.__set__('fs.readdirSync', fakeReadDirSync);
     fsStorage = new RewiredFSStorage();
     RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator.js');
     RewiredFSAuthenticator.__set__('DB', RewiredDB);
@@ -236,6 +252,9 @@ describe('Storage request handler', () => {
 
   //listExperiments
   it(`should list all the experiments the current token provides`, () => {
+    /*  const mockedLstatsync = () => { };
+     StorageRequestHandler.__set__('fs.lstatSync', mockedLstatsync);
+     var storageRequestHandler2 = new StorageRequestHandler(configFile); */
     const expected = {
       uuid: fakeExperiment,
       name: fakeExperiment

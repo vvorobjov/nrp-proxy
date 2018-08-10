@@ -210,6 +210,20 @@ class Storage extends BaseStorage {
       });
   }
 
+  hasExperimentConfiguration(folder) {
+    return (
+      fs
+        .readdirSync(path.join(utils.storagePath, folder))
+        .filter(file => file.includes('.exc')).length > 0
+    );
+  }
+
+  isDirectory(fileSystemEntry) {
+    return fs
+      .lstatSync(path.join(utils.storagePath, fileSystemEntry))
+      .isDirectory();
+  }
+
   listExperimentsSharedByUser(userId) {
     return DB.instance.experiments
       .find({ shared_users: { $in: userId } })
@@ -217,6 +231,9 @@ class Storage extends BaseStorage {
   }
 
   async addNonRegisteredExperiments(folders, userId) {
+    folders = folders
+      .filter(fileSystemEntry => this.isDirectory(fileSystemEntry))
+      .filter(folder => this.hasExperimentConfiguration(folder));
     let folderActions = folders.map(e =>
       DB.instance.experiments.findOne({ experiment: e }).then(found => {
         if (found === null && INTERNALS.indexOf(e) === -1) {
