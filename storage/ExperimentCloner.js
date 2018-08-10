@@ -296,7 +296,6 @@ class ExperimentCloner {
       }
       this.downloadFile(bibiConf.bodyModel.__text, this.config.modelsPath);
     }
-
     if (
       bibiConf.brainModel &&
       (this.expModelsPaths === undefined ||
@@ -460,8 +459,13 @@ class NewExperimentCloner extends ExperimentCloner {
           ? path.basename(this.expModelsPaths.robotPath.path)
           : path.dirname(this.expModelsPaths.robotPath.path);
 
+      const robotPath = path
+        .dirname(this.expModelsPaths.robotPath.path)
+        .split(path.sep);
+      //value of the model is the relative path, e.g: robotType/model.sdf
+      const bodyModel_text = path.join(robotPath[1], bodyModel);
       bibi.bibi.bodyModel = {
-        __text: bodyModel,
+        __text: bodyModel_text,
         _customAsset: customAsset,
         _assetPath: assetPath
       };
