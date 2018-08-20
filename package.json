@@ -85,6 +85,7 @@
   "engines": {
     "node": ">=7"
   }, 
-  "author": "", 
-  "license": "ISC"
+  "author": "NRP Software Development Team", 
+  "license": "ISC",
+  "contributors": ["Claudio Sousa", "Manos Angelidis", "Mahmoud Akl", "Kenny Sharma", "Yves Schmid", "Susie Murphy", "Hossain Mahmoud", "Kepa Cantero", "Axel von Arnim", "Luc Guyot"]
 }
