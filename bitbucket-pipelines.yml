@@ -1,0 +1,18 @@
+# This is a sample build configuration for Docker.
+# Check our guides at https://confluence.atlassian.com/x/O1toN for more examples.
+# Only use spaces to indent your .yml configuration.
+# -----
+# You can specify a custom docker image from Docker Hub as your build environment.
+image: hbpneurorobotics/nrp_frontend:dev
+
+pipelines:
+  default:
+    - step:
+        name: Build
+        script: # Modify the commands below to build your repository.
+          - sudo apt-get update && sudo apt-get install -y virtualenv
+          - source $HOME/.nvm/nvm.sh && nvm alias default 8 && nvm use default
+          - npm install
+          - echo "Checking for un-prettified file"
+          - node_modules/prettier/bin/prettier.js --list-different "{**/,}*.{js,scss}"
+          - npm test
