@@ -18,13 +18,13 @@ To submit code changes (pull requests), do as follows.
 2. Create a branch in Bitbucket : "+" button, create a branch. Give it an explicit name
    without spaces or special characters. Your change should refers to a ticket in Jira, that
    you or someone else created for this change. Then embed the ticket number in the branch
-   name. Example: NRRPLT-6828_my_new_feature  
+   name. Example: NUIT-10_my_new_feature  
 3. Copy paste the git fetch command from Bitbucket to your terminal to get the branch
    locally  
 4. Do your code changes  
 5. git add whatever files you changed/added  
 6. git commit and **make sure** your commit message starts with [<ticket_number>].
-   Example: "[NRRPLT-6828] My new feature"  
+   Example: "[NUIT-10] My new feature"  
 7. git push (you will be asked for your Bitbucket credentials)  
 6. Check the build of your commit in the Pipelines menu in Bitbucket (filter your branch)  
 7. You can do as many commits and push to your branch as needed  
