@@ -79,11 +79,30 @@ class ExperimentsService {
         ]);
       })
       .then(([exc, { bibi: bibi }]) => {
+        let robotPaths = {};
+        if (bibi.bodyModel) {
+          if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
+
+          if (bibi.bodyModel.length == 1 && !bibi.bodyModel[0]._robotId) {
+            robotPaths['robot'] = bibi.bodyModel[0].__text || bibi.bodyModel[0];
+          } else if (bibi.bodyModel.length) {
+            bibi.bodyModel.forEach(function(model) {
+              if (!model._robotId) {
+                console.error(
+                  'Multiple bodyModels has been defined with same or no names.' +
+                    'Please check bibi config file.'
+                );
+              }
+              robotPaths[model._robotId] = model.__text || model;
+            });
+          }
+        }
+
         return {
           id: id,
           name: exc.name || id,
           thumbnail: exc.thumbnail,
-          robotPath: path.dirname(bibi.bodyModel.__text || bibi.bodyModel),
+          robotPaths: robotPaths,
           path: expPath,
           physicsEngine:
             exc.physicsEngine._exists === false ? 'ode' : exc.physicsEngine,

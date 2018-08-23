@@ -275,27 +275,37 @@ class ExperimentCloner {
     );
     let bibiConf = bibi.bibi;
 
-    if (ensureArrayProp(bibiConf, 'configuration'))
+    if (ensureArrayProp(bibiConf, 'configuration')) {
       for (let conf of bibiConf.configuration) {
         this.downloadFile(conf._src);
       }
-    if (
-      bibiConf.bodyModel &&
-      (this.expModelsPaths === undefined ||
-        this.expModelsPaths.robotPath === undefined ||
-        this.expModelsPaths.robotPath.custom === false)
-    ) {
-      if (bibiConf.bodyModel._assetPath == undefined) {
-        const bodyModelFile = bibiConf.bodyModel.__text || bibiConf.bodyModel;
-        bibiConf.bodyModel = {
-          __text: bodyModelFile,
-          _assetPath: path.dirname(bodyModelFile),
-          _customAsset: false,
-          __prefix: bibiConf.__prefix
-        };
-      }
-      this.downloadFile(bibiConf.bodyModel.__text, this.config.modelsPath);
     }
+
+    if (bibiConf.bodyModel) {
+      if (!Array.isArray(bibiConf.bodyModel))
+        bibiConf.bodyModel = [bibiConf.bodyModel];
+
+      bibiConf.bodyModel.forEach(model => {
+        if (
+          model &&
+          (this.expModelsPaths === undefined ||
+            this.expModelsPaths.robotPath === undefined ||
+            this.expModelsPaths.robotPath.custom === false)
+        ) {
+          if (model._assetPath == undefined) {
+            const bodyModelFile = model.__text || model;
+            model = {
+              __text: bodyModelFile,
+              _assetPath: path.dirname(bodyModelFile),
+              _customAsset: false,
+              __prefix: bibiConf.__prefix
+            };
+          }
+          this.downloadFile(model.__text, this.config.modelsPath);
+        }
+      });
+    }
+
     if (
       bibiConf.brainModel &&
       (this.expModelsPaths === undefined ||
