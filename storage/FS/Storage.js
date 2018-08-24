@@ -195,19 +195,25 @@ class Storage extends BaseStorage {
       }));
   }
 
-  listExperiments(token, userId) {
-    return q.denodeify(fs.readdir)(utils.storagePath)
-      .then(folders => this.addNonRegisteredExperiments(folders, userId))
-      .then(folders => {
-        return DB.instance.experiments
-          .find({ token: userId })
-          .then(entries =>
-            entries.filter(e => this.unregisterDeletedExperiments(e, folders))
-          )
-          .then(entries =>
-            entries.map(e => ({ uuid: e.experiment, name: e.experiment }))
-          );
-      });
+  listExperiments(token, userId, contextId, options = {}) {
+    if (options.all) {
+      return q.denodeify(fs.readdir)(utils.storagePath).then(res =>
+        res.map(file => ({ uuid: file, name: file }))
+      );
+    } else {
+      return q.denodeify(fs.readdir)(utils.storagePath)
+        .then(folders => this.addNonRegisteredExperiments(folders, userId))
+        .then(folders => {
+          return DB.instance.experiments
+            .find({ token: userId })
+            .then(entries =>
+              entries.filter(e => this.unregisterDeletedExperiments(e, folders))
+            )
+            .then(entries =>
+              entries.map(e => ({ uuid: e.experiment, name: e.experiment }))
+            );
+        });
+    }
   }
 
   hasExperimentConfiguration(folder) {
