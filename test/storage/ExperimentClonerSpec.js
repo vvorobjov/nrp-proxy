@@ -11,7 +11,6 @@ var zippedRobotPath = path.join(
   __dirname,
   'dbMock',
   'USER_DATA',
-  'nrpuser',
   'robots',
   'husky_model.zip'
 );

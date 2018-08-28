@@ -236,6 +236,14 @@ class RequestHandler {
       );
   }
 
+  listAllCustomModels(customFolder, token, contextId) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId =>
+        this.storage.listAllCustomModels(customFolder, token, userId, contextId)
+      );
+  }
   listCustomModels(customFolder, token, contextId) {
     return this.authenticator
       .checkToken(token)

@@ -14,6 +14,13 @@ const fs = require('fs'),
 chai.use(chaiAsPromised);
 chai.use(chaiSubset);
 chai.should();
+var collectionMock = sinon.stub();
+collectionMock.prototype.insert = sinon.stub().returns(Promise.resolve());
+collectionMock.prototype.findOne = sinon
+  .stub()
+  .returns(Promise.resolve('value'));
+collectionMock.prototype.find = sinon.stub().returns(Promise.resolve());
+collectionMock.prototype.remove = sinon.stub().returns(Promise.resolve());
 
 const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
   fakeUserId = 'nrpuser',
@@ -85,6 +92,7 @@ describe('FSStorage', () => {
     };
     RewiredDB = rewire('../../storage/FS/DB.js');
     RewiredDB.__set__('utils', mockUtils);
+    RewiredDB.__set__('DBCollection', collectionMock);
     RewiredFSStorage = rewire('../../storage/FS/Storage.js');
     RewiredFSStorage.__set__('DB', RewiredDB);
     RewiredFSStorage.__set__('utils', mockUtils);
@@ -94,11 +102,74 @@ describe('FSStorage', () => {
       //empty implementation just to check if fs functions are called
       callback();
     };
+
     RewiredFSStorage.__set__('fs.mkdir', empty);
     fsStorage = new RewiredFSStorage();
   });
 
+  it(`should get a custom model`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    return fsStorage
+      .getCustomModel({ uuid: 'robots/husky_model.zip' }, fakeToken, 'admin')
+      .then(res => expect(res).should.not.be.empty);
+  });
+
+  it(`should get a list custom model`, () => {
+    const expected = {
+      uuid: fakeExperiment,
+      fileName: fakeExperiment
+    };
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          uuid: fakeExperiment,
+          fileName: fakeExperiment
+        }
+      ])
+    );
+    return fsStorage
+      .listCustomModels('robots', fakeToken, fakeUserId, 'contextId')
+      .then(res => expect(res).to.contain(expected));
+  });
+
+  it(`should have an error when here is not model `, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(null));
+    return fsStorage
+      .getCustomModel({ uuid: 'robots/husky_model.zip' }, fakeToken, 'admin')
+      .should.be.eventually.rejectedWith('Model does not exists');
+  });
+
+  it(`should have return empty if there is an error in list models`, () => {
+    collectionMock.prototype.find = sinon.stub().returns(Promise.reject(null));
+    return fsStorage
+      .listCustomModels({ uuid: 'robots/husky_model.zip' }, fakeToken, 'admin')
+      .should.eventually.deep.equal([]);
+  });
+
+  it('should create custom model correctly', () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(null));
+    return fsStorage
+      .createCustomModel(
+        'robots',
+        'data',
+        fakeUserId,
+        'test.zip',
+        fakeToken,
+        'contextId'
+      )
+      .then(res => expect(res).should.not.be.empty);
+  });
+
   it(`should return an entry when we check an existing token`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve({ token: fakeUserId }));
     return fsStorage
       .userIdHasAccessToPath(fakeUserId, fakeExperiment)
       .should.eventually.contain({ token: fakeUserId });
@@ -109,6 +180,11 @@ describe('FSStorage', () => {
     fsStorage.createExperiment = function() {
       return new Promise(function(resolve) {
         resolve('success');
+      });
+    };
+    fsStorage.listExperiments = function() {
+      return new Promise(function(resolve) {
+        resolve([{ uuid: 'uuid', name: 'name1' }]);
       });
     };
 
@@ -140,6 +216,9 @@ describe('FSStorage', () => {
   });
 
   it(`should throw when we check a non-existing token`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(null));
     return assert.isRejected(
       fsStorage.userIdHasAccessToPath('non-existing-token', fakeExperiment),
       AUTHORIZATION_ERROR
@@ -164,6 +243,11 @@ describe('FSStorage', () => {
 
   //listFiles
   it(`should list all the files contained in a certain experiment`, async () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(
+        Promise.resolve({ token: fakeUserId, experiment: fakeExperiment })
+      );
     const files = await fsStorage.listFiles(
       fakeExperiment,
       fakeToken,
@@ -201,9 +285,23 @@ describe('FSStorage', () => {
         return expect(stringContents).to.contain('fakeContent');
       });
   });
+  it(`should return the contents of a file given a correct experiment and token when byname is true`, () => {
+    return fsStorage
+      .getFile('fakeFile', 'fakeExperiment', fakeToken, fakeUserId, true)
+      .then(val => {
+        var stringContents = String.fromCharCode.apply(
+          null,
+          new Uint8Array(val.body)
+        );
+        return expect(stringContents).to.contain('fakeContent');
+      });
+  });
 
   //deleteExperiment
   it(`should fail to delete an experiment`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(null));
     return fsStorage
       .deleteExperiment('fakeExp', 'fakeExp', fakeToken, fakeUserId)
       .catch(val => expect(val).to.deep.equal({ code: 403 }));
@@ -230,6 +328,11 @@ describe('FSStorage', () => {
 
   //deleteFile
   it(`should succesfully delete a file given the correct data`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(
+        Promise.resolve({ token: fakeUserId, experiment: fakeExperiment })
+      );
     const tmpFilePath = path.join(
       __dirname,
       'dbMock/' + fakeExperiment + '/tmp'
@@ -258,10 +361,8 @@ describe('FSStorage', () => {
   it('should remove a folder from the database if the folder does not exist in the FS', () => {
     var mockExp = { experiment: 'nonExisting' };
     var folders = ['exp1', 'exp2'];
-    var DBSpy = sinon.spy(RewiredDB.instance.experiments, 'remove');
     var result = fsStorage.unregisterDeletedExperiments(mockExp, folders);
-    expect(result).to.equal(false);
-    return expect(DBSpy.called).to.equal(true);
+    return expect(result).to.equal(false);
   });
 
   //createOrUpdate
@@ -308,9 +409,57 @@ describe('FSStorage', () => {
       uuid: fakeExperiment,
       name: fakeExperiment
     };
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          uuid: fakeExperiment,
+          name: fakeExperiment,
+          experiment: fakeExperiment
+        }
+      ])
+    );
+    collectionMock.prototype.remove = sinon.stub().returns(Promise.resolve());
     return fsStorage
       .listExperiments(fakeToken, fakeUserId)
       .should.eventually.contain(expected);
+  });
+
+  it(`should return reject if there is an error`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.reject('someError'));
+    return fsStorage.deleteFile(
+      fakeExperiment,
+      fakeExperiment,
+      fakeToken,
+      fakeUserId
+    ).should.be.eventually.rejected;
+  });
+
+  it(`should not create an experiment when it already exists`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    return fsStorage.createExperiment(fakeExperiment, fakeToken, fakeUserId)
+      .should.be.eventually.rejected;
+  });
+  it(`should succesfully delete a file given when byname is true`, () => {
+    var unlinkMock = sinon.stub().returns(Promise.resolve('deleted'));
+    RewiredFSStorage.__set__('fs.unlink', unlinkMock);
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(
+        Promise.resolve({ token: fakeUserId, experiment: fakeExperiment })
+      );
+    fsStorage
+      .deleteFile(
+        'fakeExperiment' + '/tmp',
+        fakeExperiment,
+        fakeToken,
+        fakeUserId,
+        true
+      )
+      .should.eventually.contain('deleted');
   });
 });
 

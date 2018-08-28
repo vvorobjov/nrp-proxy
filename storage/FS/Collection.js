@@ -23,16 +23,35 @@
  * ---LICENSE-END**/
 'use strict';
 
-const path = require('path'),
-  shell = require('shelljs');
+const q = require('q');
 
-const STORAGE_PATH_ENV = 'STORAGE_PATH', //STORAGE_PATH variable
-  DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
+//wraps tingo db collection to promisefy methods
+class DBCollection {
+  constructor(collection) {
+    this.collection = collection;
+  }
 
-let storagePath =
-  process.env[STORAGE_PATH_ENV] ||
-  DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v]);
+  insert(...args) {
+    return q.nbind(this.collection.insert, this.collection)(...args);
+  }
 
-['robots', 'environments', 'brains'].forEach(folder =>
-  shell.mkdir('-p', path.join(storagePath, 'USER_DATA', folder))
-);
+  findOne(...args) {
+    return q.nbind(this.collection.findOne, this.collection)(...args);
+  }
+  update(...args) {
+    return q.nbind(this.collection.update, this.collection)(...args);
+  }
+  find(...args) {
+    return q.Promise((resolve, reject) => {
+      this.collection
+        .find(...args)
+        .toArray((err, res) => (err ? reject(err) : resolve(res)));
+    });
+  }
+
+  remove(...args) {
+    return q.nbind(this.collection.remove, this.collection)(...args);
+  }
+}
+
+module.exports = DBCollection;

@@ -25,8 +25,9 @@
 
 const xml2js = require('xml2js').parseString,
   q = require('q'),
-  JSZip = require('jszip'),
   path = require('path');
+
+let JSZip = require('jszip');
 
 class CustomModelsService {
   logConfig(zip, basename) {
@@ -118,7 +119,7 @@ class CustomModelsService {
       .name.split(path.sep)[0];
   }
 
-  extractModelMetadataFromZip(fileContent, brain = undefined) {
+  extractModelMetadataFromZip(fileContent, type = undefined) {
     return JSZip.loadAsync(fileContent).then(async zip => {
       const exception = q.reject(
         `Error: Zip structure is wrong. Could not find model.config.`
@@ -129,7 +130,7 @@ class CustomModelsService {
 
       let modelConfig = await this.logConfig(zip, basename);
       let modelData;
-      if (brain) {
+      if (type == 'brainPath') {
         modelData = zip.file(path.join(basename, modelConfig.brain));
       } else {
         modelData = zip.file(path.join(basename, modelConfig.sdf));
@@ -138,9 +139,14 @@ class CustomModelsService {
         return q.reject(
           `There is a problem with the ${modelConfig.name} zip file. Make sure that the file (py or sdf) the model.config points to is in the zip.`
         );
+
+      let modelName = modelData.name.split(path.sep)[1];
+      if (type == 'robotPath') modelName = modelData.name;
+
       return {
         data: await modelData.async('string'),
-        name: modelData.name.split(path.sep)[1],
+        name: modelName,
+        relPath: modelData.name,
         modelConfig: await zip
           .file(path.join(basename, 'model.config'))
           .async('string')

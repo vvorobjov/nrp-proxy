@@ -115,35 +115,61 @@ class Storage extends BaseStorage {
       );
   }
 
-  getCustomModel(modelPath) {
+  getCustomModel(modelPath, token, userId) {
     // Unfortunately we have to do that since the backend sends an unparsed json
     if (typeof modelPath !== 'object') modelPath = JSON.parse(modelPath);
-    return q
-      .resolve(path.join(USER_DATA_FOLDER, modelPath.uuid))
-      .then(relFolderName => this.calculateFilePath('', relFolderName))
-      .then(folderName => q.denodeify(fs.readFile)(folderName));
+    return DB.instance.models
+      .findOne({ fileName: modelPath.uuid, token: userId })
+      .then(existingExp => {
+        if (!existingExp) return q.reject('Model does not exists');
+        return q
+          .resolve(path.join(USER_DATA_FOLDER, modelPath.uuid))
+          .then(relFolderName => this.calculateFilePath('', relFolderName))
+          .then(folderName => q.denodeify(fs.readFile)(folderName));
+      });
   }
 
   createCustomModel(modelType, modelData, userId, modelName) {
-    return q
-      .resolve(
-        this.calculateFilePath(path.join(userId, modelType), modelName, true)
+    let newFileName = path.join(modelType, modelName);
+    return DB.instance.models
+      .findOne({ fileName: newFileName, token: userId })
+      .then(existingExp => {
+        if (!existingExp)
+          DB.instance.models.insert({
+            token: userId,
+            fileName: newFileName,
+            type: modelType
+          });
+        return q
+          .resolve(this.calculateFilePath(modelType, modelName, true))
+          .then(filePath =>
+            q.denodeify(fs.writeFile)(filePath, modelData, {
+              encoding: 'binary'
+            })
+          );
+      });
+  }
+
+  listAllCustomModels(customFolder) {
+    return DB.instance.models
+      .find({ type: customFolder })
+      .then(res =>
+        res.map(f => ({
+          uuid: f.fileName,
+          fileName: f.fileName,
+          userId: f.token
+        }))
       )
-      .then(filePath =>
-        q.denodeify(fs.writeFile)(filePath, modelData, { encoding: 'binary' })
-      );
+      .catch(() => []);
   }
 
   listCustomModels(customFolder, token, userId) {
-    let customModelsRePath = path.join(userId, customFolder);
-    return q
-      .resolve(path.join(USER_DATA_FOLDER, customModelsRePath))
-      .then(relFolderName => this.calculateFilePath('', relFolderName))
-      .then(folderName => q.denodeify(fs.readdir)(folderName))
-      .then(files =>
-        files.map(f => ({
-          uuid: path.join(customModelsRePath, f),
-          fileName: path.join(customModelsRePath, f)
+    return DB.instance.models
+      .find({ token: userId, type: customFolder })
+      .then(res =>
+        res.map(f => ({
+          uuid: f.fileName,
+          fileName: f.fileName
         }))
       )
       .catch(() => []);

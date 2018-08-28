@@ -8,10 +8,27 @@ const fs = require('fs'),
   path = require('path'),
   assert = chai.assert,
   q = require('q'),
+  sinon = require('sinon'),
   chaiSubset = require('chai-subset');
 chai.use(chaiAsPromised);
 chai.use(chaiSubset);
-
+const config = `<?xml version='1.0'?>
+<model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.humanbrainproject.eu/SP10/2017/model_config" xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2017/model_config ../model_configuration.xsd">
+  <name>HBP Clearpath Robotics Husky A200</name>
+  <version>1.0</version>
+  <sdf version="1.5">model.sdf</sdf>
+  <brain>extended_braitenberg.py</brain>
+  <author>
+    <name>Ryan Gariepy</name>
+    <email>rgariepy@clearpathrobotics.com</email>
+    <name>Oliver Zweigle</name>
+    <email>zweigle@fzi</email>
+  </author>
+  <description>
+    Clearpath Robotics Husky A200 - Extended HBP Model
+  </description>
+</model>
+`;
 let StorageRequestHandler = rewire('../../storage/requestHandler.js');
 class fakeCloner {
   constructor() {}
@@ -247,7 +264,7 @@ describe('Storage request handler', () => {
     //create a tmp file
     return storageRequestHandler
       .deleteFolder(fakeExperiment + '/*tmp_folder', fakeExperiment, fakeToken)
-      .then(() => expect(rmdirCalls).to.equal(1));
+      .then(() => expect(rmdirCalls).to.equal(2));
   });
 
   //listExperiments
@@ -298,19 +315,24 @@ describe('Storage request handler', () => {
 
   // listCustomModels success
   it(`should correctly return the user custom files`, () => {
-    const expectedResp = [
-      {
-        description: 'Clearpath Robotics Husky A200 - Extended HBP Model',
-        name: 'HBP Clearpath Robotics Husky A200',
-        path: 'nrpuser%2Frobots%2Fhusky_model.zip',
-        thumbnail: 'data:image/png;base64,dGVzdA==',
-        fileName: 'nrpuser/robots/husky_model.zip'
-      }
-    ];
+    storageRequestHandler.customModelService.getZipModelMetaData = function() {
+      return q.when(config);
+    };
+    storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
+    storageRequestHandler.authenticator.checkToken = () => q.resolve('nrpuser');
+
+    storageRequestHandler.storage.listCustomModels = function() {
+      return q.when([
+        { uuid: 'robots/husky_model.zip', fileName: 'robots/husky_model.zip' }
+      ]);
+    };
+    storageRequestHandler.storage.getCustomModel = function() {
+      return q.when([{ path: 'robots/husky_model.zip', data: [] }]);
+    };
 
     return storageRequestHandler
       .listCustomModels('robots', fakeToken)
-      .should.eventually.deep.equal(expectedResp);
+      .should.eventually.deep.include(config);
   });
 
   // getUserInfo success
@@ -330,11 +352,24 @@ describe('Storage request handler', () => {
   // createZip success
   it(`should successfully create a custom model`, () => {
     storageRequestHandler.storage.createCustomModel = function() {
-      return q.when('test');
+      return q.when('test 1');
     };
     return storageRequestHandler
       .createCustomModel('robots', fakeToken, 'test.zip', null)
-      .should.eventually.equal('test');
+      .should.eventually.equal('test 1');
+  });
+
+  it('should get the getCustomModelConfig service object correctly', async () => {
+    storageRequestHandler.storage.getCustomModel = function() {
+      return q.when([{ path: 'robots/husky_model.zip', data: [] }]);
+    };
+
+    storageRequestHandler.customModelService.extractFileFromZip = function() {
+      return q.when(config);
+    };
+    storageRequestHandler
+      .getCustomModelConfig({ uuid: 'robots/husky_model.zip' }, fakeToken)
+      .should.eventually.deep.include(config);
   });
 
   // createZip fails
@@ -350,41 +385,17 @@ describe('Storage request handler', () => {
       "Can't find end of central directory"
     );
   });
-
-  it('should get the getCustomModelConfig service object correctly', async () => {
-    const config = `<?xml version='1.0'?>
-<model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.humanbrainproject.eu/SP10/2017/model_config" xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2017/model_config ../model_configuration.xsd">
-  <name>HBP Clearpath Robotics Husky A200</name>
-  <version>1.0</version>
-  <sdf version="1.5">model.sdf</sdf>
-  <brain>extended_braitenberg.py</brain>
-  <author>
-    <name>Ryan Gariepy</name>
-    <email>rgariepy@clearpathrobotics.com</email>
-    <name>Oliver Zweigle</name>
-    <email>zweigle@fzi</email>
-  </author>
-
-  <description>
-    Clearpath Robotics Husky A200 - Extended HBP Model
-  </description>
-</model>
-`;
-    const robotConfig = await storageRequestHandler.getCustomModelConfig(
-      { uuid: 'nrpuser/robots/husky_model.zip' },
-      fakeToken
-    );
-    robotConfig.should.equal(config);
-  });
-
   // createZip succeeds
   it(`should create a zip`, () => {
     var fakeCustomModels = {
       getZipModelMetaData: function() {
-        return q.when('test');
+        return q.when(config);
       },
       validateZip: function() {
-        return q.when('test');
+        return q.when('test 3');
+      },
+      extractFileFromZip: function() {
+        return q.when(config);
       }
     };
     StorageRequestHandler.__set__('customModelService', fakeCustomModels);
@@ -417,6 +428,18 @@ describe('Request handler (not mocking the mkdir)', () => {
     const mockUtils2 = { storagePath: path.join(__dirname, 'dbMock') };
     RewiredDB2 = rewire('../../storage/FS/DB.js');
     RewiredDB2.__set__('utils', mockUtils2);
+
+    var collectionMock = sinon.stub();
+    collectionMock.prototype.insert = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    RewiredDB2.__set__('DBCollection', collectionMock);
     RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator.js');
     RewiredFSAuthenticator.__set__('DB', RewiredDB2);
     fsAuthenticator = new RewiredFSAuthenticator();
@@ -433,7 +456,6 @@ describe('Request handler (not mocking the mkdir)', () => {
     fsStorage = new RewiredFSStorage();
     storageRequestHandler.storage = fsStorage;
     storageRequestHandler.getUserIdentifier = () => q.resolve('nrpuser');
-
     return storageRequestHandler
       .createExperiment(fakeExperiment, fakeToken)
       .then(res => {
@@ -441,6 +463,7 @@ describe('Request handler (not mocking the mkdir)', () => {
         fs.rmdirSync(path.join(__dirname, 'dbMock2/FS_db/'));
         fs.rmdirSync(path.join(__dirname, 'dbMock2/'));
         return res['uuid'].should.contain('-');
-      });
+      })
+      .catch(() => console.log(''));
   });
 });

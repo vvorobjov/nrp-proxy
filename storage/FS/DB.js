@@ -24,40 +24,12 @@
 'use strict';
 
 const fs = require('fs'),
-  q = require('q'),
   path = require('path'),
   tingodb = require('tingodb')();
+
 //mocked in the test thus not const
 let utils = require('./utils.js');
-
-//wraps tingo db collection to promisefy methods
-class DBCollection {
-  constructor(collection) {
-    this.collection = collection;
-  }
-
-  insert(...args) {
-    return q.nbind(this.collection.insert, this.collection)(...args);
-  }
-  update(...args) {
-    return q.nbind(this.collection.update, this.collection)(...args);
-  }
-  findOne(...args) {
-    return q.nbind(this.collection.findOne, this.collection)(...args);
-  }
-
-  find(...args) {
-    return q.Promise((resolve, reject) => {
-      this.collection
-        .find(...args)
-        .toArray((err, res) => (err ? reject(err) : resolve(res)));
-    });
-  }
-
-  remove(...args) {
-    return q.nbind(this.collection.remove, this.collection)(...args);
-  }
-}
+let DBCollection = require('./Collection.js');
 
 //wraps tingo db
 class DB {
@@ -76,7 +48,9 @@ class DB {
   get experiments() {
     return this._experiments;
   }
-
+  get models() {
+    return this._models;
+  }
   constructor() {
     this.loadDB(path.join(utils.storagePath, DB.DB_FOLDER));
   }
@@ -87,6 +61,7 @@ class DB {
     let db = new tingodb.Db(dbDirectory, {});
     this._users = new DBCollection(db.collection('users'));
     this._experiments = new DBCollection(db.collection('experiments'));
+    this._models = new DBCollection(db.collection('models'));
   }
 }
 

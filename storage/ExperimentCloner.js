@@ -275,37 +275,27 @@ class ExperimentCloner {
     );
     let bibiConf = bibi.bibi;
 
-    if (ensureArrayProp(bibiConf, 'configuration')) {
+    if (ensureArrayProp(bibiConf, 'configuration'))
       for (let conf of bibiConf.configuration) {
         this.downloadFile(conf._src);
       }
+    if (
+      bibiConf.bodyModel &&
+      (this.expModelsPaths === undefined ||
+        this.expModelsPaths.robotPath === undefined ||
+        this.expModelsPaths.robotPath.custom === false)
+    ) {
+      if (bibiConf.bodyModel._assetPath == undefined) {
+        const bodyModelFile = bibiConf.bodyModel.__text || bibiConf.bodyModel;
+        bibiConf.bodyModel = {
+          __text: bodyModelFile,
+          _assetPath: path.dirname(bodyModelFile),
+          _customAsset: false,
+          __prefix: bibiConf.__prefix
+        };
+      }
+      this.downloadFile(bibiConf.bodyModel.__text, this.config.modelsPath);
     }
-
-    if (bibiConf.bodyModel) {
-      if (!Array.isArray(bibiConf.bodyModel))
-        bibiConf.bodyModel = [bibiConf.bodyModel];
-
-      bibiConf.bodyModel.forEach(model => {
-        if (
-          model &&
-          (this.expModelsPaths === undefined ||
-            this.expModelsPaths.robotPath === undefined ||
-            this.expModelsPaths.robotPath.custom === false)
-        ) {
-          if (model._assetPath == undefined) {
-            const bodyModelFile = model.__text || model;
-            model = {
-              __text: bodyModelFile,
-              _assetPath: path.dirname(bodyModelFile),
-              _customAsset: false,
-              __prefix: bibiConf.__prefix
-            };
-          }
-          this.downloadFile(model.__text, this.config.modelsPath);
-        }
-      });
-    }
-
     if (
       bibiConf.brainModel &&
       (this.expModelsPaths === undefined ||
@@ -419,8 +409,6 @@ class NewExperimentCloner extends ExperimentCloner {
   }
 
   async handleZippedModel(token, expUUID, userId, modelType) {
-    let brain;
-    if (modelType == 'brainPath') brain = true;
     const customModelsService = new CustomModelsService();
     const zipedModelContents = await this.storage.getCustomModel(
       { uuid: this.expModelsPaths[modelType].path },
@@ -428,7 +416,7 @@ class NewExperimentCloner extends ExperimentCloner {
       userId
     );
     const zipMetaData = await customModelsService
-      .extractModelMetadataFromZip(zipedModelContents, brain)
+      .extractModelMetadataFromZip(zipedModelContents, modelType)
       .catch(
         err =>
           this.storage.deleteExperiment(expUUID, expUUID, token, userId) &&
@@ -459,21 +447,17 @@ class NewExperimentCloner extends ExperimentCloner {
 
     if (this.expModelsPaths.robotPath) {
       const customAsset = this.expModelsPaths.robotPath.custom,
-        bodyModel = customAsset
+        bodyModel_text = customAsset
           ? robotModelConfig.robotRelPath
-          : // : path.join(
-            //     robotModelConfig.robotRelPath,
-            robotModelConfig.robotModelConfig.model.sdf.__text,
-        //)
+          : path.join(
+              robotModelConfig.robotRelPath,
+              robotModelConfig.robotModelConfig.model.sdf.__text
+            ),
         assetPath = customAsset
           ? path.basename(this.expModelsPaths.robotPath.path)
           : path.dirname(this.expModelsPaths.robotPath.path);
 
-      const robotPath = path
-        .dirname(this.expModelsPaths.robotPath.path)
-        .split(path.sep);
       //value of the model is the relative path, e.g: robotType/model.sdf
-      const bodyModel_text = path.join(robotPath[1], bodyModel);
       bibi.bibi.bodyModel = {
         __text: bodyModel_text,
         _customAsset: customAsset,

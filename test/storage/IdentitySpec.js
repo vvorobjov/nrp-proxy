@@ -79,16 +79,35 @@ describe('FSidentity', () => {
     });
   });
 
+  it(`should return a rejection on getUniqueIdentifier`, () => {
+    return identity.getUniqueIdentifier('fakeToken').should.be.eventually
+      .rejected;
+  });
   it(`should return specific user info`, () => {
     return identity
       .getUserInfo('nrpuser', fakeToken)
       .should.eventually.deep.equal({ id: 'nrpuser', displayName: 'nrpuser' });
   });
 
+  it(`should return a rejection when user is not found`, () => {
+    return identity.getUserInfo('fakeuser', fakeToken).should.be.eventually
+      .rejected;
+  });
+
   it(`should return default groups`, () => {
     return identity
       .getUserGroups()
       .should.eventually.deep.equal([{ name: 'hbp-sp10-user-edit-rights' }]);
+  });
+
+  it(`should return the default group plus admin group`, () => {
+    let expectedGroup = [
+      { name: 'hbp-sp10-user-edit-rights' },
+      { name: 'hbp-sp10-administrators' }
+    ];
+    return identity
+      .getUserGroups(fakeToken, 'admin')
+      .should.eventually.deep.equal(expectedGroup);
   });
 });
 
