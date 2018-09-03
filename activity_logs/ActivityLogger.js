@@ -34,14 +34,19 @@ class ActivityLogger {
     this.config = config;
   }
 
-  async log(activity, userName, data) {
-    if (!this.config || !this.config[activity])
-      return q.reject(`No activity log defined for activity '${activity}'.`);
-    const fileName = this.config[activity];
+  async loglocal(fileName, activity, userName, data) {
     let logContent = await stringify([
-      [new Date().toGMTString(), userName, ..._.map(data)]
+      [activity, new Date().toGMTString(), userName, ..._.map(data)]
     ]);
     await appendFile(fileName, logContent);
+  }
+
+  async log(activity, userName, data) {
+    if (!this.config) return q.reject(`No activity logs enabled.`);
+
+    if (this.config.localfile)
+      await this.loglocal(this.config.localfile, activity, userName, data);
+
     return q.resolve();
   }
 }
