@@ -10,9 +10,14 @@ pipelines:
     - step:
         name: Build
         script: # Modify the commands below to build your repository.
+
           - sudo apt-get update && sudo apt-get install -y virtualenv
           - source $HOME/.nvm/nvm.sh && nvm alias default 8 && nvm use default
           - npm install
           - echo "Checking for un-prettified file"
           - node_modules/prettier/bin/prettier.js --list-different "{**/,}*.{js,scss}"
           - npm test
+
+          # Coverage check
+          - git archive --remote=ssh://git@bitbucket.org/hbpneurorobotics/admin-scripts.git refs/heads/master nrp_cobertura_check | tar xf -
+          - ./nrp_cobertura_check reports/coverage/cobertura-coverage.xml
