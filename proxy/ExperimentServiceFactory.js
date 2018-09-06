@@ -250,32 +250,33 @@ class ExperimentService {
     let bibi = bibiFile.bibi;
     let brainModelFile = bibi.brainModel.file.toString();
 
-    bibi.brainModel.populations = populations.map(pop => {
-      if (pop.list) {
-        return {
-          _population: pop.name,
-          __prefix: bibi.brainModel.__prefix,
-          '_xsi:type':
-            (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
-            'List',
-          element: pop.list.map(nb => ({
+    if (populations.length > 0)
+      bibi.brainModel.populations = populations.map(pop => {
+        if (pop.list) {
+          return {
+            _population: pop.name,
             __prefix: bibi.brainModel.__prefix,
-            __text: `${nb}`
-          }))
-        };
-      } else {
-        return {
-          _population: pop.name,
-          _from: pop.from,
-          _step: pop.step,
-          _to: pop.to,
-          __prefix: bibi.brainModel.__prefix,
-          '_xsi:type':
-            (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
-            'Range'
-        };
-      }
-    });
+            '_xsi:type':
+              (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
+              'List',
+            element: pop.list.map(nb => ({
+              __prefix: bibi.brainModel.__prefix,
+              __text: `${nb}`
+            }))
+          };
+        } else {
+          return {
+            _population: pop.name,
+            _from: pop.from,
+            _step: pop.step,
+            _to: pop.to,
+            __prefix: bibi.brainModel.__prefix,
+            '_xsi:type':
+              (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
+              'Range'
+          };
+        }
+      });
 
     return Promise.all([
       this.saveFile(brainModelFile, brain),
