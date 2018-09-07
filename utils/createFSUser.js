@@ -23,9 +23,20 @@
  * ---LICENSE-END**/
 'use strict';
 
-const path = require('path'),
+const uuid = require('uuid/v4'),
+  path = require('path'),
+  DB = require(path.join(__dirname, '../storage/FS/DB.js')),
   shell = require('shelljs');
 
+let argv = require('minimist')(process.argv.slice(2));
+
+if (!argv.user || !argv.password) {
+  console.error(
+    `Error: arguments 'user' and 'password' required
+Example: node createFSUser.js --user nrpuser --password password`
+  );
+  return;
+}
 const STORAGE_PATH_ENV = 'STORAGE_PATH', //STORAGE_PATH variable
   DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
 
@@ -36,3 +47,34 @@ let storagePath =
 ['robots', 'environments', 'brains'].forEach(folder =>
   shell.mkdir('-p', path.join(storagePath, 'USER_DATA', folder))
 );
+
+let token = uuid();
+//we want to check if the user already exists to avoid inserting a duplicate
+DB.instance.users.find({ user: argv.user }).then(res => {
+  if (!res.length) {
+    DB.instance.users
+      .insert({ user: argv.user, password: argv.password, token: token })
+      .then(() => console.log(`New user '${argv.user}' created`))
+      .catch(err => console.error('Failed to create new user:', err));
+  } else {
+    if (res[0].password != argv.password) {
+      // new password so lets remove old user and add new user with new password
+      DB.instance.users
+        .remove(res)
+        .then(() =>
+          DB.instance.users
+            .insert({ user: argv.user, password: argv.password, token: token })
+            .then(() => console.log(`Updated user '${argv.user}' password`))
+            .catch(err =>
+              console.error('Failed to update password for user:', err)
+            )
+        )
+        .catch(err =>
+          console.error('Failed to update password for user:', err)
+        );
+    } else {
+      console.error('Username with this password already exists');
+      process.exit(1);
+    }
+  }
+});
