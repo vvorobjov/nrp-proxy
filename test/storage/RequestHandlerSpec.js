@@ -55,6 +55,7 @@ describe('Storage request handler', () => {
     fsStorage,
     identity;
 
+  var collectionMock = sinon.stub();
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
     fakeUserId = 'nrpuser',
     fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168',
@@ -90,6 +91,24 @@ describe('Storage request handler', () => {
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
     RewiredDB = rewire('../../storage/FS/DB.js');
     RewiredDB.__set__('utils', mockUtils);
+
+    collectionMock.prototype.delete = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    RewiredDB.__set__('DBCollection', collectionMock);
+    collectionMock.prototype.insert = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+
     RewiredFSStorage = rewire('../../storage/FS/Storage.js');
     RewiredFSStorage.__set__('DB', RewiredDB);
     RewiredFSStorage.__set__('utils', mockUtils);
@@ -123,6 +142,12 @@ describe('Storage request handler', () => {
   });
 
   it('should authenticate successfully', () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(
+        Promise.resolve({ token: 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24' })
+      );
+
     return storageRequestHandler
       .authenticate('nrpuser', 'password')
       .should.eventually.equal(fakeToken);
@@ -187,6 +212,9 @@ describe('Storage request handler', () => {
 
   it(`should get the list of the users`, () => {
     var expectedResult = [{ name: 'nrpuser' }, { name: 'admin' }];
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve([{ user: 'nrpuser' }, { user: 'admin' }]));
     return storageRequestHandler.getUsersList(fakeToken).then(userList => {
       expect(userList).to.deep.equal(expectedResult);
     });
@@ -195,6 +223,10 @@ describe('Storage request handler', () => {
   it(`should create a new shared Experiment when we call the addExperimentSharedUserByUser`, () => {
     var expectedResult = [{ uuid: fakeExperiment, name: fakeExperiment }];
     var adminToken = '1d3409e4-8a4e-409d-b6c7-58dacc4b833e';
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve([{ experiment: fakeExperiment }]));
+
     return storageRequestHandler
       .addExperimentSharedUserByUser(
         fakeExperiment,
@@ -210,45 +242,11 @@ describe('Storage request handler', () => {
           });
       });
   });
-
   //deleteFile
-  it(`should succesfully delete an Experiment`, () =>
+  it(`should succesfully delete an Experiment`, () => {
     storageRequestHandler
       .deleteExperiment('fakeExperiment', 'fakeExperiment', fakeToken)
-      .catch(err => expect(err).to.deep.equal({ code: 403 })));
-
-  //create or update file
-  it(`should create a new file when we call the createOrUpdateFunction`, () => {
-    //create a tmp file
-    return storageRequestHandler
-      .createOrUpdate(
-        'tmp',
-        'emptyContent',
-        'text/plain',
-        fakeExperiment,
-        fakeToken
-      )
-      .then(() => {
-        return fsStorage
-          .listFiles(fakeExperiment, fakeToken, fakeUserId)
-          .then(folderContents => {
-            //clean up the tmp file
-            fsStorage.deleteFile(
-              fakeExperiment + '/tmp',
-              fakeExperiment,
-              fakeToken,
-              fakeUserId
-            );
-            return expect(
-              folderContents[folderContents.length - 1]
-            ).to.containSubset({
-              name: 'tmp',
-              uuid: '21f0f4e0-9753-42f3-bd29-611d20fc1168/tmp',
-              size: 12,
-              type: 'file'
-            });
-          });
-      });
+      .catch(err => expect(err).to.deep.equal({ code: 403 }));
   });
 
   //create folder
@@ -276,6 +274,10 @@ describe('Storage request handler', () => {
       uuid: fakeExperiment,
       name: fakeExperiment
     };
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve([{ experiment: fakeExperiment }]));
+
     return storageRequestHandler
       .listExperiments(fakeToken)
       .should.eventually.contain(expected);
@@ -337,6 +339,10 @@ describe('Storage request handler', () => {
 
   // getUserInfo success
   it(`should successfully return the user info`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve({ user: 'nrpuser' }));
+
     return storageRequestHandler
       .getUserInfo('nrpuser', fakeToken)
       .should.eventually.deep.equal({ id: 'nrpuser', displayName: 'nrpuser' });
@@ -428,18 +434,6 @@ describe('Request handler (not mocking the mkdir)', () => {
     const mockUtils2 = { storagePath: path.join(__dirname, 'dbMock') };
     RewiredDB2 = rewire('../../storage/FS/DB.js');
     RewiredDB2.__set__('utils', mockUtils2);
-
-    var collectionMock = sinon.stub();
-    collectionMock.prototype.insert = sinon
-      .stub()
-      .returns(Promise.resolve('value'));
-    collectionMock.prototype.findOne = sinon
-      .stub()
-      .returns(Promise.resolve('value'));
-    collectionMock.prototype.find = sinon
-      .stub()
-      .returns(Promise.resolve('value'));
-    RewiredDB2.__set__('DBCollection', collectionMock);
     RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator.js');
     RewiredFSAuthenticator.__set__('DB', RewiredDB2);
     fsAuthenticator = new RewiredFSAuthenticator();
