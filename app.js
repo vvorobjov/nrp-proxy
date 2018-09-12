@@ -25,7 +25,8 @@
 
 const express = require('express'),
   _ = require('lodash'),
-  bodyParser = require('body-parser');
+  bodyParser = require('body-parser'),
+  iplocation = require('iplocation');
 
 require('./migration_scripts/sprint72.js');
 
@@ -495,22 +496,41 @@ app.get('/identity/me/users', (req, res) => {
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
+
+const getReqIp = req =>
+  req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
 app.post('/activity_log/:activity', async (req, res) => {
   let userInfo = await storageRequestHandler.getUserInfo(
     'me',
     getAuthToken(req)
   );
 
-  try {
-    let r = await activityLogger.log(
-      req.params.activity,
-      userInfo.displayName,
-      req.body
-    );
-    res.send(r);
-  } catch (err) {
-    res.status(202).send(err);
-  }
+  const clientIP = getReqIp(req);
+  const ipdata = await iplocation(clientIP);
+  activityLogger
+    .log(req.params.activity, userInfo.displayName, {
+      ...req.body,
+      city: ipdata.city,
+      country: ipdata.country
+    })
+    .then(r => res.send(r))
+    .catch(err => res.status(202).send(err));
+});
+
+app.post('/checkupdate', async (req, res) => {
+  const packagePath = require('path').resolve('./package.json');
+  const version = require(packagePath).version;
+  const clientIP = getReqIp(req);
+  const ipdata = await iplocation(clientIP);
+
+  activityLogger.log('check_update', clientIP, {
+    ...req.body,
+    city: ipdata.city,
+    country: ipdata.country
+  });
+
+  res.send({ version });
 });
 
 configurationManager.configuration.then(null, null, conf =>
