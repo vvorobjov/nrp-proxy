@@ -26,7 +26,8 @@
 const express = require('express'),
   _ = require('lodash'),
   bodyParser = require('body-parser'),
-  iplocation = require('iplocation');
+  iplocation = require('iplocation'),
+  path = require('path');
 
 require('./migration_scripts/sprint72.js');
 
@@ -312,9 +313,12 @@ app.get('/storage/custommodel/:modelPath', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/custommodelconfig/:modelPath', (req, res) => {
+app.get('/storage/custommodelconfig/:modelType/:modelPath', (req, res) => {
   storageRequestHandler
-    .getCustomModelConfig({ uuid: req.params.modelPath }, getAuthToken(req))
+    .getCustomModelConfig(
+      { uuid: path.join(req.params.modelType, req.params.modelPath) },
+      getAuthToken(req)
+    )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
