@@ -95,12 +95,14 @@ class ExperimentService {
       bibiConfSrc = undefined;
     }
 
+    const getExDProp = prop => (prop && prop.__prefix ? prop.__text : prop);
+    const maturity = getExDProp(ExD.maturity);
     let config = {
-      timeout: ExD.timeout,
-      name: ExD.name,
-      thumbnail: ExD.thumbnail,
-      description: ExD.description,
-      maturity: ExD.maturity == 'production' ? ExD.maturity : 'development',
+      timeout: getExDProp(ExD.timeout),
+      name: getExDProp(ExD.name),
+      thumbnail: getExDProp(ExD.thumbnail),
+      description: getExDProp(ExD.description),
+      maturity: maturity == 'production' ? maturity : 'development',
       cameraPose:
         ExD.cameraPose &&
         [
@@ -120,14 +122,14 @@ class ExperimentService {
       bibiConfSrc: bibiConfSrc
     };
 
-    if (exc.visualModel) {
-      let pose = exc.visualModel.visualPose,
+    if (ExD.visualModel) {
+      let pose = ExD.visualModel.visualPose,
         roll = Number(pose._roll || pose._ux),
         pitch = Number(pose._pitch || pose._uy),
         yaw = Number(pose._yaw || pose._uz),
-        scale = Number(exc.visualModel._scale || 1.0);
+        scale = Number(ExD.visualModel._scale || 1.0);
 
-      config.visualModel = exc.visualModel._src;
+      config.visualModel = ExD.visualModel._src;
 
       config.visualModelParams = [
         ...['_x', '_y', '_z'].map(prop => Number(_.get(pose, prop))),
