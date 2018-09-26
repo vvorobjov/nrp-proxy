@@ -513,7 +513,8 @@ app.post('/activity_log/:activity', async (req, res) => {
   const clientIP = getReqIp(req);
   const ipdata = await iplocation(clientIP);
   activityLogger
-    .log(req.params.activity, userInfo.displayName, {
+    .log(req.params.activity, {
+      user: userInfo.displayName,
       ...req.body,
       city: ipdata.city,
       country: ipdata.country
@@ -528,7 +529,7 @@ app.post('/checkupdate', async (req, res) => {
   const clientIP = getReqIp(req);
   const ipdata = await iplocation(clientIP);
 
-  activityLogger.log('check_update', clientIP, {
+  activityLogger.log('check_update', {
     ...req.body,
     city: ipdata.city,
     country: ipdata.country
