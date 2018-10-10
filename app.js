@@ -50,7 +50,9 @@ const storageRequestHandler = new StorageRequestHandler(config),
   adminService = new AdminService(config, proxyRequestHandler),
   activityLogger = new ActivityLogger(config['activity-logs']),
   experimentServiceFactory = new ExperimentServiceFactory(
-    storageRequestHandler
+    storageRequestHandler,
+    config,
+    proxyRequestHandler
   );
 
 app.use(function(req, res, next) {
@@ -435,7 +437,11 @@ app.post('/storage/shared', (req, res) => {
 });
 app.get('/experiment/:experiment/brain', async (req, res) => {
   experimentServiceFactory
-    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .createExperimentService(
+      req.params.experiment,
+      getAuthToken(req),
+      req.query.template == 'true'
+    )
     .getBrain()
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
@@ -451,7 +457,11 @@ app.put('/experiment/:experiment/brain', async (req, res) => {
 
 app.get('/experiment/:experiment/stateMachines', async (req, res) => {
   experimentServiceFactory
-    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .createExperimentService(
+      req.params.experiment,
+      getAuthToken(req),
+      req.query.template == 'true'
+    )
     .getStateMachines()
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
@@ -467,7 +477,11 @@ app.put('/experiment/:experiment/stateMachines', async (req, res) => {
 
 app.get('/experiment/:experiment/transferFunctions', (req, res) => {
   experimentServiceFactory
-    .createExperimentService(req.params.experiment, getAuthToken(req))
+    .createExperimentService(
+      req.params.experiment,
+      getAuthToken(req),
+      req.query.template == 'true'
+    )
     .getTransferFunctions()
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));

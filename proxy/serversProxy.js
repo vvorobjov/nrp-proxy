@@ -27,9 +27,8 @@ var request = require('request');
 var q = require('q');
 var _ = require('lodash');
 var dateFormat = require('dateformat');
-require('log-prefix')(function() {
-  return dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z');
-});
+
+require('log-prefix')(() => dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z'));
 
 var REQUEST_TIMEOUT = 20 * 1000; //ms
 

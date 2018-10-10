@@ -25,67 +25,82 @@
 
 const path = require('path'),
   _ = require('lodash'),
+  q = require('q'),
+  fs = require('fs'),
   pd = require('pretty-data').pd,
+  glob = q.denodeify(require('glob')),
   xmlFormat = xml => pd.xml(xml),
   X2JS = new require('x2js');
 
 class ExperimentServiceFactory {
-  constructor(storageRequestHandler) {
+  constructor(storageRequestHandler, config, proxyRequestHandler) {
+    this.config = config;
     this.storageRequestHandler = storageRequestHandler;
+    this.proxyRequestHandler = proxyRequestHandler;
   }
 
-  createExperimentService(experimentId, contextId) {
-    return new ExperimentService(
-      this.storageRequestHandler,
-      experimentId,
-      contextId
-    );
+  createExperimentService(experimentId, contextId, template) {
+    if (template) {
+      return new TemplateExperimentService(
+        experimentId,
+        contextId,
+        this.config,
+        this.proxyRequestHandler
+      );
+    } else {
+      return new CloneExperimentService(
+        experimentId,
+        contextId,
+        this.storageRequestHandler
+      );
+    }
   }
 }
+const FileType = {
+  EXC: 'EXC',
+  BIBI: 'BIBI',
+  BRAIN: 'BRAIN',
+  SM: 'SM',
+  TF: 'TF'
+};
 
-class ExperimentService {
-  constructor(storageRequestHandler, experimentId, contextId) {
-    this.storageRequestHandler = storageRequestHandler;
+class BaseExperimentService {
+  constructor(experimentId, contextId) {
     this.experimentId = experimentId;
     this.contextId = contextId;
   }
 
-  async getFile(filename) {
-    let response = await this.storageRequestHandler.getFile(
-      filename,
-      this.experimentId,
-      this.contextId,
-      true
-    );
-    return response.body;
+  // eslint-disable-next-line no-unused-vars
+  async getFile(filename, type) {
+    throw 'Not implemented exception';
   }
 
+  // eslint-disable-next-line no-unused-vars
   async saveFile(filename, fileContent, contentType = 'text/plain') {
-    let res = await this.storageRequestHandler.createOrUpdate(
-      filename,
-      fileContent,
-      contentType,
-      this.experimentId,
-      this.contextId
-    );
-    return res;
+    throw 'Not implemented exception';
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  async getExcFileName() {
+    throw 'Not implemented exception';
   }
 
   async getExc() {
-    let exc = await this.getFile('experiment_configuration.exc');
-    return [new X2JS().xml2js(exc.toString()), 'experiment_configuration.exc'];
+    const excFilename = await this.getExcFileName();
+    const exc = await this.getFile(excFilename, FileType.EXC);
+    const excstr = exc.toString();
+    return [new X2JS().xml2js(excstr), excFilename, excstr];
   }
 
   async getBibi() {
     let exc = (await this.getExc())[0].ExD;
-    let bibi = await this.getFile(exc.bibiConf._src);
+    let bibi = await this.getFile(exc.bibiConf._src, FileType.BIBI);
     return [new X2JS().xml2js(bibi.toString()), exc.bibiConf._src];
   }
 
   async getConfig() {
-    let exc = await this.getFile('experiment_configuration.exc'); // throws an exception if the .exc file is not found (Error 204)
-    exc = exc.toString();
-    let ExD = new X2JS().xml2js(exc).ExD;
+    // eslint-disable-next-line no-unused-vars
+    let [{ ExD }, file, exc] = await this.getExc();
 
     let bibiConfSrc;
     try {
@@ -155,7 +170,7 @@ class ExperimentService {
 
       for (let sm of stateMachines) {
         filePromises.push(
-          this.getFile(sm._src).then(
+          this.getFile(sm._src, FileType.SM).then(
             smFile => (smDict[sm._id] = smFile.toString())
           )
         );
@@ -195,7 +210,10 @@ class ExperimentService {
     let bibi = (await this.getBibi())[0].bibi;
     if (!bibi.brainModel) return null;
     let brainModelFile = bibi.brainModel.file.toString();
-    let brain = (await this.getFile(brainModelFile.toString())).toString();
+    let brain = (await this.getFile(
+      brainModelFile.toString(),
+      FileType.BRAIN
+    )).toString();
 
     if (!bibi.brainModel.populations) bibi.brainModel.populations = [];
     else if (!Array.isArray(bibi.brainModel.populations))
@@ -297,7 +315,7 @@ class ExperimentService {
 
     return Promise.all(
       transferFunctions.map(tf =>
-        this.getFile(tf._src).then(tfFile => {
+        this.getFile(tf._src, FileType.TF).then(tfFile => {
           let tfId = path.basename(tf._src);
           tfId = tfId.split('.')[0];
           tfsResponse.data[tfId] = tfFile.toString();
@@ -334,6 +352,81 @@ class ExperimentService {
       ...tfFiles,
       this.saveFile(bibiFileName, xmlFormat(new X2JS().js2xml(bibiFile)))
     ]).then(() => ({}));
+  }
+}
+
+class CloneExperimentService extends BaseExperimentService {
+  constructor(experimentId, contextId, storageRequestHandler) {
+    super(experimentId, contextId);
+    this.storageRequestHandler = storageRequestHandler;
+  }
+
+  async getExcFileName() {
+    return 'experiment_configuration.exc';
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  async getFile(filename, filetype) {
+    let response = await this.storageRequestHandler.getFile(
+      filename,
+      this.experimentId,
+      this.contextId,
+      true
+    );
+    return response.body;
+  }
+
+  async saveFile(filename, fileContent, contentType = 'text/plain') {
+    let res = await this.storageRequestHandler.createOrUpdate(
+      filename,
+      fileContent,
+      contentType,
+      this.experimentId,
+      this.contextId
+    );
+    return res;
+  }
+}
+class TemplateExperimentService extends BaseExperimentService {
+  constructor(experimentId, contextId, config, proxyRequestHandler) {
+    super(experimentId, contextId);
+    this.proxyRequestHandler = proxyRequestHandler;
+    this.config = config;
+  }
+
+  async getExperimentFolder() {
+    this.experimentFolder = path.dirname(
+      path.join(this.config.experimentsPath, this.experimentId)
+    );
+
+    const experimentGlob = `${this.experimentFolder}/**/${this
+      .experimentId}.exc`;
+    const experimentFiles = await glob(experimentGlob);
+
+    if (!experimentFiles.length)
+      throw `Could not find experiment file of pattern ${experimentGlob}`;
+
+    this.experimentDirectory = path.dirname(experimentFiles[0]);
+  }
+
+  async getExcFileName() {
+    return `${this.experimentId}.exc`;
+  }
+
+  async getFile(filename, filetype) {
+    if (!this.experimentDirectory) await this.getExperimentFolder();
+
+    let fullfileName;
+    if (filetype == FileType.BRAIN)
+      fullfileName = path.join(this.config.modelsPath, filename);
+    else fullfileName = path.join(this.experimentDirectory, filename);
+
+    return q.denodeify(fs.readFile)(fullfileName, 'utf8');
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  async saveFile(filename, fileContent, contentType) {
+    throw `Unexpected request to save '${fileContent}'. Template experiments cannot be modified`;
   }
 }
 

@@ -112,7 +112,7 @@ var expectedExcConfObject = {
 var mockedBibiBody = `
 <?xml version="1.0" encoding="UTF-8"?>
 <bibi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xmlns="http://schemas.humanbrainproject.eu/SP10/2014/BIBI" 
+xmlns="http://schemas.humanbrainproject.eu/SP10/2014/BIBI"
 xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_configuration.xsd">
   <brainModel>
     <file>brain_model/braitenberg.py</file>
@@ -171,7 +171,8 @@ describe('ExperimentServiceFactory', function() {
       .getExc()
       .should.eventually.deep.equal([
         expectedExcConfObject,
-        'experiment_configuration.exc'
+        'experiment_configuration.exc',
+        excFilebody
       ]);
   });
 
