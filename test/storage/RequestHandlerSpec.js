@@ -87,15 +87,18 @@ describe('Storage request handler', () => {
   let mkdirCalls = 0;
   let rmdirCalls = 0;
   beforeEach(() => {
-    storageRequestHandler = new StorageRequestHandler(configFile);
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
     RewiredDB = rewire('../../storage/FS/DB.js');
     RewiredDB.__set__('utils', mockUtils);
+    RewiredDB.__set__('DBCollection', collectionMock);
+    const RewiredGDPR = rewire('../../storage/GDPR.js');
+    RewiredGDPR.__set__('DB', RewiredDB);
+    StorageRequestHandler.__set__('GDPR', RewiredGDPR);
 
+    storageRequestHandler = new StorageRequestHandler(configFile);
     collectionMock.prototype.delete = sinon
       .stub()
       .returns(Promise.resolve('value'));
-    RewiredDB.__set__('DBCollection', collectionMock);
     collectionMock.prototype.insert = sinon
       .stub()
       .returns(Promise.resolve('value'));
@@ -151,6 +154,26 @@ describe('Storage request handler', () => {
     return storageRequestHandler
       .authenticate('nrpuser', 'password')
       .should.eventually.equal(fakeToken);
+  });
+
+  it('should detect user that has not accepted gdpr', () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve('userId'));
+
+    return storageRequestHandler
+      .getGDPRStatus('nrpuser')
+      .should.eventually.deep.equal({ gdpr: false });
+  });
+
+  it('should set user accepted gdpr', () => {
+    collectionMock.prototype.insert = sinon
+      .stub()
+      .returns(Promise.resolve('userId'));
+
+    return storageRequestHandler
+      .acceptGDPRStatus('nrpuser')
+      .should.eventually.deep.equal(true);
   });
 
   it('should clone experiment successfully', () => {

@@ -23,50 +23,17 @@
  * ---LICENSE-END**/
 'use strict';
 
-const fs = require('fs'),
-  path = require('path'),
-  tingodb = require('tingodb')();
+// modifiable for unit tests
+let DB = require('./FS/DB.js');
 
-//mocked in the test thus not const
-let utils = require('./utils.js');
-let DBCollection = require('./Collection.js');
-
-//wraps tingo db
-class DB {
-  static get DB_FOLDER() {
-    return 'FS_db';
+class GDPR {
+  async getUserAcceptedGDPR(userId) {
+    const user = await DB.instance.gdpr.findOne({ userId });
+    return !!user;
   }
-
-  static get instance() {
-    if (!this._instance) this._instance = new DB();
-    return this._instance;
-  }
-
-  get users() {
-    return this._users;
-  }
-  get experiments() {
-    return this._experiments;
-  }
-  get models() {
-    return this._models;
-  }
-  get gdpr() {
-    return this._gdpr;
-  }
-  constructor() {
-    this.loadDB(path.join(utils.storagePath, DB.DB_FOLDER));
-  }
-
-  loadDB(dbDirectory) {
-    fs.existsSync(dbDirectory) || fs.mkdirSync(dbDirectory);
-
-    let db = new tingodb.Db(dbDirectory, {});
-    this._users = new DBCollection(db.collection('users'));
-    this._experiments = new DBCollection(db.collection('experiments'));
-    this._models = new DBCollection(db.collection('models'));
-    this._gdpr = new DBCollection(db.collection('gdpr'));
+  async setUserAcceptedGDPR(userId) {
+    return DB.instance.gdpr.insert({ userId }).then(() => true);
   }
 }
 
-module.exports = DB;
+module.exports = GDPR;

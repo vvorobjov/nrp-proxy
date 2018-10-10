@@ -481,6 +481,20 @@ app.put('/experiment/:experiment/transferFunctions', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.get('/identity/gdpr', (req, res) => {
+  storageRequestHandler
+    .getGDPRStatus(getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.post('/identity/gdpr', (req, res) => {
+  storageRequestHandler
+    .acceptGDPRStatus(getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
 app.get('/identity/:userid', (req, res) => {
   storageRequestHandler
     .getUserInfo(req.params.userid, getAuthToken(req))

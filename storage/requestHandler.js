@@ -28,9 +28,11 @@ const q = require('q'),
   CustomModelService = require('./CustomModelsService');
 
 //mocked in the unit tests
-let ExperimentCloner = require('./ExperimentCloner.js');
+let ExperimentCloner = require('./ExperimentCloner.js'),
+  GDPR = require('./GDPR');
 
 let customModelService = new CustomModelService();
+const gdprService = new GDPR();
 
 class RequestHandler {
   constructor(config) {
@@ -72,14 +74,24 @@ class RequestHandler {
     return this.authenticator.login(usr, pwd);
   }
 
-  getUserIdentifier(token) {
-    if (this.tokenIdentifierCache.has(token)) {
+  async getGDPRStatus(token) {
+    const userId = await this.getUserIdentifier(token);
+    const gdpr = await gdprService.getUserAcceptedGDPR(userId);
+    return { gdpr };
+  }
+
+  async acceptGDPRStatus(token) {
+    const userId = await this.getUserIdentifier(token);
+    return gdprService.setUserAcceptedGDPR(userId);
+  }
+
+  async getUserIdentifier(token) {
+    if (this.tokenIdentifierCache.has(token))
       return q.when(this.tokenIdentifierCache.get(token));
-    }
-    return this.identity.getUniqueIdentifier(token).then(id => {
-      this.tokenIdentifierCache.set(token, id);
-      return id;
-    });
+
+    const id = await this.identity.getUniqueIdentifier(token);
+    this.tokenIdentifierCache.set(token, id);
+    return id;
   }
 
   listFiles(parentDir, token) {
