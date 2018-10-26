@@ -49,9 +49,9 @@ describe('ModelsService', () => {
   });
 
   it(`should throw if model not found`, async () => {
-    modelsService
+    return modelsService
       .getModelConfig('robots', 'fake_model')
-      .should.eventually.throw('BaseStorage is an abstract class');
+      .catch(res => res.should.equal('No robots named fake_model was found.'));
   });
 });
 

@@ -158,6 +158,16 @@ describe('requestHandler', function() {
     }
   });
 
+  it('should get the getModelConfig service object correctly', async () => {
+    revert = requestHandler.__set__({
+      modelsService: {
+        getModelConfig: () => Promise.resolve('robotConfig')
+      }
+    });
+    const robotConfig = await requestHandler.getModelConfig('robots');
+    robotConfig.should.equal('robotConfig');
+  });
+
   it('should get the models service object correctly', function() {
     var errorSpy = sinon.spy();
     var logSpy = sinon.spy();
@@ -178,15 +188,5 @@ describe('requestHandler', function() {
     return requestHandler
       .getModels('robots')
       .then(res => res.should.equal('robot1'));
-  });
-
-  it('should get the getModelConfig service object correctly', async () => {
-    revert = requestHandler.__set__({
-      modelsService: {
-        getModelConfig: () => Promise.resolve('robotConfig')
-      }
-    });
-    const robotConfig = await requestHandler.getModelConfig('robots');
-    robotConfig.should.equal('robotConfig');
   });
 });

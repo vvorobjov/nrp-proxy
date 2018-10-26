@@ -116,6 +116,26 @@ describe('FSStorage', () => {
       .then(res => expect(res).should.not.be.empty);
   });
 
+  it(`should list all custom models`, () => {
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve([{ fileName: 'filename', token: 'testToken' }]));
+    return fsStorage
+      .listAllCustomModels('customFolder')
+      .then(res =>
+        res.should.deep.equal([
+          { uuid: 'filename', fileName: 'filename', userId: 'testToken' }
+        ])
+      );
+  });
+
+  it(`should fail to list all custom models`, () => {
+    collectionMock.prototype.find = sinon.stub().returns(Promise.reject());
+    return fsStorage
+      .listAllCustomModels('customFolder')
+      .then(res => res.should.deep.equal([]));
+  });
+
   it(`should get a list custom model`, () => {
     const expected = {
       uuid: fakeExperiment,

@@ -111,6 +111,9 @@ describe('Storage request handler', () => {
     collectionMock.prototype.update = sinon
       .stub()
       .returns(Promise.resolve('value'));
+    collectionMock.prototype.remove = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
 
     RewiredFSStorage = rewire('../../storage/FS/Storage.js');
     RewiredFSStorage.__set__('DB', RewiredDB);
@@ -267,9 +270,9 @@ describe('Storage request handler', () => {
   });
   //deleteFile
   it(`should succesfully delete an Experiment`, () => {
-    storageRequestHandler
+    return storageRequestHandler
       .deleteExperiment('fakeExperiment', 'fakeExperiment', fakeToken)
-      .catch(err => expect(err).to.deep.equal({ code: 403 }));
+      .then(res => expect(res).to.be.undefined);
   });
 
   //create folder
@@ -388,37 +391,6 @@ describe('Storage request handler', () => {
       .should.eventually.equal('test 1');
   });
 
-  it(`should successfully list all custom models`, () => {
-    collectionMock.prototype.find = sinon
-      .stub()
-      .returns(Promise.resolve([{ fileName: 'test', token: 'testToken' }]));
-
-    return storageRequestHandler
-      .listAllCustomModels('testFolder')
-      .should.eventually.deep.equal([
-        { fileName: 'test', userId: 'testToken', uuid: 'test' }
-      ]);
-  });
-
-  it(`should fail to  list all custom models`, () => {
-    return storageRequestHandler
-      .listAllCustomModels('testFolder')
-      .should.eventually.deep.equal([]);
-  });
-
-  it('should get the getCustomModelConfig service object correctly', async () => {
-    storageRequestHandler.storage.getCustomModel = function() {
-      return q.when([{ path: 'robots/husky_model.zip', data: [] }]);
-    };
-
-    storageRequestHandler.customModelService.extractFileFromZip = function() {
-      return q.when(config);
-    };
-    storageRequestHandler
-      .getCustomModelConfig({ uuid: 'robots/husky_model.zip' }, fakeToken)
-      .should.eventually.deep.include(config);
-  });
-
   // createZip fails
   it(`should throw when trying to create a corrupt zip`, () => {
     return assert.isRejected(
@@ -453,6 +425,17 @@ describe('Storage request handler', () => {
     return storageRequestHandler2
       .createZip(fakeToken, 'robots', 'test.zip', 'fakeZip', null)
       .should.eventually.equal('success');
+  });
+
+  it('should get the getCustomModelConfig service object correctly', async () => {
+    var storageRequestHandler2 = new StorageRequestHandler(configFile);
+    storageRequestHandler2.getCustomModel = function() {
+      return q.when([{ path: 'robots/husky_model.zip', data: [] }]);
+    };
+
+    return storageRequestHandler2
+      .getCustomModelConfig({ uuid: 'robots/husky_model.zip' }, fakeToken)
+      .should.eventually.deep.include(config);
   });
 });
 
