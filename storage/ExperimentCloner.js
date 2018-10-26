@@ -108,13 +108,7 @@ class ExperimentCloner {
 
       await this.uploadDownloadedFiles(files, expUUID, token, userId);
 
-      await this.copyResourcesFolder(
-        this.experimentFolder,
-        expName,
-        expUUID,
-        token,
-        userId
-      );
+      await this.copyResourcesFolder(expName, expUUID, token, userId);
 
       return expUUID;
     } catch (e) {
@@ -123,25 +117,58 @@ class ExperimentCloner {
     }
   }
 
-  async copyResourcesFolder(experimentFolder, expName, expUUID, token, userId) {
-    let resExpPath = path.join(this.experimentFolder, 'resources');
-    let resPath = path.join(expUUID, 'resources');
-    if (fs.existsSync(path.join(experimentFolder, 'resources'))) {
-      var files = await this.downloadResourcesfiles(resExpPath);
-      await this.storage.createFolder('resources', expName, token, userId);
-      await this.uploadDownloadedFiles(files, resPath, token, userId);
+  async handleResourcesFiles(pathToDirectory, relativePath, token, userId) {
+    // given a template directory, a destination directory, and a relative
+    // path (i.e. resources/textures)
+    // creates a directory in the storage which reflects the directory in the template
+    if (
+      fs.existsSync(pathToDirectory) &&
+      fs.lstatSync(pathToDirectory).isDirectory()
+    ) {
+      var files = await this.downloadFilesFromDirectory(pathToDirectory);
+      await this.uploadDownloadedFiles(files, relativePath, token, userId);
     }
   }
 
-  async downloadResourcesfiles(resExpPath) {
-    var files = (await fs.readdirSync(resExpPath)).map(file => {
-      let filePath = path.join(resExpPath, file);
-      return {
-        name: file,
-        contentType: 'text/plain',
-        content: fs.readFileSync(filePath)
-      };
-    });
+  async copyTexturesFolder(expName, token, userId) {
+    // creates the textures directory structure and copies it over if one exists in the template experiment
+    // structure looks like resources/textures
+    var texturesPath = path.join('resources', 'textures');
+    await this.storage.createFolder(texturesPath, expName, token, userId);
+
+    // copy all files under textures
+    await this.handleResourcesFiles(
+      path.join(this.experimentFolder, texturesPath),
+      path.join(expName, texturesPath),
+      token,
+      userId
+    );
+  }
+
+  async copyResourcesFolder(expName, expUUID, token, userId) {
+    let resExpPath = path.join(this.experimentFolder, 'resources');
+    let resPath = path.join(expUUID, 'resources');
+    await this.storage.createFolder('resources', expName, token, userId);
+    await this.handleResourcesFiles(resExpPath, resPath, token, userId);
+    await this.copyTexturesFolder(expName, token, userId);
+  }
+
+  async downloadFilesFromDirectory(directoryPath) {
+    var files = (await fs.readdirSync(directoryPath))
+      .filter(file => {
+        let filePath = path.join(directoryPath, file);
+        return fs.lstatSync(filePath).isFile();
+      })
+      .map(file => {
+        let filePath = path.join(directoryPath, file);
+        if (fs.lstatSync(filePath).isFile()) {
+          return {
+            name: file,
+            contentType: 'text/plain',
+            content: fs.readFileSync(filePath)
+          };
+        }
+      });
     return files;
   }
 

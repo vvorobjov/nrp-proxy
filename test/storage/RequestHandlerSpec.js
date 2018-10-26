@@ -388,6 +388,24 @@ describe('Storage request handler', () => {
       .should.eventually.equal('test 1');
   });
 
+  it(`should successfully list all custom models`, () => {
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve([{ fileName: 'test', token: 'testToken' }]));
+
+    return storageRequestHandler
+      .listAllCustomModels('testFolder')
+      .should.eventually.deep.equal([
+        { fileName: 'test', userId: 'testToken', uuid: 'test' }
+      ]);
+  });
+
+  it(`should fail to  list all custom models`, () => {
+    return storageRequestHandler
+      .listAllCustomModels('testFolder')
+      .should.eventually.deep.equal([]);
+  });
+
   it('should get the getCustomModelConfig service object correctly', async () => {
     storageRequestHandler.storage.getCustomModel = function() {
       return q.when([{ path: 'robots/husky_model.zip', data: [] }]);
