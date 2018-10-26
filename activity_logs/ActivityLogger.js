@@ -27,25 +27,56 @@ let fs = require('fs'),
   q = require('q'),
   _ = require('lodash'),
   stringify = q.denodeify(require('csv-stringify')),
-  appendFile = q.denodeify(fs.appendFile);
-
+  appendFile = q.denodeify(fs.appendFile),
+  firebase = require('firebase-admin');
 class ActivityLogger {
-  constructor(config) {
-    this.config = config;
+  initializeFirebase() {
+    const serviceAccount = require('./serviceAccount.json');
+    firebase.initializeApp({
+      credential: firebase.credential.cert(serviceAccount),
+      databaseURL: this.config.databaseURL
+    });
+    this.db = firebase.firestore();
+    this.db.settings({ timestampsInSnapshots: true });
   }
 
-  async loglocal(fileName, activity, data) {
+  constructor(config) {
+    this.config = config;
+    if (config) {
+      this.localfile = config.localfile;
+    }
+    if (config.databaseURL) {
+      this.initializeFirebase();
+    }
+  }
+
+  async logLocal(activity, data) {
     let logContent = await stringify([
       [activity, new Date().toGMTString(), ..._.map(data)]
     ]);
-    await appendFile(fileName, logContent);
+    await appendFile(this.localfile, logContent);
+  }
+
+  async logFirebase(activity, data) {
+    let activityLogsCollection = this.db.collection('activity-logs');
+    // Add the activity entry in the Firestore database
+    var doc = activityLogsCollection.doc();
+    return doc.set({
+      activity: activity,
+      date: new Date(),
+      ...data
+    });
   }
 
   async log(activity, data) {
     if (!this.config) return q.reject(`No activity logs enabled.`);
 
-    if (this.config.localfile)
-      await this.loglocal(this.config.localfile, activity, data);
+    if (this.localfile)
+      // logs activity as text into a local CSV file
+      await this.logLocal(activity, data);
+    if (this.db)
+      // logs activity object as an entry in a Firebase database
+      await this.logFirebase(activity, data);
 
     return q.resolve();
   }

@@ -23,7 +23,7 @@ describe('BaseAuthenticator', () => {
     baseClassMock = new BaseClassMock();
   });
 
-  it(`should throw a TypeError exception when trying to instanciate the BaseAuthenticator`, () => {
+  it(`should throw a TypeError exception when trying to instantiate the BaseAuthenticator`, () => {
     return expect(() => {
       return new BaseAuthenticator();
     }).to.throw(TypeError, 'BaseAuthenticator is an abstract class');

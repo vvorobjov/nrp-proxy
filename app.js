@@ -532,23 +532,31 @@ app.get('/identity/me/users', (req, res) => {
 const getReqIp = req =>
   req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-app.post('/activity_log/:activity', async (req, res) => {
-  let userInfo = await storageRequestHandler.getUserInfo(
-    'me',
-    getAuthToken(req)
-  );
+const ANONYMOUS_ACTIVITIES = new Set(['install', 'update']);
 
-  const clientIP = getReqIp(req);
-  const ipdata = await iplocation(clientIP);
-  activityLogger
-    .log(req.params.activity, {
-      user: userInfo.displayName,
+app.post('/activity_log/:activity', async (req, res) => {
+  try {
+    let logData = { user: 'ANONYMOUS' };
+    if (!ANONYMOUS_ACTIVITIES.has(req.params.activity)) {
+      let userInfo = await storageRequestHandler.getUserInfo(
+        'me',
+        getAuthToken(req)
+      );
+      logData.user = userInfo.displayName;
+    }
+
+    const clientIP = getReqIp(req);
+    const ipdata = await iplocation(clientIP);
+    const r = await activityLogger.log(req.params.activity, {
+      ...logData,
       ...req.body,
-      city: ipdata.city,
-      country: ipdata.country
-    })
-    .then(r => res.send(r))
-    .catch(err => res.status(202).send(err));
+      city: String(ipdata.city),
+      country: String(ipdata.country)
+    });
+    res.send(r);
+  } catch (err) {
+    handleError(res, err);
+  }
 });
 
 app.post('/checkupdate', async (req, res) => {
