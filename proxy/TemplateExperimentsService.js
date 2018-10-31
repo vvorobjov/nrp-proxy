@@ -83,8 +83,8 @@ class ExperimentsService {
         if (bibi.bodyModel) {
           if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
 
-          if (bibi.bodyModel.length == 1 && !bibi.bodyModel[0]._robotId) {
-            robotPaths['robot'] = bibi.bodyModel[0].__text || bibi.bodyModel[0];
+          if (bibi.bodyModel.length && !bibi.bodyModel[0]._robotId) {
+            robotPaths['robot'] = bibi.bodyModel[0].__text || bibi.bodyModel[0]; // legacy config
           } else if (bibi.bodyModel.length) {
             bibi.bodyModel.forEach(function(model) {
               if (!model._robotId) {

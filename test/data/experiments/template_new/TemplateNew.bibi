@@ -3,5 +3,5 @@
   <brainModel>
     <file>braitenberg.py</file>
   </brainModel>
-  <bodyModel>robots/husky_model/model.config</bodyModel>
+  <bodyModel robotId="test">robots/husky_model/model.config</bodyModel>
 </bibi>

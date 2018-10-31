@@ -223,8 +223,8 @@ class BaseExperimentService {
     if (!bibi.bodyModel) bibi.bodyModel = [];
     else if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
 
-    if (bibi.bodyModel.length == 1 && !bibi.bodyModel[0]._robotId) {
-      robots.push('robot');
+    if (bibi.bodyModel.length && !bibi.bodyModel[0]._robotId) {
+      robots.push('robot'); // legacy config
     } else if (bibi.bodyModel.length) {
       bibi.bodyModel.forEach(function(model) {
         if (!model._robotId) {

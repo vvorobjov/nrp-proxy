@@ -9,7 +9,7 @@
     <configuration type="3d-settings" src="TemplateNew.3ds"/>
     <maturity>production</maturity>
     <environmentModel src="environments/biologylab_world/model.config">
-        <robotPose x="0.0" y="0.0" z="0.5" ux="0.0" uy="0.0" uz="0.0" theta="0.0"/>
+        <robotPose robotId="test" x="0.0" y="0.0" z="0.5" ux="0.0" uy="0.0" uz="0.0" theta="0.0"/>
     </environmentModel>
     <bibiConf src="TemplateNew.bibi"/>
     <cameraPose>
