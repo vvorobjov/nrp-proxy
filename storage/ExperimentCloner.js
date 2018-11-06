@@ -315,17 +315,17 @@ class ExperimentCloner {
             this.expModelsPaths.robotPath === undefined ||
             this.expModelsPaths.robotPath.custom === false)
         ) {
+          const bodyModelFile = model.__text || model;
           if (model._assetPath == undefined) {
-            const bodyModelFile = model.__text || model;
-            var robotid = model._robotId ? model._robotId : 'robot';
             model = {
               __text: bodyModelFile,
               _assetPath: path.dirname(bodyModelFile),
               _customAsset: false,
               __prefix: bibiConf.__prefix
             };
-            var destFile = path.join(robotid, path.basename(bodyModelFile));
           }
+          var robotid = model._robotId ? model._robotId : 'robot';
+          var destFile = path.join(robotid, path.basename(bodyModelFile));
           this.downloadFile(model.__text, this.config.modelsPath, destFile);
         }
       });
