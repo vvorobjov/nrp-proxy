@@ -320,6 +320,7 @@ class ExperimentCloner {
             model = {
               __text: bodyModelFile,
               _assetPath: path.dirname(bodyModelFile),
+              _robotId: model._robotId ? model._robotId : 'robot',
               _customAsset: false,
               __prefix: bibiConf.__prefix
             };
