@@ -22,14 +22,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  * ---LICENSE-END**/
 'use strict';
-
 const path = require('path'),
   q = require('q'),
   X2JS = new require('x2js'),
   _ = require('lodash'),
   pd = require('pretty-data').pd,
   CustomModelsService = require('../storage/CustomModelsService.js'),
-  exec = require('child_process').exec;
+  exec = require('child_process').exec,
+  walk = require('walk');
 
 //constants below are overriden in unit tests
 let fs = require('fs-extra'),
@@ -108,7 +108,13 @@ class ExperimentCloner {
 
       await this.uploadDownloadedFiles(files, expUUID, token, userId);
 
-      await this.copyResourcesFolder(expName, expUUID, token, userId);
+      await this.copyResourcesFolder(
+        this.experimentFolder,
+        expName,
+        expUUID,
+        token,
+        userId
+      );
 
       return expUUID;
     } catch (e) {
@@ -117,58 +123,48 @@ class ExperimentCloner {
     }
   }
 
-  async handleResourcesFiles(pathToDirectory, relativePath, token, userId) {
-    // given a template directory, a destination directory, and a relative
-    // path (i.e. resources/textures)
-    // creates a directory in the storage which reflects the directory in the template
-    if (
-      fs.existsSync(pathToDirectory) &&
-      fs.lstatSync(pathToDirectory).isDirectory()
-    ) {
-      var files = await this.downloadFilesFromDirectory(pathToDirectory);
-      await this.uploadDownloadedFiles(files, relativePath, token, userId);
+  async copyResourcesFolder(experimentFolder, expName, expUUID, token, userId) {
+    let resExpPath = path.join(this.experimentFolder, 'resources');
+    let resPath = path.join(expUUID, 'resources');
+    if (fs.existsSync(path.join(experimentFolder, 'resources'))) {
+      var files = await this.downloadResourcesfiles(resExpPath);
+      await this.storage.createFolder('resources', expName, token, userId);
+      await this.uploadDownloadedFiles(files, resPath, token, userId);
+    } else {
+      await this.storage.createFolder('resources', expName, token, userId);
+    }
+    if (!fs.existsSync(path.join(experimentFolder, 'resources', 'textures'))) {
+      await this.storage.createFolder(
+        path.join('resources', 'textures'),
+        expName,
+        token,
+        userId
+      );
     }
   }
 
-  async copyTexturesFolder(expName, token, userId) {
-    // creates the textures directory structure and copies it over if one exists in the template experiment
-    // structure looks like resources/textures
-    var texturesPath = path.join('resources', 'textures');
-    await this.storage.createFolder(texturesPath, expName, token, userId);
-
-    // copy all files under textures
-    await this.handleResourcesFiles(
-      path.join(this.experimentFolder, texturesPath),
-      path.join(expName, texturesPath),
-      token,
-      userId
-    );
-  }
-
-  async copyResourcesFolder(expName, expUUID, token, userId) {
-    let resExpPath = path.join(this.experimentFolder, 'resources');
-    let resPath = path.join(expUUID, 'resources');
-    await this.storage.createFolder('resources', expName, token, userId);
-    await this.handleResourcesFiles(resExpPath, resPath, token, userId);
-    await this.copyTexturesFolder(expName, token, userId);
-  }
-
-  async downloadFilesFromDirectory(directoryPath) {
-    var files = (await fs.readdirSync(directoryPath))
-      .filter(file => {
-        let filePath = path.join(directoryPath, file);
-        return fs.lstatSync(filePath).isFile();
-      })
-      .map(file => {
-        let filePath = path.join(directoryPath, file);
-        if (fs.lstatSync(filePath).isFile()) {
-          return {
-            name: file,
+  async downloadResourcesfiles(resExpPath) {
+    var files = [];
+    var options = {
+      listeners: {
+        file: function(root, fileStats, next) {
+          var name = root.substring(
+            root.indexOf('resources') + 10,
+            root.length
+          );
+          files.push({
+            name: name + '/' + fileStats.name,
             contentType: 'text/plain',
-            content: fs.readFileSync(filePath)
-          };
+            content: fs.readFileSync(root + '/' + fileStats.name)
+          });
+          next();
+        },
+        errors: function(root, nodeStatsArray, next) {
+          next();
         }
-      });
+      }
+    };
+    walk.walkSync(resExpPath, options);
     return files;
   }
 
