@@ -159,13 +159,6 @@ app.get('/availableServers', function(req, res, next) {
     .catch(next);
 });
 
-app.get('/joinableServers/:experimentId', function(req, res, next) {
-  proxyRequestHandler
-    .getJoinableServers(req.params.experimentId)
-    .then(r => res.send(r))
-    .catch(next);
-});
-
 app.get('/models/:modelType', function(req, res, next) {
   proxyRequestHandler
     .getModels(req.params.modelType)
@@ -228,15 +221,47 @@ let getAuthToken = req => {
 
 app.get('/storage/experiments', verifyRunningMode);
 
-app.get('/storage/experiments', (req, res) => {
-  storageRequestHandler
-    .listExperiments(
+app.get('/storage/experiments', async (req, res) => {
+  try {
+    const experiments = await storageRequestHandler.listExperiments(
       getAuthToken(req),
       req.get('context-id'),
       req.query /*options*/
-    )
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+    );
+    const joinableServerPromises = experiments.map(exp =>
+      proxyRequestHandler.getJoinableServers(exp.uuid).then(joinableServers => {
+        exp.joinableServers = joinableServers;
+      })
+    );
+
+    const configurationPromises = experiments.map(
+      exp =>
+        experimentServiceFactory
+          .createExperimentService(exp.uuid, getAuthToken(req))
+          .getConfig()
+          .then(configuration => {
+            exp.configuration = {
+              maturity: 'production',
+              ...configuration
+            };
+          })
+          .catch(() => null) //null if no config found (eg: missing exc)
+    );
+
+    await Promise.all([...joinableServerPromises, ...configurationPromises]);
+
+    const decoratedExperiments = experiments
+      .filter(exp => exp.configuration) // discard experiments without config
+      .map(exp => ({
+        ...exp,
+        id: exp.uuid,
+        private: true
+      }));
+
+    res.send(decoratedExperiments);
+  } catch (err) {
+    handleError(res, err);
+  }
 });
 
 app.get('/storage/sharedexperiments', (req, res) => {

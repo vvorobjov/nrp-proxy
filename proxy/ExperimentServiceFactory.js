@@ -113,7 +113,7 @@ class BaseExperimentService {
     const getExDProp = prop => (prop && prop.__prefix ? prop.__text : prop);
     const maturity = getExDProp(ExD.maturity);
     let config = {
-      timeout: getExDProp(ExD.timeout),
+      timeout: Number(getExDProp(ExD.timeout)) || 600,
       name: getExDProp(ExD.name),
       thumbnail: getExDProp(ExD.thumbnail),
       description: getExDProp(ExD.description),

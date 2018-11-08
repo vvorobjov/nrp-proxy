@@ -220,7 +220,7 @@ describe('ExperimentServiceFactory', function() {
     return es.getConfig().then(function(res) {
       expect(res.bibiConfSrc).to.equal(undefined);
       expect(res.brainProcesses).to.equal(undefined);
-      expect(res.timeout).to.equal(undefined);
+      expect(res.timeout).to.equal(600);
       expect(res.maturity).to.equal('development');
     });
   });
