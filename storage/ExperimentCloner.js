@@ -497,7 +497,10 @@ class NewExperimentCloner extends ExperimentCloner {
       bibi.bibi.bodyModel = {
         __text: bodyModel_text,
         _customAsset: customAsset,
-        _assetPath: assetPath
+        _assetPath: assetPath,
+        _robotId: bibi.bibi.bodyModel._robotId
+          ? bibi.bibi.bodyModel._robotId
+          : 'robot'
       };
     } else {
       delete bibi.bibi.bodyModel;
