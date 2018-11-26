@@ -512,6 +512,14 @@ app.get('/experiment/:experiment/transferFunctions', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.get('/pizdaintjob', async (req, res) => {
+  try {
+    res.send(await proxyRequestHandler.submitJob(getAuthToken(req)));
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
 app.put('/experiment/:experiment/transferFunctions', (req, res) => {
   experimentServiceFactory
     .createExperimentService(req.params.experiment, getAuthToken(req))

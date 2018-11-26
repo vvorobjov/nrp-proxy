@@ -25,7 +25,7 @@
 
 var _ = require('lodash'),
   q = require('q');
-
+var request = q.denodeify(require('request'));
 var ModelsService = require('./modelsService.js'),
   TemplateExperimentsService = require('./TemplateExperimentsService'),
   oidcAuthenticator = require('./oidcAuthenticator.js'),
@@ -160,6 +160,34 @@ function getJoinableServers(experimentId) {
   return deferred.promise;
 }
 
+async function submitJob(authToken) {
+  let base_url = configuration.job_url;
+  let options = {
+    method: 'POST',
+    url: base_url,
+    agentOptions: {
+      rejectUnauthorized: false
+    },
+    headers: { Authorization: `Bearer ${authToken}` },
+    body: { Executable: '/bin/ls', Resources: { Runtime: '1200' } },
+    json: true
+  };
+  let res;
+  try {
+    let response_array = await request(options);
+    res = response_array[0];
+  } catch (err) {
+    throw new Error(`Failed to execute request ${options.url}. ERROR: ${err}`);
+  }
+  if (res.statusCode < 200 || res.statusCode >= 300) {
+    throw new Error(
+      `Failed to execute request ${options.url}. ERROR: ${res.body
+        .errorMessage}`
+    );
+  }
+  return res.headers.location;
+}
+
 function getAvailableServers() {
   return q.resolve(availableServers);
 }
@@ -198,5 +226,6 @@ module.exports = {
   getJoinableServers,
   filterJoinableExperimentByContext,
   getModels,
-  getModelConfig
+  getModelConfig,
+  submitJob
 };
