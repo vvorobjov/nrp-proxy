@@ -328,6 +328,21 @@ class ExperimentCloner {
           var robotid = model._robotId ? model._robotId : 'robot';
           var destFile = path.join(robotid, path.basename(bodyModelFile));
           this.downloadFile(model.__text, this.config.modelsPath, destFile);
+
+          // find and upload roslaunch file into experiments directory
+          var sdfFolder = path.dirname(
+            path.join(this.config.modelsPath, model.__text)
+          );
+          var launchFile = fs.readdirSync(sdfFolder).filter(f => {
+            return path.extname(f).toLowerCase() === '.launch';
+          });
+          if (launchFile.length) {
+            this.downloadFile(
+              launchFile[0],
+              sdfFolder,
+              path.join(robotid, launchFile[0])
+            );
+          }
         }
       });
     }
@@ -458,6 +473,7 @@ class NewExperimentCloner extends ExperimentCloner {
           this.storage.deleteExperiment(expUUID, expUUID, token, userId) &&
           q.reject(err)
       );
+
     await this.storage.createOrUpdate(
       zipMetaData.name,
       zipMetaData.data,
@@ -466,6 +482,25 @@ class NewExperimentCloner extends ExperimentCloner {
       token,
       userId
     );
+
+    // Copy available launch file
+    var launchfile = await customModelsService.getFilesWithExt(
+      zipedModelContents,
+      '.launch'
+    );
+    if (launchfile.length) {
+      var name = launchfile[0].name;
+      var data = await launchfile[0].async('string');
+      await this.storage.createOrUpdate(
+        name,
+        data,
+        'application/text',
+        expUUID,
+        token,
+        userId
+      );
+    }
+
     return zipMetaData;
   }
 

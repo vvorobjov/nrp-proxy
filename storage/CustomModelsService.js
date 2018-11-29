@@ -119,6 +119,12 @@ class CustomModelsService {
       .name.split(path.sep)[0];
   }
 
+  getFilesWithExt(zipRawData, ext) {
+    return JSZip.loadAsync(zipRawData).then(async zip =>
+      zip.filter((relativePath, file) => file.name.toLowerCase().endsWith(ext))
+    );
+  }
+
   extractModelMetadataFromZip(fileContent, type = undefined) {
     return JSZip.loadAsync(fileContent).then(async zip => {
       const exception = q.reject(
@@ -140,12 +146,12 @@ class CustomModelsService {
           `There is a problem with the ${modelConfig.name} zip file. Make sure that the file (py or sdf) the model.config points to is in the zip.`
         );
 
-      let modelName = modelData.name.split(path.sep)[1];
-      if (type == 'robotPath') modelName = modelData.name;
-
       return {
         data: await modelData.async('string'),
-        name: modelName,
+        name:
+          type == 'robotPath'
+            ? modelData.name
+            : modelData.name.split(path.sep)[1],
         relPath: modelData.name,
         modelConfig: await zip
           .file(path.join(basename, 'model.config'))
