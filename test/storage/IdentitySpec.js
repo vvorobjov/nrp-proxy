@@ -67,7 +67,7 @@ describe('FSidentity', () => {
     });
   });
   it(`should return self user info`, () => {
-    var expectedResult = [{ name: 'nrpuser' }, { name: 'admin' }];
+    var expectedResult = ['nrpuser', 'admin'];
 
     return identity.getUsersList().should.eventually.deep.equal(expectedResult);
   });

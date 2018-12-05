@@ -107,6 +107,51 @@ describe('FSStorage', () => {
     fsStorage = new RewiredFSStorage();
   });
 
+  it(`should get Shared Experiments Option`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve('Private'));
+    return fsStorage
+      .getExperimentSharedMode('expId')
+      .then(res => expect(res).to.deep.equal('Private'));
+  });
+
+  it(`should list shared users by experiment`, () => {
+    var expectedResult = [1, { updatedExisting: true, n: 1 }];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expectedResult));
+    return fsStorage
+      .updateSharedExperimentMode('expId', 'public')
+      .then(res => expect(res).to.deep.equal(expectedResult));
+  });
+
+  it(`should list shared users by experiments`, () => {
+    var dbresult = {
+      token: 'user0',
+      experiment: 'benchmark_p3dx_0',
+      _id: 5,
+      shared_users: ['user1'],
+      shared_option: 'Shared'
+    };
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(dbresult));
+    return fsStorage
+      .listSharedUsersbyExperiment('expId')
+      .then(res => expect(res).to.deep.equal(dbresult.shared_users));
+  });
+
+  it(`should list experiments shared by users`, () => {
+    var expectedResult = { uuid: 'exp0', name: 'exp0' };
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve([{ experiment: 'exp0' }]));
+    return fsStorage
+      .listExperimentsSharedByUser('userId')
+      .then(res => expect(res[0]).to.deep.equal(expectedResult));
+  });
+
   it(`should get a custom model`, () => {
     collectionMock.prototype.findOne = sinon
       .stub()
@@ -119,12 +164,13 @@ describe('FSStorage', () => {
   it(`should list all custom models`, () => {
     collectionMock.prototype.find = sinon
       .stub()
-      .returns(Promise.resolve([{ fileName: 'filename', token: 'testToken' }]));
+      .returns(Promise.resolve([{ fileName: 'file0', token: 'token0' }]));
+
     return fsStorage
       .listAllCustomModels('customFolder')
       .then(res =>
         res.should.deep.equal([
-          { uuid: 'filename', fileName: 'filename', userId: 'testToken' }
+          { uuid: 'file0', fileName: 'file0', userId: 'token0' }
         ])
       );
   });

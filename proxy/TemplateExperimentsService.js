@@ -27,8 +27,13 @@ const fs = require('fs'),
   q = require('q'),
   path = require('path'),
   readFile = q.denodeify(fs.readFile),
+  configurationManager = require('../utils/configurationManager.js'),
   X2JS = new require('x2js');
 
+configurationManager.initialize();
+let utils = require('../storage/FS/utils.js');
+let StorageRequestHandler = require('../storage/requestHandler.js');
+var storageRequestHandler;
 const cxml = require('cxml');
 var parser = new cxml.Parser();
 
@@ -42,8 +47,10 @@ class ExperimentsService {
     return '*/*.exc';
   }
 
-  constructor(experimentsPath) {
+  constructor(config, experimentsPath) {
     this.experimentsPath = path.resolve(experimentsPath);
+    this.config = config;
+    storageRequestHandler = new StorageRequestHandler(config);
   }
 
   loadExperiments() {
@@ -54,26 +61,53 @@ class ExperimentsService {
     );
   }
 
+  loadSharedExperiments(req) {
+    return q.all(
+      storageRequestHandler
+        .listExperimentsSharedByUser(req)
+        .then(exps =>
+          exps.map(exp =>
+            glob(
+              path.join(utils.storagePath, exp.name + '/*.exc')
+            ).then(pathFile =>
+              this.buildExperiment(pathFile[0], exp.name, true)
+            )
+          )
+        )
+    );
+  }
+  getSharedExperimentFilePath(experimentPath, experimentFile) {
+    return path.join(utils.storagePath, experimentPath, experimentFile);
+  }
+
   getExperimentFilePath(experimentPath, experimentFile) {
     return path.join(this.experimentsPath, experimentPath, experimentFile);
   }
 
-  async buildExperiment(fileName) {
-    let experimentContent = await readFile(fileName, 'utf8');
-
-    let id = path.basename(fileName).split('.')[0],
-      configPath = path.relative(this.experimentsPath, fileName),
-      expPath = path.dirname(configPath);
-
+  async buildExperiment(fileName, expName = '', isExperimentShared = false) {
+    let experimentContent;
+    try {
+      experimentContent = await readFile(fileName, 'utf8');
+    } catch (err) {
+      console.error(err);
+      return;
+    }
     console.log(`Parsing experiment file ${fileName}`);
-
+    const id = isExperimentShared ? expName : path.parse(fileName).name,
+      fileConfigPath = isExperimentShared
+        ? path.relative(utils.storagePath, fileName)
+        : path.relative(this.experimentsPath, fileName),
+      configPath = isExperimentShared
+        ? utils.storagePath
+        : this.experimentsPath,
+      expPath = path.dirname(fileConfigPath);
     return parser
       .parse(experimentContent, ExDConfig.document)
       .then(({ ExD: exc }) => {
         return q.all([
           exc,
           readFile(
-            path.join(this.experimentsPath, expPath, exc.bibiConf.src),
+            path.join(configPath, expPath, exc.bibiConf.src),
             'utf8'
           ).then(data => new X2JS().xml2js(data))
         ]);
@@ -101,6 +135,7 @@ class ExperimentsService {
         return {
           id: id,
           name: exc.name || id,
+          isShared: isExperimentShared,
           thumbnail: exc.thumbnail,
           robotPaths: robotPaths,
           path: expPath,
@@ -109,7 +144,7 @@ class ExperimentsService {
           tags: exc.tags._exists === false ? [] : exc.tags,
           description:
             exc.description || 'No description available for this experiment.',
-          experimentConfiguration: configPath,
+          experimentConfiguration: fileConfigPath,
           maturity: exc.maturity == 'production' ? 'production' : 'development',
           timeout: exc.timeout || 600,
           brainProcesses:

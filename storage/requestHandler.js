@@ -193,15 +193,6 @@ class RequestHandler {
       );
   }
 
-  addExperimentSharedUserByUser(newExperiment, userId, token) {
-    return this.authenticator
-      .checkToken(token)
-      .then(() => this.identity.getUserToken(userId))
-      .then(() =>
-        this.storage.addExperimentSharedUserByUser(newExperiment, userId)
-      );
-  }
-
   copyExperiment(experiment, token, contextId) {
     return this.authenticator
       .checkToken(token)
@@ -313,6 +304,43 @@ class RequestHandler {
       this.storage,
       this.config
     ).cloneExperiment(token, userId, expPath, contextId);
+  }
+
+  updateSharedExperimentMode(experimentId, sharedValue, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.updateSharedExperimentMode(experimentId, sharedValue)
+      );
+  }
+
+  addUsertoSharedUserListinExperiment(newExperiment, userId, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.addUsertoSharedUserListinExperiment(newExperiment, userId)
+      );
+  }
+
+  deleteSharedUserFromExperiment(experimentId, userId, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.deleteSharedUserFromExperiment(experimentId, userId)
+      )
+      .then(res => res);
+  }
+
+  getExperimentSharedMode(experimentID, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.storage.getExperimentSharedMode(experimentID));
+  }
+
+  listSharedUsersbyExperiment(experimentID, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.storage.listSharedUsersbyExperiment(experimentID));
   }
 
   async cloneNewExperiment(token, contextId, modelsPaths, defaultName) {

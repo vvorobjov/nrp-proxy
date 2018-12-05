@@ -32,6 +32,7 @@ var ModelsService = require('./modelsService.js'),
   serversProxy = require('./serversProxy.js');
 
 var experimentList = {};
+var sharedExperimentsList = {};
 var simulationList = {};
 var availableServers = [];
 let healthStatus = {};
@@ -66,8 +67,8 @@ function reloadConfiguration(config) {
 
   modelsService = new ModelsService(configuration.modelsPath);
   modelsService.loadModels();
-
   templateExperimentsService = new TemplateExperimentsService(
+    config,
     configuration.experimentsPath
   );
   return templateExperimentsService.loadExperiments().then(experiments => {
@@ -197,14 +198,24 @@ function getExperiments() {
 }
 
 function getExperimentImageFile(experimentId) {
-  if (!experimentList[experimentId]) throw ('No experiment id: ', experimentId);
-  let experiment = experimentList[experimentId].configuration;
-  return q.resolve(
-    templateExperimentsService.getExperimentFilePath(
-      experiment.path,
-      experiment.thumbnail
-    )
-  );
+  let experiment = {};
+  if (experimentList[experimentId]) {
+    experiment = experimentList[experimentId].configuration;
+    return q.resolve(
+      templateExperimentsService.getExperimentFilePath(
+        experiment.path,
+        experiment.thumbnail
+      )
+    );
+  } else if (sharedExperimentsList[experimentId]) {
+    experiment = sharedExperimentsList[experimentId].configuration;
+    return q.resolve(
+      templateExperimentsService.getSharedExperimentFilePath(
+        experiment.path,
+        experiment.thumbnail
+      )
+    );
+  } else throw ('No experiment id: ', experimentId);
 }
 
 function getModels(modelType) {
@@ -215,11 +226,32 @@ const getModelConfig = (modelType, modelId) => {
   return modelsService && modelsService.getModelConfig(modelType, modelId);
 };
 
+function getSharedExperiments(req) {
+  return templateExperimentsService
+    .loadSharedExperiments(req)
+    .then(experiments => {
+      sharedExperimentsList = _(experiments)
+        .map(exp => [
+          exp.id,
+          {
+            configuration: exp,
+            joinableServers: []
+          }
+        ])
+        .fromPairs()
+        .value();
+      return q.resolve(
+        filterJoinableExperimentByContext(sharedExperimentsList)
+      );
+    });
+}
+
 module.exports = {
   reloadConfiguration,
   initialize,
   getServer,
   getExperiments,
+  getSharedExperiments,
   getExperimentImageFile,
   getAvailableServers,
   getServersStatus,

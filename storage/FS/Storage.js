@@ -45,7 +45,8 @@ class Storage extends BaseStorage {
       .findOne({
         $or: [
           { $and: [{ token: userId, experiment: experiment }] },
-          { $and: [{ experiment: experiment, shared_users: { $in: userId } }] }
+          { $and: [{ experiment: experiment, shared_users: { $in: userId } }] },
+          { $and: [{ experiment: experiment, shared_option: 'Public' }] }
         ]
       })
       .then(res => res || q.reject(Authenticator.AUTHORIZATION_ERROR));
@@ -248,12 +249,6 @@ class Storage extends BaseStorage {
       .isDirectory();
   }
 
-  listExperimentsSharedByUser(userId) {
-    return DB.instance.experiments
-      .find({ shared_users: { $in: userId } })
-      .then(res => res.map(f => ({ uuid: f.experiment, name: f.experiment })));
-  }
-
   async addNonRegisteredExperiments(folders, userId) {
     folders = folders.filter(fileSystemEntry =>
       this.isDirectory(fileSystemEntry)
@@ -294,19 +289,6 @@ class Storage extends BaseStorage {
       });
   }
 
-  addExperimentSharedUserByUser(newExperiment, userId) {
-    return DB.instance.experiments
-      .findOne({ experiment: newExperiment })
-      .then(existingExp => {
-        if (existingExp)
-          return DB.instance.experiments.update(
-            { _id: existingExp._id },
-            { $addToSet: { shared_users: userId } }
-          );
-        return q.reject('Experiment does not exist');
-      });
-  }
-
   copyExperiment(experiment, token, userId) {
     return this.listExperiments(token, userId, null, {
       all: true
@@ -325,6 +307,68 @@ class Storage extends BaseStorage {
           }))
         );
     });
+  }
+
+  getExperimentSharedMode(experimentID) {
+    return DB.instance.experiments
+      .findOne({ experiment: experimentID })
+      .then(res => (res.shared_option ? res.shared_option : 'Private'));
+  }
+
+  updateSharedExperimentMode(experimentID, sharedValue) {
+    return DB.instance.experiments.update(
+      { experiment: experimentID },
+      { $set: { shared_option: sharedValue } }
+    );
+  }
+
+  listSharedUsersbyExperiment(experimentID) {
+    return DB.instance.experiments
+      .findOne({ experiment: experimentID })
+      .then(res => (res.shared_users ? res.shared_users : []));
+  }
+
+  listExperimentsSharedByUser(userId) {
+    return DB.instance.experiments
+      .find({
+        $and: [
+          {
+            shared_option: { $ne: 'Private' },
+            $or: [
+              { shared_users: { $in: userId } },
+              { $and: [{ token: { $ne: userId }, shared_option: 'Public' }] }
+            ]
+          }
+        ]
+      })
+      .then(res => res.map(f => ({ uuid: f.experiment, name: f.experiment })));
+  }
+
+  deleteSharedUserFromExperiment(experimentId, userId) {
+    if (userId == 'all')
+      return DB.instance.experiments.update(
+        { experiment: experimentId },
+        { $set: { shared_users: [] } },
+        { multi: true }
+      );
+    else
+      return DB.instance.experiments.update(
+        { experiment: experimentId },
+        { $pull: { shared_users: { $in: [userId] } } }
+      );
+  }
+
+  addUsertoSharedUserListinExperiment(newExperiment, userId) {
+    return DB.instance.experiments
+      .findOne({ experiment: newExperiment })
+      .then(existingExp => {
+        if (existingExp)
+          return DB.instance.experiments.update(
+            { _id: existingExp._id },
+            { $addToSet: { shared_users: userId } }
+          );
+        return q.reject('Experiment does not exist');
+      });
   }
 
   copyFolderContents(contents, destFolder) {

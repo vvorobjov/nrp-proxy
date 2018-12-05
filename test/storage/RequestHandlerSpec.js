@@ -237,7 +237,7 @@ describe('Storage request handler', () => {
   });
 
   it(`should get the list of the users`, () => {
-    var expectedResult = [{ name: 'nrpuser' }, { name: 'admin' }];
+    var expectedResult = ['nrpuser', 'admin'];
     collectionMock.prototype.find = sinon
       .stub()
       .returns(Promise.resolve([{ user: 'nrpuser' }, { user: 'admin' }]));
@@ -254,7 +254,7 @@ describe('Storage request handler', () => {
       .returns(Promise.resolve([{ experiment: fakeExperiment }]));
 
     return storageRequestHandler
-      .addExperimentSharedUserByUser(
+      .addUsertoSharedUserListinExperiment(
         fakeExperiment,
         'admin',
         fakeToken,
@@ -268,6 +268,83 @@ describe('Storage request handler', () => {
           });
       });
   });
+
+  it(`should succesfully update the shared option of the experiment`, () => {
+    var expected = [1, { updatedExisting: true, n: 1 }];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expected));
+    return storageRequestHandler
+      .updateSharedExperimentMode('fakeExperiment', 'public')
+      .then(res => {
+        expect(res).to.deep.equal(expected);
+      });
+  });
+
+  it(`should succesfully delete a shared user`, () => {
+    var expected = [1, { updatedExisting: true, n: 1 }];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expected));
+    return storageRequestHandler
+      .deleteSharedUserFromExperiment('fakeExperiment', 'userId')
+      .then(res => expect(res).to.deep.equal(expected));
+  });
+
+  it(`should succesfully get the shared option of the experiment`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve('Private'));
+    return storageRequestHandler
+      .getExperimentSharedMode('fakeExperiment', 'userId')
+      .then(res => expect(res).to.deep.equal('Private'));
+  });
+
+  it(`should succesfully get the list of the shared users by experiment`, () => {
+    var dbresult = {
+      token: 'user0',
+      experiment: 'benchmark_p3dx_0',
+      _id: 5,
+      shared_users: ['user1'],
+      shared_option: 'Shared'
+    };
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(dbresult));
+    return storageRequestHandler
+      .listSharedUsersbyExperiment('fakeExperiment', 'token')
+      .then(res => expect(res).to.deep.equal(dbresult.shared_users));
+  });
+
+  it(`should succesfully list all customs models`, () => {
+    var expectedResult = { uuid: 'file0', fileName: 'file0', userId: 'token0' };
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve([{ fileName: 'file0', token: 'token0' }]));
+
+    return storageRequestHandler
+      .listAllCustomModels('customFolder', 'token', 'userId', 'contextId')
+      .then(res => expect(res[0]).to.deep.equal(expectedResult));
+  });
+
+  it(`should succesfully create or update all customs models`, () => {
+    class StorageMock {
+      async createOrUpdate() {
+        return 'value';
+      }
+    }
+    storageRequestHandler.storage = new StorageMock();
+    return storageRequestHandler
+      .createOrUpdate(
+        'filename',
+        'fileContent',
+        'contentType',
+        'parentDir',
+        'token'
+      )
+      .then(res => expect(res).to.deep.equal('value'));
+  });
+
   //deleteFile
   it(`should succesfully delete an Experiment`, () => {
     return storageRequestHandler

@@ -9,10 +9,15 @@ var rewire = require('rewire');
 var sinon = require('sinon');
 var nock = require('nock');
 
-var requestHandler = rewire('../../proxy/requestHandler.js');
 var testConf = rewire('../utils/testConf');
-
 var revert = function() {};
+var requestHandler = rewire('../../proxy/requestHandler.js');
+
+/* initializing Mocks*/
+var templateExperimentService = require('../mocks/TemplateExperimentsService.js');
+
+/* setting Mocks*/
+requestHandler.__set__('TemplateExperimentsService', templateExperimentService);
 
 describe('requestHandler', function() {
   beforeEach(function() {
@@ -28,6 +33,22 @@ describe('requestHandler', function() {
 
   afterEach(function() {
     revert();
+  });
+
+  it('should get shared experiments', function() {
+    var expectedResult = {
+      test1: {
+        configuration: {
+          id: 'test1',
+          name: 'test1'
+        },
+        joinableServers: []
+      }
+    };
+
+    return requestHandler
+      .getSharedExperiments('test')
+      .should.eventually.deep.equal(expectedResult);
   });
 
   it('should return a complete list of experiments', function() {

@@ -53,7 +53,7 @@ class Identity extends BaseIdentity {
       )
       .then(users =>
         users.map(f => {
-          return { name: f.user };
+          return f.user;
         })
       );
   }

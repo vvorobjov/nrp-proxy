@@ -264,16 +264,63 @@ app.get('/storage/experiments', async (req, res) => {
   }
 });
 
-app.get('/storage/sharedexperiments', (req, res) => {
-  storageRequestHandler
-    .listExperimentsSharedByUser(getAuthToken(req))
+app.post('/storage/clone', (req, res) => {
+  return storageRequestHandler
+    .cloneExperiment(getAuthToken(req), req.body.expPath, req.get('context-id'))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/clone', (req, res) => {
-  return storageRequestHandler
-    .cloneExperiment(getAuthToken(req), req.body.expPath, req.get('context-id'))
+app.post('/storage/sharedmode/:experimentId/:sharedMode', (req, res) => {
+  storageRequestHandler
+    .updateSharedExperimentMode(
+      req.params.experimentId,
+      req.params.sharedMode,
+      getAuthToken(req)
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/sharedusers/:experimentId', (req, res) => {
+  storageRequestHandler
+    .listSharedUsersbyExperiment(req.params.experimentId, getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/sharedExperiments', (req, res) => {
+  proxyRequestHandler
+    .getSharedExperiments(getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.delete('/storage/sharedusers/:experimentId/:userId', (req, res) => {
+  storageRequestHandler
+    .deleteSharedUserFromExperiment(
+      req.params.experimentId,
+      req.params.userId,
+      getAuthToken(req)
+    )
+    .then(r => res.send(r || ''))
+    .catch(_.partial(handleError, res));
+});
+
+app.post('/storage/sharedusers/:experimentId/:userId', (req, res) => {
+  storageRequestHandler
+    .addUsertoSharedUserListinExperiment(
+      req.params.experimentId,
+      req.params.userId,
+      getAuthToken(req)
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/sharedvalue/:experimentId', (req, res) => {
+  storageRequestHandler
+    .getExperimentSharedMode(req.params.experimentId, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -450,16 +497,7 @@ app.get('/experiment/:experimentId/config', async (req, res) => {
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
-app.post('/storage/shared', (req, res) => {
-  storageRequestHandler
-    .addExperimentSharedUserByUser(
-      req.body.experimentId,
-      req.body.userId,
-      getAuthToken(req)
-    )
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
-});
+
 app.get('/experiment/:experiment/brain', async (req, res) => {
   experimentServiceFactory
     .createExperimentService(
