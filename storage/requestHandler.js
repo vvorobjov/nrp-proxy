@@ -137,7 +137,14 @@ class RequestHandler {
       );
   }
 
-  createOrUpdate(filename, fileContent, contentType, parentDir, token) {
+  createOrUpdate(
+    filename,
+    fileContent,
+    contentType,
+    parentDir,
+    token,
+    append = false
+  ) {
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
@@ -148,7 +155,8 @@ class RequestHandler {
           contentType,
           parentDir,
           token,
-          userId
+          userId,
+          append
         )
       );
   }

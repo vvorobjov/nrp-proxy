@@ -199,7 +199,8 @@ class Storage extends BaseStorage {
     contentType,
     experiment,
     token,
-    userId
+    userId,
+    append = false
   ) {
     filename = path.join(experiment, filename);
     return this.userIdHasAccessToPath(userId, filename)
@@ -207,19 +208,28 @@ class Storage extends BaseStorage {
       .then(filePath =>
         fsExtra.ensureDir(path.dirname(filePath)).then(() => filePath)
       )
-      .then(filePath => q.denodeify(fs.writeFile)(filePath, fileContent));
+      .then(
+        filePath =>
+          append
+            ? q.denodeify(fs.appendFile)(filePath, fileContent)
+            : q.denodeify(fs.writeFile)(filePath, fileContent)
+      );
   }
 
   createFolder(foldername, experiment, token, userId) {
     const fullFoldername = path.join(experiment, foldername);
-    return this.userIdHasAccessToPath(userId, fullFoldername)
-      .then(() => this.calculateFilePath(experiment, fullFoldername))
-      .then(folderpath => q.denodeify(fs.mkdir)(folderpath))
-      .then(() => ({
-        uuid: fullFoldername,
-        entity_type: 'folder',
-        name: foldername
-      }));
+    return (
+      this.userIdHasAccessToPath(userId, fullFoldername)
+        .then(() => this.calculateFilePath(experiment, fullFoldername))
+        .then(folderpath => q.denodeify(fs.mkdir)(folderpath))
+        //if folder exists no need to throw error
+        .catch(err => (err.code == 'EEXIST' ? q.resolve() : q.reject(err)))
+        .then(() => ({
+          uuid: fullFoldername,
+          entity_type: 'folder',
+          name: foldername
+        }))
+    );
   }
 
   listExperiments(token, userId, contextId, options = {}) {

@@ -465,7 +465,8 @@ app.post('/storage/:experiment/*', (req, res) => {
         req.body,
         req.get('content-type'),
         req.params.experiment,
-        getAuthToken(req)
+        getAuthToken(req),
+        req.query.append
       )
   )
     .then(r => res.send(r || ''))
