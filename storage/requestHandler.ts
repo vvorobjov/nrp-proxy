@@ -23,50 +23,71 @@
  * ---LICENSE-END**/
 'use strict';
 
+import CustomModelService from './CustomModelsService';
+import * as ExperimentCloner from './ExperimentCloner';
+
+// test mocked
+let { TemplateExperimentCloner, NewExperimentCloner } = ExperimentCloner,
+  { default: GDPR } = require('./GDPR');
+
 const q = require('q'),
-  path = require('path'),
-  CustomModelService = require('./CustomModelsService');
+  path = require('path');
 
 //mocked in the unit tests
-let ExperimentCloner = require('./ExperimentCloner.js'),
-  GDPR = require('./GDPR');
 
 let customModelService = new CustomModelService();
 const gdprService = new GDPR();
 
-class RequestHandler {
-  constructor(config) {
+export default class RequestHandler {
+  private authenticator;
+  private storage;
+  private identity;
+  private customModelService;
+  private tokenIdentifierCache;
+  private newExperimentPath;
+
+  constructor(private config) {
     try {
       if (!config.storage) throw "'storage' key missing in the config file";
       if (!config.authentication)
         throw "'authentication' key missing in the config file";
 
-      const storageBasePath = path.resolve(
-        path.join(__dirname, config.storage)
-      );
-      const authenticationBasePath = path.resolve(
-        path.join(__dirname, config.authentication)
-      );
+      this.loadDependenciesInjection();
 
-      const Storage = require(path.join(storageBasePath, 'Storage.js'));
-      const Authenticator = require(path.join(
-        authenticationBasePath,
-        'Authenticator.js'
-      ));
-      const Identity = require(path.join(
-        authenticationBasePath,
-        'Identity.js'
-      ));
-
-      this.config = config;
-      this.authenticator = new Authenticator(config);
-      this.storage = new Storage(config);
-      this.identity = new Identity(config);
       this.customModelService = new CustomModelService();
       this.tokenIdentifierCache = new Map();
       this.newExperimentPath = path.join('template_new', 'TemplateNew.exc');
     } catch (e) {
       console.error('Failed to instantiate storage implementation', e);
+    }
+  }
+
+  async loadDependenciesInjection() {
+    try {
+      const storageBasePath = path.resolve(
+        path.join(__dirname, this.config.storage)
+      );
+      const authenticationBasePath = path.resolve(
+        path.join(__dirname, this.config.authentication)
+      );
+
+      const { Storage } = await import(path.join(storageBasePath, 'Storage'));
+      const { Authenticator } = await import(path.join(
+        authenticationBasePath,
+        'Authenticator'
+      ));
+      const { Identity } = await require(path.join(
+        authenticationBasePath,
+        'Identity'
+      ));
+
+      this.authenticator = new Authenticator(this.config);
+      this.storage = new Storage(this.config);
+      this.identity = new Identity(this.config);
+    } catch (ex) {
+      console.error(`Impossible to lazy load injected dependencies:
+${ex.stack}`);
+      process.exit(1);
     }
   }
 
@@ -101,13 +122,10 @@ class RequestHandler {
       .then(userId => this.storage.listFiles(parentDir, token, userId));
   }
 
-  getFile(filename, parentDir, token, byname = false) {
-    return this.authenticator
-      .checkToken(token)
-      .then(() => this.getUserIdentifier(token))
-      .then(userId =>
-        this.storage.getFile(filename, parentDir, token, userId, byname)
-      );
+  async getFile(filename, parentDir, token, byname = false) {
+    await this.authenticator.checkToken(token);
+    const userId = await this.getUserIdentifier(token);
+    return this.storage.getFile(filename, parentDir, token, userId, byname);
   }
 
   deleteFile(filename, parentDir, token, byname = false) {
@@ -170,20 +188,19 @@ class RequestHandler {
       );
   }
 
-  listExperiments(token, contextId, options = {}) {
+  async listExperiments(token, contextId, options = { filter: undefined }) {
     const SPECIAL_FOLDERS = new Set(['robots', 'brains', 'environments']);
-    return this.authenticator
-      .checkToken(token)
-      .then(() => this.getUserIdentifier(token))
-      .then(userId =>
-        this.storage.listExperiments(token, userId, contextId, options)
-      )
-      .then(
-        exps =>
-          options.filter
-            ? exps.filter(e => e.name === options.filter)
-            : exps.filter(e => !SPECIAL_FOLDERS.has(e.name))
-      );
+    await this.authenticator.checkToken(token);
+    const userId = await this.getUserIdentifier(token);
+    const exps = await this.storage.listExperiments(
+      token,
+      userId,
+      contextId,
+      options
+    );
+    return options.filter
+      ? exps.filter(e => e.name === options.filter)
+      : exps.filter(e => !SPECIAL_FOLDERS.has(e.name));
   }
   listExperimentsSharedByUser(token) {
     return this.authenticator
@@ -217,20 +234,17 @@ class RequestHandler {
       .then(userId => this.storage.getCustomModel(modelPath, token, userId));
   }
 
-  createCustomModel(modelType, token, modelName, modelData, contextId) {
-    return this.authenticator
-      .checkToken(token)
-      .then(() => this.getUserIdentifier(token))
-      .then(userId =>
-        this.storage.createCustomModel(
-          modelType,
-          modelData,
-          userId,
-          modelName,
-          token,
-          contextId
-        )
-      );
+  async createCustomModel(modelType, token, modelName, modelData, contextId) {
+    await this.authenticator.checkToken(token);
+    const userId = await this.getUserIdentifier(token);
+    return this.storage.createCustomModel(
+      modelType,
+      modelData,
+      userId,
+      modelName,
+      token,
+      contextId
+    );
   }
 
   async getCustomModelConfig(modelPath, token) {
@@ -308,10 +322,10 @@ class RequestHandler {
     await this.authenticator.checkToken(token);
     let userId = await this.getUserIdentifier(token);
 
-    return new ExperimentCloner.TemplateExperimentCloner(
+    return new TemplateExperimentCloner(
       this.storage,
       this.config
-    ).cloneExperiment(token, userId, expPath, contextId);
+    ).cloneExperiment(token, userId, expPath, contextId, undefined);
   }
 
   updateSharedExperimentMode(experimentId, sharedValue, token) {
@@ -355,7 +369,7 @@ class RequestHandler {
     await this.authenticator.checkToken(token);
     let userId = await this.getUserIdentifier(token);
 
-    return new ExperimentCloner.NewExperimentCloner(
+    return new NewExperimentCloner(
       this.storage,
       this.config,
       modelsPaths,
@@ -369,5 +383,3 @@ class RequestHandler {
     );
   }
 }
-
-module.exports = RequestHandler;

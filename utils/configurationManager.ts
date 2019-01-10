@@ -95,7 +95,7 @@ let setState = (key, value) => {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(configFile));
 };
 
-module.exports = {
+export default {
   watch: watch,
   initialize: initialize,
   loadConfigFile: loadConfigFile,

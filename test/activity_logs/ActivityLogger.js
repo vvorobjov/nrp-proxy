@@ -8,7 +8,8 @@ var rewire = require('rewire');
 var sinon = require('sinon');
 var assert = chai.assert;
 const q = require('q');
-var ActivityLogger = rewire('../../activity_logs/ActivityLogger.js');
+const ActivityLoggerRewire = rewire('../../activity_logs/ActivityLogger'),
+  { default: ActivityLogger } = ActivityLoggerRewire;
 
 var refMock = {
   set: sinon.stub().returns(q.resolve({}))
@@ -33,7 +34,7 @@ let configFile = {
 describe('ActivityLogger', function() {
   beforeEach(function() {
     refMock.set.reset();
-    ActivityLogger.__set__('firebase', firebaseMock);
+    ActivityLoggerRewire.__set__('firebase', firebaseMock);
   });
 
   it('The constructor should call initializeFirebase depending on the app configuration', function() {

@@ -23,57 +23,49 @@
  * ---LICENSE-END**/
 'use strict';
 
-class BaseStorage {
-  constructor() {
-    if (new.target === BaseStorage)
-      throw new TypeError('BaseStorage is an abstract class');
+import BaseAuthenticator from '../BaseAuthenticator';
+import { Identity } from './Identity';
+
+const q = require('q'),
+  identity = new Identity();
+
+export class Authenticator extends BaseAuthenticator {
+  static get TOKEN_CACHE_DURATION_MS() {
+    return 60 * 1000;
   }
-  /*eslint-disable no-unused-vars*/
-  listFiles(experiment, token, userId) {
-    throw 'not implemented';
+
+  private authCache = new Map();
+
+  constructor(private config) {
+    super();
   }
-  getFile(filename, experiment, token, userId, byname) {
-    throw 'not implemented';
+
+  checkToken(token) {
+    if (this.config.storage == 'Collab') {
+      // No need to check token, it will be done by the underlying Collab storage requests
+      return q.when(true);
+    }
+
+    //do we have the token in cache?
+    if (this.authCache.has(token)) {
+      let cache = this.authCache.get(token);
+      if (Date.now() - cache.time <= Authenticator.TOKEN_CACHE_DURATION_MS) {
+        //cache still time valid
+        return q.when(cache.userinfo);
+      } else this.authCache.delete(token);
+    }
+    //no valid cache, we verify the token by trying to retrieve the user info
+    return identity.getUserInfo('me', token).then(userinfo => {
+      this.authCache.set(token, { time: Date.now(), userinfo });
+      return userinfo;
+    });
   }
-  deleteFile(filename, experiment, token, userId, byname) {
-    throw 'not implemented';
-  }
-  deleteFolder(foldername, experiment, token, userId, byname = false) {
-    throw 'not implemented';
-  }
-  createFolder(foldername, experiment, token, userId) {
+
+  login(usr, pwd) {
     throw 'not implemented';
   }
 
-  deleteExperiment(experimentName, parentDir, token, userId) {
+  getLoginPage() {
     throw 'not implemented';
   }
-
-  createOrUpdate(
-    filename,
-    fileContent,
-    contentType,
-    experiment,
-    token,
-    userId
-  ) {
-    throw 'not implemented';
-  }
-
-  getCustomModel(modelPath, token, userId) {
-    throw 'not implemented';
-  }
-
-  listCustomModels(customFolder, token, userId, contextId) {
-    throw 'not implemented';
-  }
-  listExperiments(token, userId, contextId, options) {
-    throw 'not implemented';
-  }
-  createExperiment(newExperiment, token, userId, contextId) {
-    throw 'not implemented';
-  }
-  /*eslint-enable no-unused-vars*/
 }
-
-module.exports = BaseStorage;

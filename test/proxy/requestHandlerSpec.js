@@ -11,13 +11,17 @@ var nock = require('nock');
 
 var testConf = rewire('../utils/testConf');
 var revert = function() {};
-var requestHandler = rewire('../../proxy/requestHandler.js');
+var requestHandlerRewired = rewire('../../proxy/requestHandler');
+var requestHandler = requestHandlerRewired.default;
 
 /* initializing Mocks*/
-var templateExperimentService = require('../mocks/TemplateExperimentsService.js');
+var templateExperimentService = require('../mocks/TemplateExperimentsService');
 
 /* setting Mocks*/
-requestHandler.__set__('TemplateExperimentsService', templateExperimentService);
+requestHandlerRewired.__set__(
+  'TemplateExperimentsService',
+  templateExperimentService
+);
 
 describe('requestHandler', function() {
   beforeEach(function() {
@@ -25,7 +29,7 @@ describe('requestHandler', function() {
     testConf.mockResponses();
     testConf.mockSuccessfulOidcResponse();
     requestHandler.initialize(testConf.config);
-    requestHandler.__set__({
+    requestHandlerRewired.__set__({
       console: testConf.consoleMock,
       configuration: testConf.config
     });
@@ -52,7 +56,7 @@ describe('requestHandler', function() {
   });
 
   it('should return a complete list of experiments', function() {
-    revert = requestHandler.__set__(
+    revert = requestHandlerRewired.__set__(
       'experimentList',
       testConf.experimentListNoCTXID
     );
@@ -75,7 +79,7 @@ describe('requestHandler', function() {
   });
 
   it('should return joinable servers for a given experimentID', function() {
-    revert = requestHandler.__set__(
+    revert = requestHandlerRewired.__set__(
       'simulationList',
       testConf.serveserverSimulations
     );
@@ -93,7 +97,7 @@ describe('requestHandler', function() {
 
   it('submitJob should get job location after submitting job', function() {
     const resp = [{ statusCode: 200, headers: { location: '/job_location' } }];
-    requestHandler.__set__('request', () => {
+    requestHandlerRewired.__set__('request', () => {
       return new Promise(function(resolve) {
         resolve(resp);
       });
@@ -106,7 +110,10 @@ describe('requestHandler', function() {
   });
 
   it('should return available servers for a given experiment', async () => {
-    revert = requestHandler.__set__('experimentList', testConf.experimentList);
+    revert = requestHandlerRewired.__set__(
+      'experimentList',
+      testConf.experimentList
+    );
     let availableServers = await requestHandler.getAvailableServers();
     const sortServers = servers =>
       [...servers].sort((a, b) => a.id.localeCompare(b.id));
@@ -125,7 +132,7 @@ describe('requestHandler', function() {
 
   it('should return getExperimentImageFile response', function() {
     var serversProxyGetExperimentImageSpy = sinon.spy();
-    revert = requestHandler.__set__({
+    revert = requestHandlerRewired.__set__({
       'serversProxy.getExperimentImageFile': serversProxyGetExperimentImageSpy,
       experimentList: testConf.experimentList
     });
@@ -137,7 +144,7 @@ describe('requestHandler', function() {
   it('should not find the configuration file and log the error', function() {
     var errorSpy = sinon.spy();
     var logSpy = sinon.spy();
-    revert = requestHandler.__set__({
+    revert = requestHandlerRewired.__set__({
       console: {
         error: errorSpy,
         log: logSpy
@@ -155,7 +162,7 @@ describe('requestHandler', function() {
 
   it('should reconfigure oidcAuthenticator on reloadConfiguration', function() {
     var configureSpy = sinon.spy();
-    revert = requestHandler.__set__({
+    revert = requestHandlerRewired.__set__({
       oidcAuthenticator: {
         configure: configureSpy
       },
@@ -177,7 +184,7 @@ describe('requestHandler', function() {
     var serversProxyGetExperimentImageSpy = sinon.spy();
     var errorSpy = sinon.spy();
     var logSpy = sinon.spy();
-    revert = requestHandler.__set__({
+    revert = requestHandlerRewired.__set__({
       console: {
         error: errorSpy,
         log: logSpy
@@ -189,12 +196,12 @@ describe('requestHandler', function() {
     try {
       requestHandler.getExperimentImageFile('falseExperiment');
     } catch (e) {
-      e.should.equal('falseExperiment');
+      e.should.equal('No experiment id: falseExperiment');
     }
   });
 
   it('should get the getModelConfig service object correctly', async () => {
-    revert = requestHandler.__set__({
+    revert = requestHandlerRewired.__set__({
       modelsService: {
         getModelConfig: () => Promise.resolve('robotConfig')
       }
@@ -206,7 +213,7 @@ describe('requestHandler', function() {
   it('should get the models service object correctly', function() {
     var errorSpy = sinon.spy();
     var logSpy = sinon.spy();
-    revert = requestHandler.__set__({
+    revert = requestHandlerRewired.__set__({
       console: {
         error: errorSpy,
         log: logSpy

@@ -5,13 +5,12 @@ var chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 var expect = chai.expect;
 var nock = require('nock');
-var rewire = require('rewire');
 var sinon = require('sinon');
 const q = require('q');
-var ExperimentServiceFactory = rewire(
-  '../../proxy/ExperimentServiceFactory.js'
-);
-var RequestHandler = require('../../storage/requestHandler.js');
+const {
+    default: ExperimentServiceFactory
+  } = require('../../proxy/ExperimentServiceFactory'),
+  { default: RequestHandler } = require('../../storage/requestHandler');
 let configFile = {
   storage: 'FS',
   authentication: 'FS'

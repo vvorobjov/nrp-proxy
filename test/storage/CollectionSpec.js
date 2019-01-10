@@ -7,7 +7,7 @@ const chai = require('chai'),
   expect = chai.expect,
   sinon = require('sinon');
 
-let RewiredCollection = rewire('../../storage/FS/Collection.js');
+let RewiredCollection = rewire('../../storage/FS/Collection');
 var tingodbMock = sinon.stub();
 const fakeResult = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
   fakeEntry = { uuid: 'fakeUuid' };
@@ -23,7 +23,7 @@ tingodbMock.prototype.update = sinon
   .stub()
   .returns(Promise.resolve(fakeResult));
 
-var collection = new RewiredCollection(tingodbMock);
+var collection = new RewiredCollection.default(tingodbMock);
 chai.use(chaiAsPromised);
 chai.use(chaiSubset);
 chai.should();

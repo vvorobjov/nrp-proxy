@@ -80,9 +80,7 @@ var getToken = function() {
   return deferred.promise;
 };
 
-module.exports = {
-  getToken: function() {
-    return getToken();
-  },
-  configure: configure
+export default {
+  getToken,
+  configure
 };

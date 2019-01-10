@@ -23,22 +23,23 @@
  * ---LICENSE-END**/
 'use strict';
 
-const express = require('express'),
-  _ = require('lodash'),
+import express from 'express';
+import AdminService from './admin/AdminService';
+import proxyRequestHandler from './proxy/requestHandler';
+import StorageRequestHandler from './storage/requestHandler';
+import configurationManager from './utils/configurationManager';
+import loggerManager from './utils/loggerManager';
+import ActivityLogger from './activity_logs/ActivityLogger';
+import ExperimentServiceFactory from './proxy/ExperimentServiceFactory';
+
+const _ = require('lodash'),
   bodyParser = require('body-parser'),
   iplocation = require('iplocation'),
   path = require('path');
 
 require('./migration_scripts/sprint72.js');
 
-const proxyRequestHandler = require('./proxy/requestHandler.js'),
-  StorageRequestHandler = require('./storage/requestHandler.js'),
-  ExperimentServiceFactory = require('./proxy/ExperimentServiceFactory'),
-  configurationManager = require('./utils/configurationManager.js'),
-  loggerManager = require('./utils/loggerManager.js'),
-  AdminService = require('./admin/AdminService'),
-  ActivityLogger = require('./activity_logs/ActivityLogger'),
-  app = express();
+const app = express();
 
 configurationManager.initialize();
 let config = configurationManager.loadConfigFile();
@@ -415,24 +416,24 @@ app.get('/storage/:experiment/:filename', (req, res) => {
 });
 
 app.delete('/storage/:experiment/:filename', (req, res) => {
-  let args = [
+  const fnName = req.query.type === 'folder' ? 'deleteFolder' : 'deleteFile';
+  let deleted = storageRequestHandler[fnName](
     req.params.filename,
     req.params.experiment,
     getAuthToken(req),
     req.query.byname === 'true'
-  ];
-  let deleted =
-    req.query.type === 'folder'
-      ? storageRequestHandler.deleteFolder(...args)
-      : storageRequestHandler.deleteFile(...args);
+  );
 
   deleted.then(r => res.send(r || '')).catch(_.partial(handleError, res));
 });
 
 app.delete('/storage/:experiment', (req, res) => {
-  let args = [req.params.experiment, req.params.experiment, getAuthToken(req)];
   storageRequestHandler
-    .deleteExperiment(...args)
+    .deleteExperiment(
+      req.params.experiment,
+      req.params.experiment,
+      getAuthToken(req)
+    )
     .then(r => res.send(r || ''))
     .catch(_.partial(handleError, res));
 });

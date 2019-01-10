@@ -29,7 +29,7 @@ const xml2js = require('xml2js').parseString,
 
 let JSZip = require('jszip');
 
-class CustomModelsService {
+export default class CustomModelsService {
   logConfig(zip, basename) {
     const exception = q.reject(
       `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
@@ -161,5 +161,3 @@ class CustomModelsService {
     });
   }
 }
-
-module.exports = CustomModelsService;

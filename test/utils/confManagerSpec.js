@@ -9,24 +9,23 @@ const chai = require('chai'),
 chai.use(chaiAsPromised);
 
 describe('Configuration Manager', () => {
-  let rewiredManager = rewire('../../utils/configurationManager.js');
+  let rewiredManager;
 
   beforeEach(() => {
     let confFile = path.join(__dirname, 'config.json');
-    rewiredManager = rewire('../../utils/configurationManager.js');
+    rewiredManager = rewire('../../utils/configurationManager');
     rewiredManager.__set__({ CONFIG_FILE: confFile });
   });
 
   it('should load the config file', () => {
-    return expect(rewiredManager.loadConfigFile()).to.be.an('object');
+    return expect(rewiredManager.default.loadConfigFile()).to.be.an('object');
   });
 
   it('should throw when the conf file is wrong', () => {
     var errorSpy = sinon.spy();
     var logSpy = sinon.spy();
-    let RewiredConf;
     let wrongConfFile = path.join(__dirname, 'wrongConfig.json');
-    RewiredConf = rewire('../../utils/configurationManager.js');
+    let RewiredConf = rewire('../../utils/configurationManager');
     RewiredConf.__set__({ CONFIG_FILE: wrongConfFile });
     RewiredConf.__set__({
       console: {
@@ -34,7 +33,7 @@ describe('Configuration Manager', () => {
         error: errorSpy
       }
     });
-    RewiredConf.loadConfigFile();
+    RewiredConf.default.loadConfigFile();
     sinon.assert.calledOnce(errorSpy);
   });
 

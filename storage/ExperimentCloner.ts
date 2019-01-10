@@ -22,12 +22,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  * ---LICENSE-END**/
 'use strict';
+
+import CustomModelsService from './CustomModelsService';
+import X2JS from 'x2js';
+
 const path = require('path'),
   q = require('q'),
-  X2JS = new require('x2js'),
   _ = require('lodash'),
   pd = require('pretty-data').pd,
-  CustomModelsService = require('../storage/CustomModelsService.js'),
   exec = require('child_process').exec,
   walk = require('walk');
 
@@ -41,22 +43,23 @@ const ensureArrayProp = (obj, prop) => {
   if (!Array.isArray(obj[prop])) obj[prop] = [obj[prop]];
   return true;
 };
-class ExperimentCloner {
-  constructor(storage, config) {
-    this.storage = storage;
-    this.config = config;
 
-    this.downloadedFiles = [];
-    this.tmpFolder = tmp.dirSync({ unsafeCleanup: true });
-  }
+abstract class ExperimentCloner {
+  protected tmpFolder = tmp.dirSync({ unsafeCleanup: true });
+  protected experimentFolder?;
+  private downloadedFiles: Promise<string>[] = [];
 
-  getBibiFullPath() {
-    throw 'not implemented';
-  }
+  constructor(protected storage, protected config, protected expModelsPaths?) {}
 
-  getExperimentFileFullPath() {
-    throw 'not implemented';
-  }
+  abstract getBibiFullPath(bibiConfFile, expUUID, token, userId);
+
+  abstract getExperimentFileFullPath(
+    expPath,
+    expUUID,
+    token,
+    userId,
+    defaultName
+  );
 
   async createUniqueExperimentId(token, userId, expPath, contextId) {
     //finds an unused name for a new experiment in the form 'templatename_0'
@@ -144,7 +147,7 @@ class ExperimentCloner {
   }
 
   async downloadResourcesfiles(resExpPath) {
-    var files = [];
+    var files = [] as any[];
     var options = {
       listeners: {
         file: function(root, fileStats, next) {
@@ -395,7 +398,7 @@ class ExperimentCloner {
   }
 }
 
-class TemplateExperimentCloner extends ExperimentCloner {
+export class TemplateExperimentCloner extends ExperimentCloner {
   getBibiFullPath(bibiConfFile) {
     return path.join(this.experimentFolder, bibiConfFile);
   }
@@ -405,12 +408,17 @@ class TemplateExperimentCloner extends ExperimentCloner {
   }
 }
 
-class NewExperimentCloner extends ExperimentCloner {
-  constructor(storage, config, modelsPaths, newExperimentPath) {
+export class NewExperimentCloner extends ExperimentCloner {
+  private brainModelPath = 'brain_model';
+  private newExpConfigurationPath;
+  private newExpBibiPath;
+
+  constructor(storage, config, protected expModelsPaths, private templateExc) {
     super(storage, config);
-    this.expModelsPaths = modelsPaths;
-    this.brainModelPath = 'brain_model';
-    this.templateExc = newExperimentPath;
+
+    console.info('this.config.experimentsPath' + this.config.experimentsPath);
+    console.info('this.templateExc' + this.templateExc);
+
     this.newExpConfigurationPath = path.join(
       this.config.experimentsPath,
       this.templateExc
@@ -516,7 +524,7 @@ class NewExperimentCloner extends ExperimentCloner {
       userId
     );
 
-    if (this.expModelsPaths.robotPath) {
+    if (this.expModelsPaths.robotPath && robotModelConfig) {
       const customAsset = this.expModelsPaths.robotPath.custom,
         bodyModel_text = customAsset
           ? robotModelConfig.robotRelPath
@@ -637,11 +645,9 @@ class NewExperimentCloner extends ExperimentCloner {
   }
 
   async handleEnvironmentFiles(experimentConf, expUUID, token, userId) {
-    let envRelPath, envConfigPath;
-    let envModelConfig = {};
     //handle zipped models
     if (this.expModelsPaths.environmentPath.custom) {
-      envRelPath = (await this.handleZippedModel(
+      let envRelPath = (await this.handleZippedModel(
         token,
         expUUID,
         userId,
@@ -651,38 +657,36 @@ class NewExperimentCloner extends ExperimentCloner {
       experimentConf.ExD.environmentModel._customModelPath = path.basename(
         this.expModelsPaths.environmentPath.path
       );
-      envModelConfig.model = {};
-      envModelConfig.model.name = path
-        .basename(envRelPath, '.sdf')
-        .split('_')
-        .join(' ');
+      return {
+        model: {
+          name: path
+            .basename(envRelPath, '.sdf')
+            .split('_')
+            .join(' ')
+        }
+      };
     } else {
-      envRelPath = _.takeRight(
+      let envRelPath = _.takeRight(
         this.expModelsPaths.environmentPath.path.split(path.sep),
         2
       );
 
-      envConfigPath = path.join(
+      let envConfigPath = path.join(
         this.config.modelsPath,
         envRelPath[0],
         envRelPath[1]
       );
 
-      envModelConfig = await readFile(envConfigPath, 'utf8').then(envContent =>
-        new X2JS().xml2js(envContent)
-      );
+      let envModelConfig = await readFile(
+        envConfigPath,
+        'utf8'
+      ).then(envContent => new X2JS().xml2js(envContent));
 
       experimentConf.ExD.environmentModel._src = path.join(
         envRelPath[0],
         envModelConfig.model.sdf.__text
       );
+      return envModelConfig;
     }
-    return envModelConfig;
   }
 }
-
-module.exports = {
-  TemplateExperimentCloner: TemplateExperimentCloner,
-  NewExperimentCloner: NewExperimentCloner,
-  ExperimentCloner: ExperimentCloner
-};

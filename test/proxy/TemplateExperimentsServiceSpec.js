@@ -47,19 +47,25 @@ const expectedExp2 = {
   visualModelParams: undefined
 };
 let confFilePath = path.join(__dirname, '../utils/config.json'),
-  configurationManager = rewire('../../utils/configurationManager.js');
-configurationManager.__set__('CONFIG_FILE', confFilePath);
+  configurationManagerRewire = rewire('../../utils/configurationManager'),
+  configurationManager = configurationManagerRewire.default;
+
+configurationManagerRewire.__set__('CONFIG_FILE', confFilePath);
 
 let confMock = configurationManager.loadConfigFile();
-let ExperimentsService = rewire('../../proxy/TemplateExperimentsService.js');
+let ExperimentsService = rewire('../../proxy/TemplateExperimentsService');
 /* initializing Mocks*/
 var StorageRequestHandler = rewire('../mocks/StorageRequestHandler.js');
 
 const mockUtils = { storagePath: 'test/data/sharedExperiments' };
 
 ExperimentsService.__set__('utils', mockUtils);
+
 ExperimentsService.__set__('StorageRequestHandler', StorageRequestHandler);
-let experimentsService = new ExperimentsService(confMock, experimentsPaths);
+let experimentsService = new ExperimentsService.default(
+  confMock,
+  experimentsPaths
+);
 
 describe('TemplateExperimentsService', () => {
   /* setting Mocks*/

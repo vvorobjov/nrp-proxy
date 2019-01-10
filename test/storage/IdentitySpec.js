@@ -3,69 +3,23 @@
 const chai = require('chai'),
   chaiAsPromised = require('chai-as-promised'),
   rewire = require('rewire'),
-  expect = chai.expect,
   path = require('path');
 
 chai.use(chaiAsPromised);
 
-describe('BaseIdentity', () => {
-  const BaseIdentity = require('../../storage/BaseIdentity.js');
-  let baseClassMock;
-  //to test the non overidden methods of the BaseAuthenticator we have to provide an empty
-  //implementation and instantiate it
-  class BaseIdentityMock extends BaseIdentity {
-    constructor() {
-      super();
-    }
-  }
-
-  beforeEach(() => {
-    baseClassMock = new BaseIdentityMock();
-  });
-
-  it(`should throw a TypeError exception when trying to instanciate the BaseAuthenticator`, () => {
-    return expect(() => {
-      return new BaseIdentity();
-    }).to.throw(TypeError, 'BaseIdentity is an abstract class');
-  });
-
-  //for all the non implemented methods of the base class
-  [
-    'getUserInfo',
-    'getUserGroups',
-    'getUniqueIdentifier',
-    'getUsersList',
-    'getUserToken'
-  ].forEach(method => {
-    it(
-      'should throw a non implemented method error when trying to use the base class non-overidden function: ' +
-        method,
-      () => {
-        return expect(baseClassMock[method]).to.throw('not implemented');
-      }
-    );
-  });
-});
-
 describe('FSidentity', () => {
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24';
-  const fakeName = 'nrpuser';
   let identity;
 
   beforeEach(() => {
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
-    const DB = rewire('../../storage/FS/DB.js');
+    const DB = rewire('../../storage/FS/DB');
     DB.__set__('utils', mockUtils);
-    const Identity = rewire('../../storage/FS/Identity.js');
-    Identity.__set__('DB', DB);
-    identity = new Identity();
+    const IdentityRewire = rewire('../../storage/FS/Identity');
+    IdentityRewire.__set__('DB', DB.default);
+    identity = new IdentityRewire.Identity();
   });
 
-  it(`should return self user token`, () => {
-    return identity.getUserToken(fakeName).should.eventually.deep.equal({
-      token: fakeToken
-    });
-  });
   it(`should return self user info`, () => {
     var expectedResult = ['nrpuser', 'admin'];
 
@@ -114,12 +68,12 @@ describe('FSidentity', () => {
 describe('Collabidentity', () => {
   const nock = require('nock');
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24';
-  const Identity = rewire('../../storage/Collab/Identity.js');
+  const IdentityRewire = rewire('../../storage/Collab/Identity');
 
   let identity;
 
   beforeEach(() => {
-    identity = new Identity();
+    identity = new IdentityRewire.Identity();
   });
 
   it(`should return self user info`, () => {

@@ -23,27 +23,13 @@
  * ---LICENSE-END**/
 'use strict';
 
-class BaseAuthenticator {
-  static get AUTHORIZATION_ERROR() {
-    return { code: 403 };
-  }
+export default abstract class BaseIdentity {
 
-  constructor() {
-    if (new.target === BaseAuthenticator)
-      throw new TypeError('BaseAuthenticator is an abstract class');
-  }
+  abstract getUniqueIdentifier(token);
 
-  //eslint-disable-next-line no-unused-vars
-  login(usr, pwd) {
-    throw 'not implemented';
-  }
-  //eslint-disable-next-line no-unused-vars
-  checkToken(token) {
-    throw 'not implemented';
-  }
-  getLoginPage() {
-    throw 'not implemented';
-  }
+  abstract  getUserInfo(userId, token);
+
+  abstract getUsersList();
+
+  abstract getUserGroups(token, userId);
 }
-
-module.exports = BaseAuthenticator;

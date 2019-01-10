@@ -7,18 +7,19 @@ var expect = chai.expect;
 var nock = require('nock');
 var rewire = require('rewire');
 const _ = require('lodash');
-var serversProxy = rewire('../../proxy/serversProxy.js');
+var serversProxyRewire = rewire('../../proxy/serversProxy');
+const serversProxy = serversProxyRewire.default;
 var testConf = require('../utils/testConf.js');
 
 describe('serversProxy', function() {
   beforeEach(function() {
     nock.cleanAll();
-    serversProxy.__set__('console', testConf.consoleMock);
+    serversProxyRewire.__set__('console', testConf.consoleMock);
   });
 
   it('should set authToken', function() {
     serversProxy.setToken('testToken');
-    serversProxy.__get__('authToken').should.deep.equal('testToken');
+    serversProxyRewire.__get__('authToken').should.deep.equal('testToken');
   });
 
   it('should return the correct list of experiments', function() {

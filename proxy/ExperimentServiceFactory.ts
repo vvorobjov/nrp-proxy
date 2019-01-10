@@ -23,23 +23,24 @@
  * ---LICENSE-END**/
 'use strict';
 
+import X2JS from 'x2js';
+
 const path = require('path'),
   _ = require('lodash'),
   q = require('q'),
   fs = require('fs'),
   pd = require('pretty-data').pd,
   glob = q.denodeify(require('glob')),
-  xmlFormat = xml => pd.xml(xml),
-  X2JS = new require('x2js');
+  xmlFormat = xml => pd.xml(xml);
 
-class ExperimentServiceFactory {
-  constructor(storageRequestHandler, config, proxyRequestHandler) {
-    this.config = config;
-    this.storageRequestHandler = storageRequestHandler;
-    this.proxyRequestHandler = proxyRequestHandler;
-  }
+export default class ExperimentServiceFactory {
+  constructor(
+    private storageRequestHandler,
+    private config,
+    private proxyRequestHandler
+  ) {}
 
-  createExperimentService(experimentId, contextId, template) {
+  createExperimentService(experimentId, contextId, template?) {
     if (template) {
       return new TemplateExperimentService(
         experimentId,
@@ -64,26 +65,14 @@ const FileType = {
   TF: 'TF'
 };
 
-class BaseExperimentService {
-  constructor(experimentId, contextId) {
-    this.experimentId = experimentId;
-    this.contextId = contextId;
-  }
+abstract class BaseExperimentService {
+  constructor(protected experimentId, protected contextId) {}
 
-  // eslint-disable-next-line no-unused-vars
-  async getFile(filename, type) {
-    throw 'Not implemented exception';
-  }
+  abstract async getFile(filename, type);
 
-  // eslint-disable-next-line no-unused-vars
-  async saveFile(filename, fileContent, contentType = 'text/plain') {
-    throw 'Not implemented exception';
-  }
+  abstract async saveFile(filename, fileContent, contentType?): Promise<any>;
 
-  // eslint-disable-next-line no-unused-vars
-  async getExcFileName() {
-    throw 'Not implemented exception';
-  }
+  abstract async getExcFileName();
 
   async getExc() {
     const excFilename = await this.getExcFileName();
@@ -134,7 +123,9 @@ class BaseExperimentService {
           : undefined,
       physicsEngine: ExD.physicsEngine,
       experimentFile: exc,
-      bibiConfSrc: bibiConfSrc
+      bibiConfSrc: bibiConfSrc,
+      visualModel: null,
+      visualModelParams: [] as Number[]
     };
 
     if (ExD.visualModel) {
@@ -162,7 +153,7 @@ class BaseExperimentService {
     let exc = (await this.getExc())[0].ExD;
 
     let smDict = {};
-    let filePromises = [];
+    let filePromises: any[] = [];
     if (exc.experimentControl) {
       let stateMachines = exc.experimentControl.stateMachine;
       if (!Array.isArray(exc.experimentControl.stateMachine))
@@ -185,7 +176,7 @@ class BaseExperimentService {
     let [excFile, excFileName] = await this.getExc();
     let exc = excFile.ExD;
 
-    let promises = [];
+    let promises: Promise<any>[] = [];
     if (!_.isEmpty(stateMachines))
       exc.experimentControl = {
         __prefix: exc.__prefix,
@@ -219,7 +210,7 @@ class BaseExperimentService {
     else if (!Array.isArray(bibi.brainModel.populations))
       bibi.brainModel.populations = [bibi.brainModel.populations];
 
-    let robots = [];
+    let robots: string[] = [];
     if (!bibi.bodyModel) bibi.bodyModel = [];
     else if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
 
@@ -329,8 +320,8 @@ class BaseExperimentService {
     let bibi = bibiFile.bibi;
 
     let tfs = transferFunctions.map(tfCode => {
-      let tfName = /def +([^\\( ]*)/gm.exec(tfCode);
-      if (tfName) tfName = tfName[1];
+      let tfRegexp = /def +([^\\( ]*)/gm.exec(tfCode);
+      let tfName = tfRegexp ? tfRegexp[1] : '';
       return [`${tfName}.py`, tfCode];
     });
 
@@ -356,9 +347,8 @@ class BaseExperimentService {
 }
 
 class CloneExperimentService extends BaseExperimentService {
-  constructor(experimentId, contextId, storageRequestHandler) {
+  constructor(experimentId, contextId, private storageRequestHandler) {
     super(experimentId, contextId);
-    this.storageRequestHandler = storageRequestHandler;
   }
 
   async getExcFileName() {
@@ -388,10 +378,16 @@ class CloneExperimentService extends BaseExperimentService {
   }
 }
 class TemplateExperimentService extends BaseExperimentService {
-  constructor(experimentId, contextId, config, proxyRequestHandler) {
+  private experimentFolder?: string;
+  private experimentDirectory?: string;
+
+  constructor(
+    experimentId,
+    contextId,
+    private config,
+    private proxyRequestHandler
+  ) {
     super(experimentId, contextId);
-    this.proxyRequestHandler = proxyRequestHandler;
-    this.config = config;
   }
 
   async getExperimentFolder() {
@@ -429,5 +425,3 @@ class TemplateExperimentService extends BaseExperimentService {
     throw `Unexpected request to save '${fileContent}'. Template experiments cannot be modified`;
   }
 }
-
-module.exports = ExperimentServiceFactory;

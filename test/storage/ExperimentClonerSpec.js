@@ -76,12 +76,11 @@ describe('Experiment cloner', () => {
   };
 
   const storageMock = new StorageMock(),
-    ExperimentCloner = rewire('../../storage/ExperimentCloner.js');
-  const baseCloner = new ExperimentCloner.ExperimentCloner(storageMock, config),
-    templateCloner = new ExperimentCloner.TemplateExperimentCloner(
-      storageMock,
-      config
-    );
+    ExperimentCloner = rewire('../../storage/ExperimentCloner');
+  const templateCloner = new ExperimentCloner.TemplateExperimentCloner(
+    storageMock,
+    config
+  );
   ExperimentCloner.__set__('fs', fsMock);
 
   const templateCreateUniqueExperimentId = sinon.spy(
@@ -90,12 +89,6 @@ describe('Experiment cloner', () => {
     ),
     templateDownloadFile = sinon.spy(templateCloner, 'downloadFile'),
     createExperiment = sinon.spy(storageMock, 'createExperiment');
-
-  ['getBibiFullPath', 'getExperimentFileFullPath'].forEach(function(item) {
-    it('should throw a non implemented method error when trying to use a base class non-overidden function ', () => {
-      return expect(baseCloner[item]).to.throw('not implemented');
-    });
-  });
 
   it(`should correctly clone experiment1`, async () => {
     const res = await templateCloner.cloneExperiment(

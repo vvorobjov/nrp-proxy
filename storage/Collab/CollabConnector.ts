@@ -30,7 +30,7 @@ const q = require('q'),
 let request = require('request-promise');
 
 //wraps the collab connection
-class CollabConnector {
+export default class CollabConnector {
   static get REQUEST_TIMEOUT() {
     return 30 * 1000;
   } //ms
@@ -39,8 +39,9 @@ class CollabConnector {
     return 'https://services.humanbrainproject.eu/storage/v1/api';
   }
 
+  private static _instance = new CollabConnector();
+
   static get instance() {
-    if (!this._instance) this._instance = new CollabConnector();
     return this._instance;
   }
 
@@ -123,6 +124,7 @@ class CollabConnector {
     );
   }
 
+  private _getMemoizedCollabs?;
   getCollabEntity(token, collabId) {
     if (!this._getMemoizedCollabs)
       this._getMemoizedCollabs = _.memoize(
@@ -233,6 +235,7 @@ class CollabConnector {
     return this.get(COLLAB_ENTITY_URL, token);
   }
 
+  private _getMemoizedCollab?;
   getContextIdCollab(token, contextId) {
     if (!this._getMemoizedCollab) {
       this._getMemoizedCollab = _.memoize((token, contextId) => {
@@ -246,5 +249,3 @@ class CollabConnector {
     return this._getMemoizedCollab(token, contextId);
   }
 }
-
-module.exports = CollabConnector;

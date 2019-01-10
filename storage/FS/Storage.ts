@@ -23,22 +23,25 @@
  * ---LICENSE-END**/
 'use strict';
 
+import BaseStorage from '../BaseStorage';
+import Authenticator from '../BaseAuthenticator';
+import utils_original from './utils';
+import DB_original from './DB';
+
 const q = require('q'),
   path = require('path'),
-  BaseStorage = require('../BaseStorage.js'),
-  Authenticator = require('./Authenticator.js'),
   mime = require('mime-types'),
   USER_DATA_FOLDER = 'USER_DATA',
   INTERNALS = ['FS_db', USER_DATA_FOLDER];
 
 //mocked in the tests thus non const
-let utils = require('./utils.js'),
-  DB = require('./DB.js'),
+let DB = DB_original,
+  utils = utils_original,
   fs = require('fs'),
   rmdir = require('rmdir'),
   fsExtra = require('fs-extra');
 
-class Storage extends BaseStorage {
+export class Storage extends BaseStorage {
   userIdHasAccessToPath(userId, filename) {
     let experiment = filename.split('/')[0];
     return DB.instance.experiments
@@ -232,7 +235,7 @@ class Storage extends BaseStorage {
     );
   }
 
-  listExperiments(token, userId, contextId, options = {}) {
+  listExperiments(token, userId, contextId, options = { all: false }) {
     if (options.all) {
       return q.denodeify(fs.readdir)(utils.storagePath).then(res =>
         res.map(file => ({ uuid: file, name: file }))
@@ -399,5 +402,3 @@ class Storage extends BaseStorage {
     );
   }
 }
-
-module.exports = Storage;

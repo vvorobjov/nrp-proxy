@@ -1,21 +1,20 @@
+import configurationManager from '../utils/configurationManager';
+
 const q = require('q'),
-  configurationManager = require('../utils/configurationManager.js'),
   { spawn } = require('child_process');
 
-class AdminService {
-  constructor(config, proxyRequestHandler) {
-    this.config = config;
-    this.proxyRequestHandler = proxyRequestHandler;
-    this.serversRestarting = new Set();
-  }
+export default class AdminService {
+  private serversRestarting = new Set();
 
-  getStatus() {
+  constructor(private config, private proxyRequestHandler) {}
+
+  getStatus(): Promise<{ maintenance: boolean }> {
     return q.resolve({
       maintenance: configurationManager.getState('maintenance') || false
     });
   }
 
-  setStatus(maintenance) {
+  setStatus(maintenance: boolean): Promise<any> {
     configurationManager.setState('maintenance', maintenance);
     return q.resolve();
   }
@@ -28,7 +27,7 @@ class AdminService {
     return serversStatus;
   }
 
-  restartServer(server) {
+  restartServer(server: String): Promise<any> {
     if (this.serversRestarting.has(server)) return q.reject('Server');
     this.serversRestarting.add(server);
 
@@ -59,4 +58,3 @@ class AdminService {
       });
   }
 }
-module.exports = AdminService;

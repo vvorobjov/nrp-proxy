@@ -23,35 +23,12 @@
  * ---LICENSE-END**/
 'use strict';
 
-const q = require('q');
-
-//wraps tingo db collection to promisefy methods
-class DBCollection {
-  constructor(collection) {
-    this.collection = collection;
+export default abstract class BaseAuthenticator {
+  static get AUTHORIZATION_ERROR() {
+    return { code: 403 };
   }
 
-  insert(...args) {
-    return q.nbind(this.collection.insert, this.collection)(...args);
-  }
-
-  findOne(...args) {
-    return q.nbind(this.collection.findOne, this.collection)(...args);
-  }
-  update(...args) {
-    return q.nbind(this.collection.update, this.collection)(...args);
-  }
-  find(...args) {
-    return q.Promise((resolve, reject) => {
-      this.collection
-        .find(...args)
-        .toArray((err, res) => (err ? reject(err) : resolve(res)));
-    });
-  }
-
-  remove(...args) {
-    return q.nbind(this.collection.remove, this.collection)(...args);
-  }
+  abstract login(usr, pwd);
+  abstract checkToken(token);
+  abstract getLoginPage();
 }
-
-module.exports = DBCollection;

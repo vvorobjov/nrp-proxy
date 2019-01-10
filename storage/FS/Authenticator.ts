@@ -23,36 +23,32 @@
  * ---LICENSE-END**/
 'use strict';
 
-const BaseIdentity = require('../BaseIdentity.js'),
-  CollabConnector = require('./CollabConnector.js');
+import BaseAuthenticator from '../BaseAuthenticator';
 
-class Identity extends BaseIdentity {
-  static get IDENTITY_API_URL() {
-    return 'https://services.humanbrainproject.eu/idm/v1/api';
+const q = require('q'),
+  path = require('path');
+
+//mocked in the tests thus non const
+let { default: DB } = require('./DB');
+
+export class Authenticator extends BaseAuthenticator {
+  login(usr, pwd) {
+    return DB.instance.users
+      .findOne({ user: usr, password: pwd })
+      .then(
+        res => (res && res.token) || q.reject(Authenticator.AUTHORIZATION_ERROR)
+      );
   }
 
-  constructor() {
-    super();
+  getLoginPage() {
+    return q.resolve(path.join(__dirname, 'login.html'));
   }
 
-  getUniqueIdentifier(token) {
-    return this.getUserInfo('me', token).then(({ id }) => id);
-  }
-
-  getUserInfo(userId, token) {
-    return CollabConnector.instance
-      .get(`${Identity.IDENTITY_API_URL}/user/${userId}`, token)
-      .then(res => JSON.parse(res));
-  }
-
-  getUserGroups(token) {
-    return CollabConnector.instance
-      .get(
-        `${Identity.IDENTITY_API_URL}/user/me/member-groups?page=0&pageSize=1000`,
-        token
-      )
-      .then(res => JSON.parse(res)._embedded.groups);
+  async checkToken(token) {
+    const user = await DB.instance.users.findOne({ token });
+    return (
+      user ||
+      q.reject({ code: 477, msg: '/authentication/loginpage?origin=FS' })
+    );
   }
 }
-
-module.exports = Identity;

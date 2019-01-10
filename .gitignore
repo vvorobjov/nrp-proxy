@@ -8,3 +8,4 @@ cache
 package-lock.json
 usersLogged.log
 proxy_virtualenv
+dist

@@ -5,8 +5,7 @@ const fs = require('fs'),
   chaiAsPromised = require('chai-as-promised'),
   rewire = require('rewire'),
   sinon = require('sinon'),
-  q = require('q'),
-  expect = chai.expect;
+  q = require('q');
 
 const modelsPath = 'test/data/models',
   expectedModelsFileName = `${modelsPath}/expectedResponses.json`,
@@ -20,7 +19,7 @@ let expectedModelsParseResult = JSON.parse(
 chai.use(chaiAsPromised);
 
 describe('ModelsService', () => {
-  let ModelsService = require('../../proxy/modelsService.js'),
+  let { default: ModelsService } = require('../../proxy/modelsService'),
     modelsService = new ModelsService(modelsPath);
   modelsService.loadModels();
 
@@ -60,7 +59,7 @@ describe('ModelsService errors', () => {
   let consoleMock = { error: sinon.spy() };
 
   beforeEach(() => {
-    ModelsService = rewire('../../proxy/modelsService.js');
+    ModelsService = rewire('../../proxy/modelsService');
     ModelsService.__set__('console', consoleMock);
     consoleMock.error.reset();
   });
@@ -68,7 +67,7 @@ describe('ModelsService errors', () => {
   it(`should log to console if failure to find files`, () => {
     ModelsService.__set__('glob', q.reject());
 
-    let modelsService = new ModelsService(modelsPath);
+    let modelsService = new ModelsService.default(modelsPath);
     return modelsService
       .loadModels()
       .then(() => sinon.assert.callCount(consoleMock.error, models.length));
@@ -86,19 +85,5 @@ describe('ModelsService errors', () => {
     return brainLoader
       .loadModels(modelsPath)
       .then(() => sinon.assert.callCount(consoleMock.error, numberOfBrains));
-  });
-});
-
-describe('ModelLoader errors', () => {
-  let ModelsService = rewire('../../proxy/modelsService.js'),
-    ModelLoader = ModelsService.__get__('ModelLoader');
-
-  it(`should throw error on unimplemented methods`, () => {
-    let modelLoader = new ModelLoader(),
-      notImplementedException = 'Not implemented';
-
-    expect(() => modelLoader.modelType).to.throw(notImplementedException);
-    expect(() => modelLoader.filePattern).to.throw(notImplementedException);
-    expect(modelLoader.parseFile).to.throw(notImplementedException);
   });
 });

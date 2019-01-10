@@ -8,15 +8,18 @@ const chai = require('chai'),
 
 chai.use(chaiAsPromised);
 
-let StorageRequestHandler = require('../../storage/requestHandler.js');
+let {
+  default: StorageRequestHandler
+} = require('../../storage/requestHandler');
 let confFilePath = path.join(__dirname, '../utils/config.json'),
   confFilePath2 = path.join(__dirname, '../utils/config_2.json'),
-  configurationManager = rewire('../../utils/configurationManager.js');
-configurationManager.__set__('CONFIG_FILE', confFilePath);
+  configurationManagerRewire = rewire('../../utils/configurationManager'),
+  configurationManager = configurationManagerRewire.default;
+configurationManagerRewire.__set__('CONFIG_FILE', confFilePath);
 
 let confMock = configurationManager.loadConfigFile();
 
-configurationManager.__set__('CONFIG_FILE', confFilePath2);
+configurationManagerRewire.__set__('CONFIG_FILE', confFilePath2);
 let confMock2 = configurationManager.loadConfigFile();
 
 describe('Storage request handler', () => {

@@ -8,9 +8,9 @@ let fakeJSZip = {
   loadAsync: () => q.when('test')
 };
 
-CustomModelsService = rewire('../../storage/CustomModelsService.js');
+CustomModelsService = rewire('../../storage/CustomModelsService');
 CustomModelsService.__set__('JSZip', fakeJSZip);
-customModelsService = new CustomModelsService();
+customModelsService = new CustomModelsService.default();
 
 describe('CustomModelsService', () => {
   beforeEach(() => {});

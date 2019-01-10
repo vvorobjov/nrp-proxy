@@ -6,7 +6,7 @@ const rewire = require('rewire'),
   expect = chai.expect,
   sinon = require('sinon');
 
-let loggerManager = rewire('../../utils/loggerManager.js');
+let loggerManager = rewire('../../utils/loggerManager');
 
 describe('Logger Manager', () => {
   it('should throw when unsuccessful', async () => {
@@ -21,7 +21,7 @@ describe('Logger Manager', () => {
       appendFile: appendFile
     };
     loggerManager.__set__('fs', mockFs);
-    var res = await loggerManager.log('manos');
+    var res = await loggerManager.default.log('manos');
     // we catch the error from propagating cause we don't
     // want the response to be broken if we cannot log
     expect(res).to.equal(undefined);

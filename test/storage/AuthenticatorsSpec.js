@@ -3,43 +3,9 @@
 const chai = require('chai'),
   chaiAsPromised = require('chai-as-promised'),
   rewire = require('rewire'),
-  expect = chai.expect,
   path = require('path'),
   assert = chai.assert;
 chai.use(chaiAsPromised);
-
-describe('BaseAuthenticator', () => {
-  const BaseAuthenticator = require('../../storage/BaseAuthenticator.js');
-  let baseClassMock;
-  //to test the non overidden methods of the BaseAuthenticator we have to provide an empty
-  //implementation and instantiate it
-  class BaseClassMock extends BaseAuthenticator {
-    constructor() {
-      super();
-    }
-  }
-
-  beforeEach(() => {
-    baseClassMock = new BaseClassMock();
-  });
-
-  it(`should throw a TypeError exception when trying to instantiate the BaseAuthenticator`, () => {
-    return expect(() => {
-      return new BaseAuthenticator();
-    }).to.throw(TypeError, 'BaseAuthenticator is an abstract class');
-  });
-
-  //for all the non implemented methods of the base class
-  ['login', 'checkToken', 'getLoginPage'].forEach(method => {
-    it(
-      'should throw a non implemented method error when trying to use the base class non-overidden function: ' +
-        method,
-      () => {
-        return expect(baseClassMock[method]).to.throw('not implemented');
-      }
-    );
-  });
-});
 
 describe('FSAuthenticator', () => {
   let RewiredDB, RewiredFSAuthenticator, fsAuthenticator;
@@ -50,11 +16,11 @@ describe('FSAuthenticator', () => {
 
   beforeEach(() => {
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
-    RewiredDB = rewire('../../storage/FS/DB.js');
+    RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
-    RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator.js');
-    RewiredFSAuthenticator.__set__('DB', RewiredDB);
-    fsAuthenticator = new RewiredFSAuthenticator();
+    RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator');
+    RewiredFSAuthenticator.__set__('DB', RewiredDB.default);
+    fsAuthenticator = new RewiredFSAuthenticator.Authenticator();
   });
 
   it(`should successfully return a user token provided a correct combination of user name and password `, () => {
@@ -92,7 +58,9 @@ describe('FSAuthenticator', () => {
 });
 
 describe('CollabAuthenticator', () => {
-  const CollabAuthenticator = require('../../storage/Collab/Authenticator.js'),
+  const {
+      Authenticator: CollabAuthenticator
+    } = require('../../storage/Collab/Authenticator'),
     nock = require('nock');
 
   it('should resolve to true when trying to authenticate with collab storage', () => {

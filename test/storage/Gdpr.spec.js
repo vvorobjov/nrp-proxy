@@ -13,11 +13,11 @@ describe('GDPR', () => {
 
   beforeEach(() => {
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
-    DB = rewire('../../storage/FS/DB.js');
+    DB = rewire('../../storage/FS/DB');
     DB.__set__('utils', mockUtils);
-    const GDPR = rewire('../../storage/GDPR.js');
-    GDPR.__set__('DB', DB);
-    gdpr = new GDPR();
+    const GDPR = rewire('../../storage/GDPR');
+    GDPR.__set__('DB', DB.default);
+    gdpr = new GDPR.default();
   });
 
   it(`should find nrpuser`, () => {

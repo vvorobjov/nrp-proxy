@@ -26,53 +26,12 @@ const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
   fakeUserId = 'nrpuser',
   fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168';
 
-describe('BaseStorage', () => {
-  const BaseStorage = require('../../storage/BaseStorage.js');
-  let baseClassMock;
-  //to test the non overidden methods of the BaseAuthenticator we have to provide an empty
-  //implementation and instanciate it
-  class BaseClassMock extends BaseStorage {
-    constructor() {
-      super();
-    }
-  }
-
-  beforeEach(() => {
-    baseClassMock = new BaseClassMock();
-  });
-
-  it(`should throw a TypeError exception when trying to instanciate the BaseStorage`, () => {
-    return expect(() => {
-      return new BaseStorage();
-    }).to.throw(TypeError, 'BaseStorage is an abstract class');
-  });
-
-  //for all the non implemented methods of the base class
-  [
-    'listFiles',
-    'getFile',
-    'deleteFile',
-    'createOrUpdate',
-    'listExperiments',
-    'createExperiment',
-    'deleteFolder',
-    'createFolder',
-    'listCustomModels',
-    'deleteExperiment',
-    'getCustomModel'
-  ].forEach(function(item) {
-    it('should throw a non implemented method error when trying to use a base class non-overidden function ', () => {
-      return expect(baseClassMock[item]).to.throw('not implemented');
-    });
-  });
-});
-
 describe('FSStorage', () => {
   let RewiredDB, RewiredFSStorage, fsStorage;
   const AUTHORIZATION_ERROR = {
     code: 403
   };
-  let realUtils = require('../../storage/FS/utils');
+  let { default: realUtils } = require('../../storage/FS/utils');
 
   const originalStatSync = fs.statSync;
   const fakeStatSync = file => {
@@ -90,11 +49,11 @@ describe('FSStorage', () => {
       copy: () => q.when('test'),
       ensureDir: () => q.resolve()
     };
-    RewiredDB = rewire('../../storage/FS/DB.js');
+    RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
     RewiredDB.__set__('DBCollection', collectionMock);
-    RewiredFSStorage = rewire('../../storage/FS/Storage.js');
-    RewiredFSStorage.__set__('DB', RewiredDB);
+    RewiredFSStorage = rewire('../../storage/FS/Storage');
+    RewiredFSStorage.__set__('DB', RewiredDB.default);
     RewiredFSStorage.__set__('utils', mockUtils);
     RewiredFSStorage.__set__('fsExtra', mockFsExtra);
     RewiredFSStorage.__set__('fs.statSync', fakeStatSync);
@@ -104,7 +63,7 @@ describe('FSStorage', () => {
     };
 
     RewiredFSStorage.__set__('fs.mkdir', empty);
-    fsStorage = new RewiredFSStorage();
+    fsStorage = new RewiredFSStorage.Storage();
   });
 
   it(`should get Shared Experiments Option`, () => {
@@ -537,13 +496,13 @@ describe('FS Storage (not mocking the mkdir)', () => {
   it(`should successfully create an experiment given a correct token `, () => {
     let newPath = path.join(__dirname, 'dbMock2');
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock2') };
-    RewiredDB = rewire('../../storage/FS/DB.js');
+    RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
-    RewiredFSStorage = rewire('../../storage/FS/Storage.js');
-    RewiredFSStorage.__set__('DB', RewiredDB);
+    RewiredFSStorage = rewire('../../storage/FS/Storage');
+    RewiredFSStorage.__set__('DB', RewiredDB.default);
     RewiredFSStorage.__set__('utils', mockUtils);
     fs.existsSync(newPath) || fs.mkdirSync(newPath);
-    fsStorage = new RewiredFSStorage();
+    fsStorage = new RewiredFSStorage.Storage();
     return fsStorage.createExperiment(fakeToken).then(res => {
       fs.unlinkSync(path.join(__dirname, 'dbMock2/FS_db/experiments'));
       fs.rmdirSync(path.join(__dirname, 'dbMock2/FS_db/'));
@@ -555,8 +514,10 @@ describe('FS Storage (not mocking the mkdir)', () => {
 
 describe('Collab Storage', () => {
   //modules
-  const CollabConnector = require('../../storage/Collab/CollabConnector.js'),
-    CollabStorage = require('../../storage/Collab/Storage.js');
+  const {
+      default: CollabConnector
+    } = require('../../storage/Collab/CollabConnector'),
+    { Storage: CollabStorage } = require('../../storage/Collab/Storage');
 
   //we need to mock all the http responses, thus we use a mocking framework called nock
   var nock = require('nock');
@@ -624,9 +585,7 @@ describe('Collab Storage', () => {
 
   it('should throw when we have a response with a wrong status code', () => {
     const resp = { statusCode: 404 };
-    const CollabConnectorMock = rewire(
-      '../../storage/Collab/CollabConnector.js'
-    );
+    const CollabConnectorMock = rewire('../../storage/Collab/CollabConnector');
     CollabConnectorMock.__set__('request', () => {
       return q.resolve(resp);
     });
@@ -639,8 +598,10 @@ describe('Collab Storage', () => {
       headers: { Authorization: 'Bearer a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24' }
     };
 
-    return CollabConnectorMock.instance.executeRequest(options, fakeToken)
-      .should.be.rejected;
+    return CollabConnectorMock.default.instance.executeRequest(
+      options,
+      fakeToken
+    ).should.be.rejected;
   });
 
   //Collab storage
@@ -943,7 +904,7 @@ describe('Collab Storage', () => {
       .then(res => res.should.deep.equal({ uuid: undefined }));
   });
 
-  it('should copy an experiment correctly', () => {
+  it('should copy an experiment correctly2', () => {
     const contentsMock = [
       {
         name: 'robot1',
@@ -986,7 +947,7 @@ describe('Collab Storage', () => {
 });
 
 describe('Utils', () => {
-  const utils = require('../../storage/FS/utils.js');
+  const { default: utils } = require('../../storage/FS/utils');
 
   it(`should generate a new unique uuid`, () => {
     return expect(

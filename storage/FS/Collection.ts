@@ -23,33 +23,32 @@
  * ---LICENSE-END**/
 'use strict';
 
-class BaseIdentity {
-  constructor() {
-    if (new.target === BaseIdentity)
-      throw new TypeError('BaseIdentity is an abstract class');
+const q = require('q');
+
+//wraps tingo db collection to promisefy methods
+export default class DBCollection {
+  constructor(private collection) {
   }
 
-  //eslint-disable-next-line no-unused-vars
-  getUniqueIdentifier(token) {
-    throw 'not implemented';
+  insert(...args) {
+    return q.nbind(this.collection.insert, this.collection)(...args);
   }
 
-  //eslint-disable-next-line no-unused-vars
-  getUserInfo(userId, token) {
-    throw 'not implemented';
+  findOne(...args) {
+    return q.nbind(this.collection.findOne, this.collection)(...args);
   }
-  //eslint-disable-next-line no-unused-vars
-  getUsersList() {
-    throw 'not implemented';
+  update(...args) {
+    return q.nbind(this.collection.update, this.collection)(...args);
   }
-  //eslint-disable-next-line no-unused-vars
-  getUserToken(user) {
-    throw 'not implemented';
+  find(...args) {
+    return q.Promise((resolve, reject) => {
+      this.collection
+        .find(...args)
+        .toArray((err, res) => (err ? reject(err) : resolve(res)));
+    });
   }
-  //eslint-disable-next-line no-unused-vars
-  getUserGroups(token, userId) {
-    throw 'not implemented';
+
+  remove(...args) {
+    return q.nbind(this.collection.remove, this.collection)(...args);
   }
 }
-
-module.exports = BaseIdentity;

@@ -33,25 +33,17 @@ const fs = require('fs'),
 //not a constant, because mocked on unit test
 let glob = require('glob');
 
-class ModelLoader {
-  constructor() {
-    this.models = [];
-  }
+abstract class ModelLoader {
+  private models = [];
 
   get modelList() {
     return this.models;
   }
-  get modelType() {
-    throw 'Not implemented';
-  }
-  get filePattern() {
-    throw 'Not implemented';
-  }
+  abstract get modelType(): string;
 
-  // eslint-disable-next-line no-unused-vars
-  parseFile(file) {
-    throw 'Not implemented';
-  }
+  abstract get filePattern(): string;
+
+  abstract parseFile(file): Promise<any>;
 
   loadModels(modelsPath) {
     let loadModel = f =>
@@ -125,7 +117,7 @@ class BrainsModelLoader extends ModelLoader {
   }
 }
 
-class XmlConfigModelLoader extends ModelLoader {
+abstract class XmlConfigModelLoader extends ModelLoader {
   get filePattern() {
     return `${this.modelType}/*/model.config`;
   }
@@ -175,7 +167,10 @@ class EnvironmentsModelLoader extends XmlConfigModelLoader {
   }
 }
 
-class ModelsService {
+export default class ModelsService {
+  private modelsPath: string;
+  private moduleLoaders: ModelLoader[];
+
   constructor(modelsPath) {
     this.modelsPath = path.resolve(modelsPath);
 
@@ -210,5 +205,3 @@ class ModelsService {
     return path.join(this.modelsPath, model.path);
   }
 }
-
-module.exports = ModelsService;

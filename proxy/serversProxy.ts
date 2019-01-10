@@ -67,7 +67,7 @@ var setToken = function(token) {
   authToken = token;
 };
 
-var executeServerRequest = function(url) {
+var executeServerRequest = function(url: string): Promise<any> {
   var options = {
     method: 'GET',
     url: url,
@@ -102,7 +102,7 @@ var executeServerRequest = function(url) {
 };
 
 var executeRequestForAllServers = function(configuration, urlPostFix) {
-  var serversResponses = [];
+  var serversResponses: any[] = [];
   _.forOwn(configuration.servers, function(serverConfig, serverId) {
     serversResponses.push(
       executeServerRequest(serverConfig.gzweb['nrp-services'] + urlPostFix)
@@ -172,8 +172,8 @@ async function getExperimentsAndSimulations(configuration) {
   return [joinableServers, simulations, availableServers, health];
 }
 
-module.exports = {
-  setToken: setToken,
-  getExperimentsAndSimulations: getExperimentsAndSimulations,
-  RUNNING_SIMULATION_STATES: RUNNING_SIMULATION_STATES
+export default {
+  setToken,
+  getExperimentsAndSimulations,
+  RUNNING_SIMULATION_STATES
 };

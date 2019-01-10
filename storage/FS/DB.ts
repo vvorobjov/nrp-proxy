@@ -23,16 +23,25 @@
  * ---LICENSE-END**/
 'use strict';
 
+import utils_original from './utils';
+import DBCollection_original from './Collection';
+
 const fs = require('fs'),
   path = require('path'),
   tingodb = require('tingodb')();
 
-//mocked in the test thus not const
-let utils = require('./utils.js');
-let DBCollection = require('./Collection.js');
+//test mocked
+let utils = utils_original,
+  DBCollection = DBCollection_original;
 
 //wraps tingo db
-class DB {
+export default class DB {
+  private static _instance?: DB;
+  private _users;
+  private _experiments;
+  private _models;
+  private _gdpr;
+
   static get DB_FOLDER() {
     return 'FS_db';
   }
@@ -68,5 +77,3 @@ class DB {
     this._gdpr = new DBCollection(db.collection('gdpr'));
   }
 }
-
-module.exports = DB;

@@ -29,7 +29,11 @@ let fs = require('fs'),
   stringify = q.denodeify(require('csv-stringify')),
   appendFile = q.denodeify(fs.appendFile),
   firebase = require('firebase-admin');
-class ActivityLogger {
+
+export default class ActivityLogger {
+  private db?;
+  private localfile?;
+
   initializeFirebase() {
     const serviceAccount = require('./serviceAccount.json');
     firebase.initializeApp({
@@ -40,8 +44,7 @@ class ActivityLogger {
     this.db.settings({ timestampsInSnapshots: true });
   }
 
-  constructor(config) {
-    this.config = config;
+  constructor(private config) {
     if (config) {
       this.localfile = config.localfile;
     }
@@ -52,7 +55,7 @@ class ActivityLogger {
 
   async logLocal(activity, data) {
     let logContent = await stringify([
-      [activity, new Date().toGMTString(), ..._.map(data)]
+      [activity, new Date().toUTCString(), ..._.map(data)]
     ]);
     await appendFile(this.localfile, logContent);
   }
@@ -81,5 +84,3 @@ class ActivityLogger {
     return q.resolve();
   }
 }
-
-module.exports = ActivityLogger;

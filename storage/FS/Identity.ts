@@ -23,11 +23,13 @@
  * ---LICENSE-END**/
 'use strict';
 
-const q = require('q'),
-  BaseIdentity = require('../BaseIdentity.js');
-let DB = require('./DB.js');
+import BaseIdentity from '../BaseIdentity';
 
-class Identity extends BaseIdentity {
+let { default: DB } = require('./DB');
+
+const q = require('q');
+
+export class Identity extends BaseIdentity {
   constructor() {
     super();
   }
@@ -58,19 +60,6 @@ class Identity extends BaseIdentity {
       );
   }
 
-  getUserToken(user) {
-    let findCondition = { user };
-    return DB.instance.users
-      .findOne(findCondition)
-      .then(
-        res =>
-          res || q.reject({ code: 404, msg: 'getUserInfo: user id not found' })
-      )
-      .then(res => ({
-        token: res.token
-      }));
-  }
-
   getUserInfo(user, token) {
     let findCondition, userId;
     if (user === 'me' || user === 'default-owner') {
@@ -96,5 +85,3 @@ class Identity extends BaseIdentity {
     return q.when(groups);
   }
 }
-
-module.exports = Identity;

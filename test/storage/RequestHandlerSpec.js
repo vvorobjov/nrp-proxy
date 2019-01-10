@@ -29,16 +29,16 @@ const config = `<?xml version='1.0'?>
   </description>
 </model>
 `;
-let StorageRequestHandler = rewire('../../storage/requestHandler.js');
+let StorageRequestHandlerRewire = rewire('../../storage/requestHandler'),
+  StorageRequestHandler = StorageRequestHandlerRewire.default;
 class fakeCloner {
   constructor() {}
   cloneExperiment() {}
 }
-const fakeExpCloner = {
-  TemplateExperimentCloner: fakeCloner,
-  NewExperimentCloner: fakeCloner
-};
-StorageRequestHandler.__set__('ExperimentCloner', fakeExpCloner);
+
+StorageRequestHandlerRewire.__set__('TemplateExperimentCloner', fakeCloner);
+StorageRequestHandlerRewire.__set__('NewExperimentCloner', fakeCloner);
+
 let configFile = {
   storage: 'FS',
   authentication: 'FS'
@@ -86,16 +86,17 @@ describe('Storage request handler', () => {
 
   let mkdirCalls = 0;
   let rmdirCalls = 0;
-  beforeEach(() => {
+  beforeEach(async () => {
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
-    RewiredDB = rewire('../../storage/FS/DB.js');
+    RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
     RewiredDB.__set__('DBCollection', collectionMock);
-    const RewiredGDPR = rewire('../../storage/GDPR.js');
-    RewiredGDPR.__set__('DB', RewiredDB);
-    StorageRequestHandler.__set__('GDPR', RewiredGDPR);
+    const RewiredGDPR = rewire('../../storage/GDPR');
+    RewiredGDPR.__set__('DB', RewiredDB.default);
+    StorageRequestHandlerRewire.__set__('GDPR', RewiredGDPR.default);
 
     storageRequestHandler = new StorageRequestHandler(configFile);
+    await storageRequestHandler.loadDependenciesInjection();
     collectionMock.prototype.delete = sinon
       .stub()
       .returns(Promise.resolve('value'));
@@ -115,11 +116,11 @@ describe('Storage request handler', () => {
       .stub()
       .returns(Promise.resolve('value'));
 
-    RewiredFSStorage = rewire('../../storage/FS/Storage.js');
-    RewiredFSStorage.__set__('DB', RewiredDB);
+    RewiredFSStorage = rewire('../../storage/FS/Storage');
+    RewiredFSStorage.__set__('DB', RewiredDB.default);
     RewiredFSStorage.__set__('utils', mockUtils);
     RewiredIdentity = rewire('../../storage/FS/Identity');
-    RewiredIdentity.__set__('DB', RewiredDB);
+    RewiredIdentity.__set__('DB', RewiredDB.default);
     mkdirCalls = 0;
 
     var fakeMkdir = (path, callback) => {
@@ -137,11 +138,11 @@ describe('Storage request handler', () => {
     RewiredFSStorage.__set__('rmdir', fakeRmdir);
     RewiredFSStorage.__set__('fs.lstatSync', fakeLstatSync);
     RewiredFSStorage.__set__('fs.readdirSync', fakeReadDirSync);
-    fsStorage = new RewiredFSStorage();
-    RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator.js');
-    RewiredFSAuthenticator.__set__('DB', RewiredDB);
-    fsAuthenticator = new RewiredFSAuthenticator();
-    identity = new RewiredIdentity();
+    fsStorage = new RewiredFSStorage.Storage();
+    RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator');
+    RewiredFSAuthenticator.__set__('DB', RewiredDB.default);
+    fsAuthenticator = new RewiredFSAuthenticator.Authenticator();
+    identity = new RewiredIdentity.Identity();
     storageRequestHandler.authenticator = fsAuthenticator;
     storageRequestHandler.storage = fsStorage;
     storageRequestHandler.identity = identity;
@@ -494,7 +495,7 @@ describe('Storage request handler', () => {
         return q.when(config);
       }
     };
-    StorageRequestHandler.__set__('customModelService', fakeCustomModels);
+    StorageRequestHandlerRewire.__set__('customModelService', fakeCustomModels);
     var storageRequestHandler2 = new StorageRequestHandler(configFile);
     storageRequestHandler2.createCustomModel = function() {
       return 'success';
@@ -533,22 +534,22 @@ describe('Request handler (not mocking the mkdir)', () => {
     storageRequestHandler = new StorageRequestHandler(configFile);
     //using the correct authentication DB
     const mockUtils2 = { storagePath: path.join(__dirname, 'dbMock') };
-    RewiredDB2 = rewire('../../storage/FS/DB.js');
+    RewiredDB2 = rewire('../../storage/FS/DB');
     RewiredDB2.__set__('utils', mockUtils2);
-    RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator.js');
-    RewiredFSAuthenticator.__set__('DB', RewiredDB2);
-    fsAuthenticator = new RewiredFSAuthenticator();
+    RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator');
+    RewiredFSAuthenticator.__set__('DB', RewiredDB2.default);
+    fsAuthenticator = new RewiredFSAuthenticator.Authenticator();
     storageRequestHandler.authenticator = fsAuthenticator;
     //mocking the storage db
     let newPath = path.join(__dirname, 'dbMock2');
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock2') };
-    RewiredDB = rewire('../../storage/FS/DB.js');
+    RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
-    RewiredFSStorage = rewire('../../storage/FS/Storage.js');
-    RewiredFSStorage.__set__('DB', RewiredDB);
+    RewiredFSStorage = rewire('../../storage/FS/Storage');
+    RewiredFSStorage.__set__('DB', RewiredDB.default);
     RewiredFSStorage.__set__('utils', mockUtils);
     fs.existsSync(newPath) || fs.mkdirSync(newPath);
-    fsStorage = new RewiredFSStorage();
+    fsStorage = new RewiredFSStorage.Storage();
     storageRequestHandler.storage = fsStorage;
     storageRequestHandler.getUserIdentifier = () => q.resolve('nrpuser');
     return storageRequestHandler

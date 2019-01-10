@@ -23,25 +23,16 @@
  * ---LICENSE-END**/
 'use strict';
 
-const STORAGE_PATH_ENV = 'STORAGE_PATH', //STORAGE_PATH variable
-  DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
+// modifiable for unit tests
+let { default: DB } = require('./FS/DB');
+type UserId = string;
 
-//storagePath = 'STORAGE_PATH' env variable is defined, or $HOME/.opt/nrpStorage by default
-let storagePath =
-  process.env[STORAGE_PATH_ENV] ||
-  DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v]);
-
-let generateUniqueExperimentId = (basename, suffix, existingExperiments) => {
-  var newName = [basename, suffix].join('_');
-  if (existingExperiments.includes(newName)) {
-    suffix += 1;
-    return generateUniqueExperimentId(basename, suffix, existingExperiments);
-  } else {
-    return newName;
+export default class GDPR {
+  async getUserAcceptedGDPR(userId: UserId): Promise<boolean> {
+    const user = await DB.instance.gdpr.findOne({ userId });
+    return !!user;
   }
-};
-
-module.exports = {
-  storagePath,
-  generateUniqueExperimentId
-};
+  async setUserAcceptedGDPR(userId: UserId) {
+    return DB.instance.gdpr.insert({ userId }).then(() => true);
+  }
+}

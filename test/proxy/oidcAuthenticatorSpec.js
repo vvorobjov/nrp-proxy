@@ -4,7 +4,7 @@ var chai = require('chai');
 var chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 
-var oidcAuthenticator = require('../../proxy/oidcAuthenticator.js');
+var { default: oidcAuthenticator } = require('../../proxy/oidcAuthenticator');
 var testConf = require('../utils/testConf.js');
 
 describe('oidcAuthenticator', function() {

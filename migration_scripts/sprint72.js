@@ -1,7 +1,7 @@
 /*
 Migrate local storage clned experiments indexing from token to user identifier
 */
-const DB = require('../storage/FS/DB.js');
+import DB from '../storage/FS/DB';
 
 DB.instance.experiments
   .find()

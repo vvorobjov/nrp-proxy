@@ -23,13 +23,19 @@
  * ---LICENSE-END**/
 'use strict';
 
-var _ = require('lodash'),
+import ModelsService from './modelsService';
+import TemplateExperimentsService_original from './TemplateExperimentsService';
+import oidcAuthenticator_original from './oidcAuthenticator';
+import serversProxy_original from './serversProxy';
+
+//test mocked dependencies
+let TemplateExperimentsService = TemplateExperimentsService_original,
+  serversProxy = serversProxy_original,
+  oidcAuthenticator = oidcAuthenticator_original;
+
+const _ = require('lodash'),
   q = require('q');
 var request = q.denodeify(require('request'));
-var ModelsService = require('./modelsService.js'),
-  TemplateExperimentsService = require('./TemplateExperimentsService'),
-  oidcAuthenticator = require('./oidcAuthenticator.js'),
-  serversProxy = require('./serversProxy.js');
 
 var experimentList = {};
 var sharedExperimentsList = {};
@@ -121,7 +127,7 @@ function updateExperimentList() {
 }
 
 function getServersStatus() {
-  const serversStatus = [];
+  const serversStatus = [] as any[];
   for (let key in healthStatus) {
     serversStatus.push({
       server: key,
@@ -143,7 +149,7 @@ function getServer(serverId) {
 
 function getJoinableServers(experimentId) {
   var deferred = q.defer();
-  var contextSims = [];
+  var contextSims = [] as any[];
   _.forOwn(simulationList, function(serverSimulations, serverId) {
     serverSimulations.forEach(function(simulation) {
       if (
@@ -198,9 +204,8 @@ function getExperiments() {
 }
 
 function getExperimentImageFile(experimentId) {
-  let experiment = {};
   if (experimentList[experimentId]) {
-    experiment = experimentList[experimentId].configuration;
+    let experiment = experimentList[experimentId].configuration;
     return q.resolve(
       templateExperimentsService.getExperimentFilePath(
         experiment.path,
@@ -208,14 +213,14 @@ function getExperimentImageFile(experimentId) {
       )
     );
   } else if (sharedExperimentsList[experimentId]) {
-    experiment = sharedExperimentsList[experimentId].configuration;
+    let experiment = sharedExperimentsList[experimentId].configuration;
     return q.resolve(
       templateExperimentsService.getSharedExperimentFilePath(
         experiment.path,
         experiment.thumbnail
       )
     );
-  } else throw ('No experiment id: ', experimentId);
+  } else throw `No experiment id: ${experimentId}`;
 }
 
 function getModels(modelType) {
@@ -246,7 +251,7 @@ function getSharedExperiments(req) {
     });
 }
 
-module.exports = {
+export default {
   reloadConfiguration,
   initialize,
   getServer,

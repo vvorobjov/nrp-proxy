@@ -23,17 +23,16 @@
  * ---LICENSE-END**/
 'use strict';
 
+import BaseStorage from '../BaseStorage';
+import CollabConnector from './CollabConnector';
+import utils from '../FS/utils';
+
 const q = require('q'),
-  _ = require('lodash'),
-  BaseStorage = require('../BaseStorage.js'),
-  CollabConnector = require('./CollabConnector.js');
+  _ = require('lodash');
 
-let utils = require('../FS/utils.js');
-
-class Storage extends BaseStorage {
-  constructor(config) {
+export class Storage extends BaseStorage {
+  constructor(private config) {
     super();
-    this.config = config;
   }
 
   listFiles(experiment, token) {
@@ -233,7 +232,7 @@ class Storage extends BaseStorage {
         userId,
         contextId
       ).then(copiedExp =>
-        this.listFiles(experiment, token, userId)
+        this.listFiles(experiment, token)
           .then(files => [
             files.map(file =>
               this.getFile(file.name, experiment, token, userId, true)
@@ -264,5 +263,3 @@ class Storage extends BaseStorage {
     });
   }
 }
-
-module.exports = Storage;

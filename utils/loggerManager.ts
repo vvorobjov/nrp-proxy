@@ -12,6 +12,4 @@ let log = user => {
   );
 };
 
-module.exports = {
-  log: log
-};
+export default { log };

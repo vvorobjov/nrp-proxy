@@ -23,38 +23,23 @@
  * ---LICENSE-END**/
 'use strict';
 
-const q = require('q'),
-  path = require('path'),
-  BaseAuthenticator = require('../BaseAuthenticator.js');
-//mocked in the tests thus non const
-let DB = require('./DB.js');
-
-class Authenticator extends BaseAuthenticator {
-  constructor() {
-    super();
-  }
-
-  login(usr, pwd) {
-    return DB.instance.users
-      .findOne({ user: usr, password: pwd })
-      .then(
-        res => (res && res.token) || q.reject(Authenticator.AUTHORIZATION_ERROR)
-      );
-  }
-
-  getLoginPage() {
-    return q.resolve(path.join(__dirname, 'login.html'));
-  }
-
-  checkToken(token) {
-    return DB.instance.users
-      .findOne({ token: token })
-      .then(
-        res =>
-          res ||
-          q.reject({ code: 477, msg: '/authentication/loginpage?origin=FS' })
-      );
-  }
+export default abstract class BaseStorage {
+  abstract listFiles(experiment, token, userId);
+  abstract getFile(filename, experiment, token, userId, byname);
+  abstract deleteFile(filename, experiment, token, userId, byname);
+  abstract deleteFolder(foldername, experiment, token, userId, byname);
+  abstract createFolder(foldername, experiment, token, userId);
+  abstract deleteExperiment(experimentName, parentDir, token, userId);
+  abstract createOrUpdate(
+    filename,
+    fileContent,
+    contentType,
+    experiment,
+    token,
+    userId
+  );
+  abstract getCustomModel(modelPath, token, userId);
+  abstract listCustomModels(customFolder, token, userId, contextId);
+  abstract listExperiments(token, userId, contextId, options);
+  abstract createExperiment(newExperiment, token, userId, contextId);
 }
-
-module.exports = Authenticator;

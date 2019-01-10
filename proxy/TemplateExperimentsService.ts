@@ -23,16 +23,21 @@
  * ---LICENSE-END**/
 'use strict';
 
+import X2JS from 'x2js';
+import StorageRequestHandler_original from '../storage/requestHandler';
+import utils_original from '../storage/FS/utils';
+import configurationManager from '../utils/configurationManager';
+
+// mocked modules
+let utils = utils_original,
+  StorageRequestHandler = StorageRequestHandler_original;
+
 const fs = require('fs'),
   q = require('q'),
   path = require('path'),
-  readFile = q.denodeify(fs.readFile),
-  configurationManager = require('../utils/configurationManager.js'),
-  X2JS = new require('x2js');
+  readFile = q.denodeify(fs.readFile);
 
 configurationManager.initialize();
-let utils = require('../storage/FS/utils.js');
-let StorageRequestHandler = require('../storage/requestHandler.js');
 var storageRequestHandler;
 const cxml = require('cxml');
 var parser = new cxml.Parser();
@@ -42,14 +47,15 @@ let ExDConfig = require('../xmlns/schemas.humanbrainproject.eu/SP10/2014/ExDConf
 //not a constant, because mocked on unit test
 let glob = q.denodeify(require('glob'));
 
-class ExperimentsService {
+export default class ExperimentsService {
   static get EXC_FILE_PATTERN() {
     return '*/*.exc';
   }
 
-  constructor(config, experimentsPath) {
+  private experimentsPath: string;
+
+  constructor(private config, experimentsPath) {
     this.experimentsPath = path.resolve(experimentsPath);
-    this.config = config;
     storageRequestHandler = new StorageRequestHandler(config);
   }
 
@@ -172,5 +178,3 @@ class ExperimentsService {
       });
   }
 }
-
-module.exports = ExperimentsService;

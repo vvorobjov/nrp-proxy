@@ -23,26 +23,27 @@
  * ---LICENSE-END**/
 'use strict';
 
-const uuid = require('uuid/v4'),
-  path = require('path'),
-  DB = require(path.join(__dirname, '../storage/FS/DB.js')),
-  shell = require('shelljs');
+import DB from '../storage/FS/DB';
+import * as path from 'path';
+import shell from 'shelljs';
+import uuid from 'uuid/v4';
+import minimist from 'minimist';
 
-let argv = require('minimist')(process.argv.slice(2));
+let argv = minimist(process.argv.slice(2));
 
 if (!argv.user || !argv.password) {
   console.error(
     `Error: arguments 'user' and 'password' required
 Example: node createFSUser.js --user nrpuser --password password`
   );
-  return;
+  process.exit(-1);
 }
 const STORAGE_PATH_ENV = 'STORAGE_PATH', //STORAGE_PATH variable
   DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
 
 let storagePath =
   process.env[STORAGE_PATH_ENV] ||
-  DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v]);
+  DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v] as string);
 
 ['robots', 'environments', 'brains'].forEach(folder =>
   shell.mkdir('-p', path.join(storagePath, 'USER_DATA', folder))

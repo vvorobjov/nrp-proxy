@@ -23,42 +23,35 @@
  * ---LICENSE-END**/
 'use strict';
 
-const q = require('q'),
-  BaseAuthenticator = require('../BaseAuthenticator.js'),
-  Identity = require('./Identity.js'),
-  identity = new Identity();
+import BaseIdentity from '../BaseIdentity';
+import CollabConnector from './CollabConnector';
 
-class Authenticator extends BaseAuthenticator {
-  static get TOKEN_CACHE_DURATION_MS() {
-    return 60 * 1000;
+export class Identity extends BaseIdentity {
+  static get IDENTITY_API_URL() {
+    return 'https://services.humanbrainproject.eu/idm/v1/api';
   }
 
-  constructor(config) {
-    super();
-    this.config = config;
-    this.authCache = new Map();
+  getUniqueIdentifier(token) {
+    return this.getUserInfo('me', token).then(({ id }) => id);
   }
 
-  checkToken(token) {
-    if (this.config.storage == 'Collab') {
-      // No need to check token, it will be done by the underlying Collab storage requests
-      return q.when(true);
-    }
-
-    //do we have the token in cache?
-    if (this.authCache.has(token)) {
-      let cache = this.authCache.get(token);
-      if (Date.now() - cache.time <= Authenticator.TOKEN_CACHE_DURATION_MS) {
-        //cache still time valid
-        return q.when(cache.userinfo);
-      } else this.authCache.delete(token);
-    }
-    //no valid cache, we verify the token by trying to retrieve the user info
-    return identity.getUserInfo('me', token).then(userinfo => {
-      this.authCache.set(token, { time: Date.now(), userinfo });
-      return userinfo;
-    });
+  getUserInfo(userId, token) {
+    return CollabConnector.instance
+      .get(`${Identity.IDENTITY_API_URL}/user/${userId}`, token)
+      .then(res => JSON.parse(res));
   }
+
+  getUserGroups(token) {
+    return CollabConnector.instance
+      .get(
+        `${Identity.IDENTITY_API_URL}/user/me/member-groups?page=0&pageSize=1000`,
+        token
+      )
+      .then(res => JSON.parse(res)._embedded.groups);
+  }
+
+  getUsersList() {
+    throw 'not implemented';
+  }
+
 }
-
-module.exports = Authenticator;
