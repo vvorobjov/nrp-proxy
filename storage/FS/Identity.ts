@@ -23,11 +23,13 @@
  * ---LICENSE-END**/
 'use strict';
 
+import q from 'q';
 import BaseIdentity from '../BaseIdentity';
 
-let { default: DB } = require('./DB');
-
-const q = require('q');
+// mocked on unit tests
+// tslint:disable: prefer-const
+let DB = require('./DB').default;
+// tslint:enable: prefer-const
 
 export class Identity extends BaseIdentity {
   constructor() {
@@ -80,8 +82,8 @@ export class Identity extends BaseIdentity {
   }
 
   getUserGroups(token, userId) {
-    let groups = [{ name: 'hbp-sp10-user-edit-rights' }];
-    if (userId == 'admin') groups.push({ name: 'hbp-sp10-administrators' });
+    const groups = [{ name: 'hbp-sp10-user-edit-rights' }];
+    if (userId === 'admin') groups.push({ name: 'hbp-sp10-administrators' });
     return q.when(groups);
   }
 }

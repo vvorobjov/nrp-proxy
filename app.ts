@@ -20,29 +20,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- * ---LICENSE-END**/
+ * ---LICENSE-END
+ **/
+
 'use strict';
 
+import bodyParser from 'body-parser';
 import express from 'express';
+import iplocation from 'iplocation';
+import _ from 'lodash';
+import path from 'path';
+import ActivityLogger from './activity_logs/ActivityLogger';
 import AdminService from './admin/AdminService';
+import ExperimentServiceFactory from './proxy/ExperimentServiceFactory';
 import proxyRequestHandler from './proxy/requestHandler';
 import StorageRequestHandler from './storage/requestHandler';
 import configurationManager from './utils/configurationManager';
 import loggerManager from './utils/loggerManager';
-import ActivityLogger from './activity_logs/ActivityLogger';
-import ExperimentServiceFactory from './proxy/ExperimentServiceFactory';
-
-const _ = require('lodash'),
-  bodyParser = require('body-parser'),
-  iplocation = require('iplocation'),
-  path = require('path');
 
 require('./migration_scripts/sprint72.js');
 
 const app = express();
 
 configurationManager.initialize();
-let config = configurationManager.loadConfigFile();
+const config = configurationManager.loadConfigFile();
 configurationManager.watch();
 
 proxyRequestHandler.initialize(config);
@@ -56,7 +57,7 @@ const storageRequestHandler = new StorageRequestHandler(config),
     proxyRequestHandler
   );
 
-app.use(function(req, res, next) {
+app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
   res.setHeader(
@@ -67,11 +68,11 @@ app.use(function(req, res, next) {
   next();
 });
 
-let checkAdminRights = (req, res, next) => {
+const checkAdminRights = (req, res, next) => {
   return storageRequestHandler
     .getUserGroups(getAuthToken(req))
     .then(groups => {
-      if (!groups.some(g => g.name == 'hbp-sp10-administrators'))
+      if (!groups.some(g => g.name === 'hbp-sp10-administrators'))
         throw 'Administration rights required';
     })
     .then(() => next())
@@ -81,15 +82,15 @@ let checkAdminRights = (req, res, next) => {
     });
 };
 
-let isAdmin = req => {
+const isAdmin = req => {
   return storageRequestHandler
     .getUserGroups(getAuthToken(req))
-    .then(groups => groups.some(g => g.name == 'hbp-sp10-administrators'));
+    .then(groups => groups.some(g => g.name === 'hbp-sp10-administrators'));
 };
 
 app.post(/^\/admin\//, checkAdminRights);
 
-app.get('/admin/status', (req, res, next) => {
+app.get('/admin/status', (_req, res, next) => {
   adminService
     .getStatus()
     .then(r => res.send(r))
@@ -98,12 +99,12 @@ app.get('/admin/status', (req, res, next) => {
 
 app.post('/admin/status/:maintenance', (req, res, next) =>
   adminService
-    .setStatus(req.params.maintenance == 'true')
+    .setStatus(req.params.maintenance === 'true')
     .then(r => res.send(r))
     .catch(next)
 );
 
-app.get('/admin/servers', (req, res, next) =>
+app.get('/admin/servers', (_req, res, next) =>
   adminService
     .getServersStatus()
     .then(f => res.send(f))
@@ -117,7 +118,7 @@ app.post('/admin/restart/:server', (req, res, next) =>
     .catch(next)
 );
 
-app.get('/experimentImage/:experiment', function(req, res, next) {
+app.get('/experimentImage/:experiment', (req, res, next) => {
   proxyRequestHandler
     .getExperimentImageFile(req.params.experiment)
     .then(f => res.sendFile(f))
@@ -139,35 +140,35 @@ app.get('/maintenancemode', (_, res) => res.send({}));
 
 app.get('/experiments', verifyRunningMode);
 
-app.get('/experiments', function(req, res, next) {
+app.get('/experiments', (_req, res, next) => {
   proxyRequestHandler
     .getExperiments()
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/server/:serverId', function(req, res, next) {
+app.get('/server/:serverId', (req, res, next) => {
   proxyRequestHandler
     .getServer(req.params.serverId)
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/availableServers', function(req, res, next) {
+app.get('/availableServers', (_req, res, next) => {
   proxyRequestHandler
     .getAvailableServers()
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/models/:modelType', function(req, res, next) {
+app.get('/models/:modelType', (req, res, next) => {
   proxyRequestHandler
     .getModels(req.params.modelType)
     .then(r => res.send(r))
     .catch(next);
 });
 
-app.get('/models/:modelType/:modelId/config', function(req, res, next) {
+app.get('/models/:modelType/:modelId/config', (req, res, next) => {
   proxyRequestHandler
     .getModelConfig(req.params.modelType, req.params.modelId)
     .then(config => res.sendFile(config))
@@ -179,8 +180,8 @@ app.use(bodyParser.json({ limit: '200mb' }));
 app.use(bodyParser.raw({ limit: '200mb' }));
 app.use(bodyParser.text({ type: () => true, limit: '200mb' }));
 
-let handleError = (res, err) => {
-  let errType = Object.prototype.toString.call(err).slice(8, -1);
+const handleError = (res, err) => {
+  const errType = Object.prototype.toString.call(err).slice(8, -1);
 
   if (errType === 'String' || errType === 'Error' || !err.code) {
     if (errType === 'Error') {
@@ -204,17 +205,17 @@ app.post('/authentication/authenticate', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/authentication/loginpage', (req, res) => {
+app.get('/authentication/loginpage', (_req, res) => {
   storageRequestHandler
     .getLoginPage()
     .then(r => res.sendFile(r))
     .catch(_.partial(handleError, res));
 });
 
-let getAuthToken = req => {
+const getAuthToken = req => {
   if (config.auth.demoToken) return config.auth.demoToken;
 
-  let authorization = req.get('authorization');
+  const authorization = req.get('authorization');
   if (!authorization || authorization.length < 7)
     throw 'Authorization header missing';
   return authorization.length > 7 && authorization.substr(7);
@@ -246,7 +247,7 @@ app.get('/storage/experiments', async (req, res) => {
               ...configuration
             };
           })
-          .catch(() => null) //null if no config found (eg: missing exc)
+          .catch(() => null) // null if no config found (eg: missing exc)
     );
 
     await Promise.all([...joinableServerPromises, ...configurationPromises]);
@@ -417,7 +418,7 @@ app.get('/storage/:experiment/:filename', (req, res) => {
 
 app.delete('/storage/:experiment/:filename', (req, res) => {
   const fnName = req.query.type === 'folder' ? 'deleteFolder' : 'deleteFile';
-  let deleted = storageRequestHandler[fnName](
+  const deleted = storageRequestHandler[fnName](
     req.params.filename,
     req.params.experiment,
     getAuthToken(req),
@@ -505,7 +506,7 @@ app.get('/experiment/:experiment/brain', async (req, res) => {
     .createExperimentService(
       req.params.experiment,
       getAuthToken(req),
-      req.query.template == 'true'
+      req.query.template === 'true'
     )
     .getBrain()
     .then(r => res.send(r))
@@ -525,7 +526,7 @@ app.get('/experiment/:experiment/stateMachines', async (req, res) => {
     .createExperimentService(
       req.params.experiment,
       getAuthToken(req),
-      req.query.template == 'true'
+      req.query.template === 'true'
     )
     .getStateMachines()
     .then(r => res.send(r))
@@ -545,7 +546,7 @@ app.get('/experiment/:experiment/transferFunctions', (req, res) => {
     .createExperimentService(
       req.params.experiment,
       getAuthToken(req),
-      req.query.template == 'true'
+      req.query.template === 'true'
     )
     .getTransferFunctions()
     .then(r => res.send(r))
@@ -609,9 +610,9 @@ const ANONYMOUS_ACTIVITIES = new Set(['install', 'update']);
 
 app.post('/activity_log/:activity', async (req, res) => {
   try {
-    let logData = { user: 'ANONYMOUS' };
+    const logData = { user: 'ANONYMOUS' };
     if (!ANONYMOUS_ACTIVITIES.has(req.params.activity)) {
-      let userInfo = await storageRequestHandler.getUserInfo(
+      const userInfo = await storageRequestHandler.getUserInfo(
         'me',
         getAuthToken(req)
       );
@@ -651,5 +652,5 @@ configurationManager.configuration.then(null, null, conf =>
   proxyRequestHandler.reloadConfiguration(conf)
 );
 
-//start server
+// start server
 app.listen(config.port, () => console.log('Listening on port:', config.port));

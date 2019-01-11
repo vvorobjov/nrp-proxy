@@ -24,8 +24,8 @@
 'use strict';
 
 import BaseStorage from '../BaseStorage';
-import CollabConnector from './CollabConnector';
 import utils from '../FS/utils';
+import CollabConnector from './CollabConnector';
 
 const q = require('q'),
   _ = require('lodash');
@@ -111,7 +111,7 @@ export class Storage extends BaseStorage {
 
   createCustomModel(modelType, modelData, userId, modelName, token, contextId) {
     return this.listExperiments(token, userId, contextId).then(folders => {
-      let folder = _.find(folders, f => f.name == modelType);
+      const folder = _.find(folders, f => f.name === modelType);
       if (!folder) return q.reject(`Folder ${modelType} not found`);
       return this.createOrUpdate(
         modelName,
@@ -126,7 +126,7 @@ export class Storage extends BaseStorage {
   listCustomModels(customFolder, token, userId, contextId) {
     return this.listExperiments(token, userId, contextId)
       .then(folders => {
-        let folder = _.find(folders, f => f.name == customFolder);
+        const folder = _.find(folders, f => f.name === customFolder);
         if (!folder) return [];
         return CollabConnector.instance.folderContent(token, folder.uuid);
       })
@@ -149,11 +149,11 @@ export class Storage extends BaseStorage {
   }
 
   ensurePath(pathparts, parent, contentType, token) {
-    let fileType = pathparts.length > 1 ? 'folder' : 'file';
+    const fileType = pathparts.length > 1 ? 'folder' : 'file';
     return CollabConnector.instance
       .folderContent(token, parent)
       .then(contents => {
-        let foundEntity = contents.find(
+        const foundEntity = contents.find(
           f => f.name === pathparts[0] && f.type === fileType
         );
         if (foundEntity) return foundEntity;
@@ -178,7 +178,7 @@ export class Storage extends BaseStorage {
   }
 
   createOrUpdate(filepath, fileContent, contentType, experiment, token) {
-    let pathparts = filepath.split('/');
+    const pathparts = filepath.split('/');
     return this.ensurePath(
       pathparts,
       experiment,
@@ -221,8 +221,8 @@ export class Storage extends BaseStorage {
 
   copyExperiment(experiment, token, userId, contextId) {
     return this.listExperiments(token, userId, contextId).then(res => {
-      var copiedExpName = utils.generateUniqueExperimentId(
-        res.filter(exp => exp.uuid == experiment)[0].name,
+      const copiedExpName = utils.generateUniqueExperimentId(
+        res.filter(exp => exp.uuid === experiment)[0].name,
         0,
         res.map(exp => exp.name)
       );

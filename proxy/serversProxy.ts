@@ -23,28 +23,28 @@
  * ---LICENSE-END**/
 'use strict';
 
-var request = require('request');
-var q = require('q');
-var _ = require('lodash');
-var dateFormat = require('dateformat');
+const request = require('request');
+const q = require('q');
+const _ = require('lodash');
+const dateFormat = require('dateformat');
 
 require('log-prefix')(() => dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z'));
 
-var REQUEST_TIMEOUT = 20 * 1000; //ms
+const REQUEST_TIMEOUT = 20 * 1000; // ms
 
-var SERVER_URLS = {
+const SERVER_URLS = {
   HEALTH: '/health/errors',
   SIMULATION: '/simulation'
 };
 
-var HEALTH_STATUS_PRIORITY = {
+const HEALTH_STATUS_PRIORITY = {
   OK: 1,
   WARNING: 2,
   CRITICAL: 3,
   DOWN: 9
 };
 
-var SIMULATION_STATES = {
+const SIMULATION_STATES = {
   CREATED: 'created',
   STARTED: 'started',
   PAUSED: 'paused',
@@ -54,7 +54,7 @@ var SIMULATION_STATES = {
   STOPPED: 'stopped'
 };
 
-var RUNNING_SIMULATION_STATES = [
+const RUNNING_SIMULATION_STATES = [
   SIMULATION_STATES.CREATED,
   SIMULATION_STATES.PAUSED,
   SIMULATION_STATES.STARTED,
@@ -62,22 +62,22 @@ var RUNNING_SIMULATION_STATES = [
   SIMULATION_STATES.HALTED
 ];
 
-var authToken;
-var setToken = function(token) {
+let authToken;
+const setToken = token => {
   authToken = token;
 };
 
-var executeServerRequest = function(url: string): Promise<any> {
-  var options = {
+const executeServerRequest = (url: string): Promise<any> => {
+  const options = {
     method: 'GET',
-    url: url,
+    url,
     timeout: REQUEST_TIMEOUT,
     headers: { Authorization: 'Bearer ' + authToken }
   };
 
-  var deferred = q.defer();
+  const deferred = q.defer();
 
-  request(options, function(err, res, body) {
+  request(options, (err, res, body) => {
     function requestFailed(error) {
       console.error(
         'Failed to execute request ' + options.url + '. ERROR: ' + error
@@ -91,7 +91,7 @@ var executeServerRequest = function(url: string): Promise<any> {
       requestFailed(new Error('Status code: ' + res.statusCode + '\n' + body));
     } else {
       try {
-        var bodyObj = JSON.parse(body);
+        const bodyObj = JSON.parse(body);
         deferred.resolve(bodyObj);
       } catch (e) {
         requestFailed(new Error(e));
@@ -101,12 +101,12 @@ var executeServerRequest = function(url: string): Promise<any> {
   return deferred.promise;
 };
 
-var executeRequestForAllServers = function(configuration, urlPostFix) {
-  var serversResponses: any[] = [];
-  _.forOwn(configuration.servers, function(serverConfig, serverId) {
+const executeRequestForAllServers = (configuration, urlPostFix) => {
+  const serversResponses: any[] = [];
+  _.forOwn(configuration.servers, (serverConfig, serverId) => {
     serversResponses.push(
       executeServerRequest(serverConfig.gzweb['nrp-services'] + urlPostFix)
-        .then(function(serverResponse) {
+        .then(serverResponse => {
           return [serverId, serverResponse];
         })
         .catch(() => [serverId, null])
@@ -121,25 +121,25 @@ async function getExperimentsAndSimulations(configuration) {
     executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
   ]);
 
-  //map to dictionary<server, healthStatus>
+  // map to dictionary<server, healthStatus>
   health = _.fromPairs(health);
 
-  //map to dictionary<server, simulationStatus>
+  // map to dictionary<server, simulationStatus>
   simulations = _.fromPairs(
     simulations.filter(
       simulation => simulation[1] && !(simulation[1].data instanceof Error)
     )
   );
 
-  //set runningSimulation per simulation server
+  // set runningSimulation per simulation server
   _.forOwn(simulations, serverSimulations => {
     serverSimulations.runningSimulation = _.find(serverSimulations, sim =>
       RUNNING_SIMULATION_STATES.includes(sim.state)
     );
   });
 
-  //get servers that are not running a simulation, sorted by health status
-  let availableServers = _(configuration.servers)
+  // get servers that are not running a simulation, sorted by health status
+  const availableServers = _(configuration.servers)
     .filter(
       (config, serverId) =>
         simulations[serverId] && !simulations[serverId].runningSimulation
@@ -152,8 +152,8 @@ async function getExperimentsAndSimulations(configuration) {
     )
     .value();
 
-  //build dictionary<expId, server> of joinnable servers
-  let joinableServers = {};
+  // build dictionary<expId, server> of joinnable servers
+  const joinableServers = {};
   _.forOwn(simulations, ({ runningSimulation }, serverId) => {
     if (
       runningSimulation &&
@@ -164,7 +164,7 @@ async function getExperimentsAndSimulations(configuration) {
 
       joinableServers[runningSimulation.experimentConfiguration].push({
         server: serverId,
-        runningSimulation: runningSimulation
+        runningSimulation
       });
     }
   });

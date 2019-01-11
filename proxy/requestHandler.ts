@@ -23,27 +23,27 @@
  * ---LICENSE-END**/
 'use strict';
 
+import _ from 'lodash';
+import q from 'q';
 import ModelsService from './modelsService';
-import TemplateExperimentsService_original from './TemplateExperimentsService';
-import oidcAuthenticator_original from './oidcAuthenticator';
-import serversProxy_original from './serversProxy';
 
-//test mocked dependencies
-let TemplateExperimentsService = TemplateExperimentsService_original,
-  serversProxy = serversProxy_original,
-  oidcAuthenticator = oidcAuthenticator_original;
+// test mocked dependencies
+// tslint:disable: prefer-const variable-name
+let TemplateExperimentsService = require('./TemplateExperimentsService')
+    .default,
+  serversProxy = require('./serversProxy').default,
+  oidcAuthenticator = require('./oidcAuthenticator').default,
+  request = q.denodeify(require('request'));
 
-const _ = require('lodash'),
-  q = require('q');
-var request = q.denodeify(require('request'));
+// tslint:enable: prefer-const variable-name
 
-var experimentList = {};
-var sharedExperimentsList = {};
-var simulationList = {};
-var availableServers = [];
+let experimentList = {};
+let sharedExperimentsList = {};
+let simulationList = {};
+let availableServers = [];
 let healthStatus = {};
 
-var configuration, modelsService, templateExperimentsService;
+let configuration, modelsService, templateExperimentsService;
 
 function initialize(config) {
   reloadConfiguration(config)
@@ -91,11 +91,11 @@ function reloadConfiguration(config) {
   });
 }
 
-var filterJoinableExperimentByContext = function(experiments) {
-  return _.mapValues(experiments, function(originalExperiment) {
-    var exp = _.cloneDeep(originalExperiment);
+const filterJoinableExperimentByContext = experiments => {
+  return _.mapValues(experiments, originalExperiment => {
+    const exp = _.cloneDeep(originalExperiment);
     if (exp && exp.joinableServers) {
-      exp.joinableServers = exp.joinableServers.filter(function(joinable) {
+      exp.joinableServers = exp.joinableServers.filter(joinable => {
         return !joinable.runningSimulation.contextID;
       });
     }
@@ -112,8 +112,8 @@ function updateExperimentList() {
       simulationList = simulations;
       availableServers = serversAvailable;
       healthStatus = _healthStatus;
-      //build experimentList with exp config + joinable servers + available servers
-      _.forOwn(experimentList, exp => {
+      // build experimentList with exp config + joinable servers + available servers
+      _.forOwn(experimentList, (exp: any) => {
         exp.joinableServers =
           joinableServers[exp.configuration.experimentConfiguration] || [];
       });
@@ -128,7 +128,7 @@ function updateExperimentList() {
 
 function getServersStatus() {
   const serversStatus = [] as any[];
-  for (let key in healthStatus) {
+  for (const key in healthStatus) {
     serversStatus.push({
       server: key,
       health: healthStatus[key],
@@ -144,14 +144,14 @@ function getServer(serverId) {
     return q.resolve(configuration.servers[serverId]);
 
   console.error('Wrong Server ID');
-  return q.reject("'serverId' not found\n");
+  return q.reject('\'serverId\' not found\n');
 }
 
 function getJoinableServers(experimentId) {
-  var deferred = q.defer();
-  var contextSims = [] as any[];
-  _.forOwn(simulationList, function(serverSimulations, serverId) {
-    serverSimulations.forEach(function(simulation) {
+  const deferred = q.defer();
+  const contextSims = [] as any[];
+  _.forOwn(simulationList, (serverSimulations: [any], serverId) => {
+    serverSimulations.forEach(simulation => {
       if (
         simulation.experimentID === experimentId &&
         serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1
@@ -168,10 +168,10 @@ function getJoinableServers(experimentId) {
 }
 
 async function submitJob(authToken) {
-  let base_url = configuration.job_url;
-  let options = {
+  const baseUrl = configuration.job_url;
+  const options = {
     method: 'POST',
-    url: base_url,
+    url: baseUrl,
     agentOptions: {
       rejectUnauthorized: false
     },
@@ -181,8 +181,8 @@ async function submitJob(authToken) {
   };
   let res;
   try {
-    let response_array = await request(options);
-    res = response_array[0];
+    const responseArray = await request(options);
+    res = responseArray[0];
   } catch (err) {
     throw new Error(`Failed to execute request ${options.url}. ERROR: ${err}`);
   }
@@ -205,7 +205,7 @@ function getExperiments() {
 
 function getExperimentImageFile(experimentId) {
   if (experimentList[experimentId]) {
-    let experiment = experimentList[experimentId].configuration;
+    const experiment = experimentList[experimentId].configuration;
     return q.resolve(
       templateExperimentsService.getExperimentFilePath(
         experiment.path,
@@ -213,7 +213,7 @@ function getExperimentImageFile(experimentId) {
       )
     );
   } else if (sharedExperimentsList[experimentId]) {
-    let experiment = sharedExperimentsList[experimentId].configuration;
+    const experiment = sharedExperimentsList[experimentId].configuration;
     return q.resolve(
       templateExperimentsService.getSharedExperimentFilePath(
         experiment.path,

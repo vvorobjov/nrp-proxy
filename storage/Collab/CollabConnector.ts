@@ -26,28 +26,34 @@
 const q = require('q'),
   _ = require('lodash'),
   path = require('path');
-//mocked in the tests
+
+// mocked in the tests
+// tslint:disable-next-line: prefer-const
 let request = require('request-promise');
 
-//wraps the collab connection
+// wraps the collab connection
 export default class CollabConnector {
   static get REQUEST_TIMEOUT() {
     return 30 * 1000;
-  } //ms
+  } // ms
 
   static get COLLAB_API_URL() {
     return 'https://services.humanbrainproject.eu/storage/v1/api';
   }
 
-  private static _instance = new CollabConnector();
-
   static get instance() {
     return this._instance;
   }
 
+  private static _instance = new CollabConnector();
+
+  private _getMemoizedCollabs?;
+
+  private _getMemoizedCollab?;
+
   handleError(err) {
     console.error(`[Collab error] ${err}`);
-    let errType = Object.prototype.toString.call(err).slice(8, -1);
+    const errType = Object.prototype.toString.call(err).slice(8, -1);
 
     if (errType === 'Object' && err.statusCode) {
       if (
@@ -86,7 +92,7 @@ export default class CollabConnector {
   }
 
   post(url, data, token, jsonType = false) {
-    let operation = () =>
+    const operation = () =>
       this.executeRequest(
         {
           method: 'POST',
@@ -123,8 +129,6 @@ export default class CollabConnector {
       token
     );
   }
-
-  private _getMemoizedCollabs?;
   getCollabEntity(token, collabId) {
     if (!this._getMemoizedCollabs)
       this._getMemoizedCollabs = _.memoize(
@@ -138,7 +142,7 @@ export default class CollabConnector {
   getEntity(token, collabId, ...entityPath) {
     if (!collabId) return q.reject('No collab id specified');
 
-    let fullpath = encodeURIComponent(
+    const fullpath = encodeURIComponent(
       path.join('/', collabId + '', entityPath.join('/'))
     );
     const COLLAB_STORAGE_URL = `${CollabConnector.COLLAB_API_URL}/entity/?path=${fullpath}`;
@@ -162,7 +166,7 @@ export default class CollabConnector {
       COLLAB_FILE_URL,
       {
         name,
-        parent: parent,
+        parent,
         content_type: contentType
       },
       token,
@@ -203,9 +207,9 @@ export default class CollabConnector {
         uuid: f.uuid,
         name: f.name,
         parent: f.parent,
-        contentType: f['content_type'],
-        type: f['entity_type'],
-        modifiedOn: f['modified_on']
+        contentType: f.content_type,
+        type: f.entity_type,
+        modifiedOn: f.modified_on
       }))
     );
   }
@@ -234,8 +238,6 @@ export default class CollabConnector {
 
     return this.get(COLLAB_ENTITY_URL, token);
   }
-
-  private _getMemoizedCollab?;
   getContextIdCollab(token, contextId) {
     if (!this._getMemoizedCollab) {
       this._getMemoizedCollab = _.memoize((token, contextId) => {

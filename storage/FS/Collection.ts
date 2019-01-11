@@ -25,7 +25,7 @@
 
 const q = require('q');
 
-//wraps tingo db collection to promisefy methods
+// wraps tingo db collection to promisefy methods
 export default class DBCollection {
   constructor(private collection) {
   }

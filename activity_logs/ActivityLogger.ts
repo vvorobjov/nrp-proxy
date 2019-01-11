@@ -23,16 +23,28 @@
  * ---LICENSE-END**/
 'use strict';
 
-let fs = require('fs'),
+const fs = require('fs'),
   q = require('q'),
   _ = require('lodash'),
   stringify = q.denodeify(require('csv-stringify')),
-  appendFile = q.denodeify(fs.appendFile),
-  firebase = require('firebase-admin');
+  appendFile = q.denodeify(fs.appendFile);
+
+// mocked in tests
+// tslint:disable-next-line: prefer-const
+let firebase = require('firebase-admin');
 
 export default class ActivityLogger {
   private db?;
   private localfile?;
+
+  constructor(private config) {
+    if (config) {
+      this.localfile = config.localfile;
+    }
+    if (config.databaseURL) {
+      this.initializeFirebase();
+    }
+  }
 
   initializeFirebase() {
     const serviceAccount = require('./serviceAccount.json');
@@ -44,28 +56,19 @@ export default class ActivityLogger {
     this.db.settings({ timestampsInSnapshots: true });
   }
 
-  constructor(private config) {
-    if (config) {
-      this.localfile = config.localfile;
-    }
-    if (config.databaseURL) {
-      this.initializeFirebase();
-    }
-  }
-
   async logLocal(activity, data) {
-    let logContent = await stringify([
+    const logContent = await stringify([
       [activity, new Date().toUTCString(), ..._.map(data)]
     ]);
     await appendFile(this.localfile, logContent);
   }
 
   async logFirebase(activity, data) {
-    let activityLogsCollection = this.db.collection('activity-logs');
+    const activityLogsCollection = this.db.collection('activity-logs');
     // Add the activity entry in the Firestore database
-    var doc = activityLogsCollection.doc();
+    const doc = activityLogsCollection.doc();
     return doc.set({
-      activity: activity,
+      activity,
       date: new Date(),
       ...data
     });

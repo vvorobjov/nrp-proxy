@@ -23,13 +23,13 @@
  * ---LICENSE-END**/
 'use strict';
 
-import DB from '../storage/FS/DB';
+import minimist from 'minimist';
 import * as path from 'path';
 import shell from 'shelljs';
 import uuid from 'uuid/v4';
-import minimist from 'minimist';
+import DB from '../storage/FS/DB';
 
-let argv = minimist(process.argv.slice(2));
+const argv = minimist(process.argv.slice(2));
 
 if (!argv.user || !argv.password) {
   console.error(
@@ -38,10 +38,10 @@ Example: node createFSUser.js --user nrpuser --password password`
   );
   process.exit(-1);
 }
-const STORAGE_PATH_ENV = 'STORAGE_PATH', //STORAGE_PATH variable
+const STORAGE_PATH_ENV = 'STORAGE_PATH', // STORAGE_PATH variable
   DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
 
-let storagePath =
+const storagePath =
   process.env[STORAGE_PATH_ENV] ||
   DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v] as string);
 
@@ -49,22 +49,22 @@ let storagePath =
   shell.mkdir('-p', path.join(storagePath, 'USER_DATA', folder))
 );
 
-let token = uuid();
-//we want to check if the user already exists to avoid inserting a duplicate
+const token = uuid();
+// we want to check if the user already exists to avoid inserting a duplicate
 DB.instance.users.find({ user: argv.user }).then(res => {
   if (!res.length) {
     DB.instance.users
-      .insert({ user: argv.user, password: argv.password, token: token })
+      .insert({ user: argv.user, password: argv.password, token })
       .then(() => console.log(`New user '${argv.user}' created`))
       .catch(err => console.error('Failed to create new user:', err));
   } else {
-    if (res[0].password != argv.password) {
+    if (res[0].password !== argv.password) {
       // new password so lets remove old user and add new user with new password
       DB.instance.users
         .remove(res)
         .then(() =>
           DB.instance.users
-            .insert({ user: argv.user, password: argv.password, token: token })
+            .insert({ user: argv.user, password: argv.password, token })
             .then(() => console.log(`Updated user '${argv.user}' password`))
             .catch(err =>
               console.error('Failed to update password for user:', err)

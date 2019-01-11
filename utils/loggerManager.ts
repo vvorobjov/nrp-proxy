@@ -1,12 +1,15 @@
-const path = require('path');
-let q = require('q'),
-  fs = require('fs');
+import path from 'path';
+import q from 'q';
 
-var dateFormat = require('dateformat');
+// mocked in unit tests
+// tslint:disable-next-line: prefer-const
+let  fs = require('fs');
+
+const dateFormat = require('dateformat');
 const pathLog = path.join(path.dirname(__dirname), 'usersLogged.log');
 
-let log = user => {
-  var message = user + '  ' + dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss\n');
+const log = user => {
+  const message = user + '  ' + dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss\n');
   return q.denodeify(fs.appendFile)(pathLog, message).catch(err =>
     console.log(err)
   );

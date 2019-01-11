@@ -57,7 +57,7 @@ export default class ExperimentServiceFactory {
     }
   }
 }
-const FileType = {
+const FILE_TYPE = {
   EXC: 'EXC',
   BIBI: 'BIBI',
   BRAIN: 'BRAIN',
@@ -76,24 +76,24 @@ abstract class BaseExperimentService {
 
   async getExc() {
     const excFilename = await this.getExcFileName();
-    const exc = await this.getFile(excFilename, FileType.EXC);
+    const exc = await this.getFile(excFilename, FILE_TYPE.EXC);
     const excstr = exc.toString();
     return [new X2JS().xml2js(excstr), excFilename, excstr];
   }
 
   async getBibi() {
-    let exc = (await this.getExc())[0].ExD;
-    let bibi = await this.getFile(exc.bibiConf._src, FileType.BIBI);
+    const exc = (await this.getExc())[0].ExD;
+    const bibi = await this.getFile(exc.bibiConf._src, FILE_TYPE.BIBI);
     return [new X2JS().xml2js(bibi.toString()), exc.bibiConf._src];
   }
 
   async getConfig() {
     // eslint-disable-next-line no-unused-vars
-    let [{ ExD }, file, exc] = await this.getExc();
+    const [{ ExD }, _file, exc] = await this.getExc();
 
     let bibiConfSrc;
     try {
-      let bibi = await this.getBibi();
+      const bibi = await this.getBibi();
       bibiConfSrc = bibi[1];
     } catch (err) {
       bibiConfSrc = undefined;
@@ -101,12 +101,12 @@ abstract class BaseExperimentService {
 
     const getExDProp = prop => (prop && prop.__prefix ? prop.__text : prop);
     const maturity = getExDProp(ExD.maturity);
-    let config = {
+    const config = {
       timeout: Number(getExDProp(ExD.timeout)) || 600,
       name: getExDProp(ExD.name),
       thumbnail: getExDProp(ExD.thumbnail),
       description: getExDProp(ExD.description),
-      maturity: maturity == 'production' ? maturity : 'development',
+      maturity: maturity === 'production' ? maturity : 'development',
       cameraPose:
         ExD.cameraPose &&
         [
@@ -123,13 +123,13 @@ abstract class BaseExperimentService {
           : undefined,
       physicsEngine: ExD.physicsEngine,
       experimentFile: exc,
-      bibiConfSrc: bibiConfSrc,
+      bibiConfSrc,
       visualModel: null,
-      visualModelParams: [] as Number[]
+      visualModelParams: [] as number[]
     };
 
     if (ExD.visualModel) {
-      let pose = ExD.visualModel.visualPose,
+      const pose = ExD.visualModel.visualPose,
         roll = Number(pose._roll || pose._ux),
         pitch = Number(pose._pitch || pose._uy),
         yaw = Number(pose._yaw || pose._uz),
@@ -150,18 +150,18 @@ abstract class BaseExperimentService {
   }
 
   async getStateMachines() {
-    let exc = (await this.getExc())[0].ExD;
+    const exc = (await this.getExc())[0].ExD;
 
-    let smDict = {};
-    let filePromises: any[] = [];
+    const smDict = {};
+    const filePromises: any[] = [];
     if (exc.experimentControl) {
       let stateMachines = exc.experimentControl.stateMachine;
       if (!Array.isArray(exc.experimentControl.stateMachine))
         stateMachines = [stateMachines];
 
-      for (let sm of stateMachines) {
+      for (const sm of stateMachines) {
         filePromises.push(
-          this.getFile(sm._src, FileType.SM).then(
+          this.getFile(sm._src, FILE_TYPE.SM).then(
             smFile => (smDict[sm._id] = smFile.toString())
           )
         );
@@ -173,10 +173,10 @@ abstract class BaseExperimentService {
   }
 
   async setStateMachines(stateMachines) {
-    let [excFile, excFileName] = await this.getExc();
-    let exc = excFile.ExD;
+    const [excFile, excFileName] = await this.getExc();
+    const exc = excFile.ExD;
 
-    let promises: Promise<any>[] = [];
+    const promises: Array<Promise<any>> = [];
     if (!_.isEmpty(stateMachines))
       exc.experimentControl = {
         __prefix: exc.__prefix,
@@ -198,26 +198,26 @@ abstract class BaseExperimentService {
   }
 
   async getBrain() {
-    let bibi = (await this.getBibi())[0].bibi;
+    const bibi = (await this.getBibi())[0].bibi;
     if (!bibi.brainModel) return null;
-    let brainModelFile = bibi.brainModel.file.toString();
-    let brain = (await this.getFile(
+    const brainModelFile = bibi.brainModel.file.toString();
+    const brain = (await this.getFile(
       brainModelFile.toString(),
-      FileType.BRAIN
+      FILE_TYPE.BRAIN
     )).toString();
 
     if (!bibi.brainModel.populations) bibi.brainModel.populations = [];
     else if (!Array.isArray(bibi.brainModel.populations))
       bibi.brainModel.populations = [bibi.brainModel.populations];
 
-    let robots: string[] = [];
+    const robots: string[] = [];
     if (!bibi.bodyModel) bibi.bodyModel = [];
     else if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
 
     if (bibi.bodyModel.length && !bibi.bodyModel[0]._robotId) {
       robots.push('robot'); // legacy config
     } else if (bibi.bodyModel.length) {
-      bibi.bodyModel.forEach(function(model) {
+      bibi.bodyModel.forEach(model => {
         if (!model._robotId) {
           console.error(
             'Multiple bodyModels has been defined with same or no names.' +
@@ -229,20 +229,20 @@ abstract class BaseExperimentService {
     }
 
     return Promise.resolve({
-      brain: brain,
+      brain,
       brainType: path.extname(brainModelFile).substr(1),
-      robots: robots,
+      robots,
       populations: _.reduce(
         bibi.brainModel.populations,
         (acc, pop) => {
           let popObj;
           if (pop.element) {
-            //list
+            // list
             popObj = {
               list: pop.element.map(e => Number(e.toString()))
             };
           } else {
-            //slice
+            // slice
             popObj = {
               to: Number(pop._to),
               from: Number(pop._from),
@@ -257,9 +257,9 @@ abstract class BaseExperimentService {
   }
 
   async setBrain(brain, populations) {
-    let [bibiFile, bibiFileName] = await this.getBibi();
-    let bibi = bibiFile.bibi;
-    let brainModelFile = bibi.brainModel.file.toString();
+    const [bibiFile, bibiFileName] = await this.getBibi();
+    const bibi = bibiFile.bibi;
+    const brainModelFile = bibi.brainModel.file.toString();
 
     if (populations.length > 0)
       bibi.brainModel.populations = populations.map(pop => {
@@ -296,17 +296,17 @@ abstract class BaseExperimentService {
   }
 
   async getTransferFunctions() {
-    let bibi = (await this.getBibi())[0].bibi;
+    const bibi = (await this.getBibi())[0].bibi;
 
     let transferFunctions = bibi.transferFunction || [];
     if (transferFunctions && !Array.isArray(transferFunctions))
       transferFunctions = [transferFunctions];
 
-    let tfsResponse = { data: {} };
+    const tfsResponse = { data: {} };
 
     return Promise.all(
       transferFunctions.map(tf =>
-        this.getFile(tf._src, FileType.TF).then(tfFile => {
+        this.getFile(tf._src, FILE_TYPE.TF).then(tfFile => {
           let tfId = path.basename(tf._src);
           tfId = tfId.split('.')[0];
           tfsResponse.data[tfId] = tfFile.toString();
@@ -316,12 +316,12 @@ abstract class BaseExperimentService {
   }
 
   async saveTransferFunctions(transferFunctions) {
-    let [bibiFile, bibiFileName] = await this.getBibi();
-    let bibi = bibiFile.bibi;
+    const [bibiFile, bibiFileName] = await this.getBibi();
+    const bibi = bibiFile.bibi;
 
-    let tfs = transferFunctions.map(tfCode => {
-      let tfRegexp = /def +([^\\( ]*)/gm.exec(tfCode);
-      let tfName = tfRegexp ? tfRegexp[1] : '';
+    const tfs = transferFunctions.map(tfCode => {
+      const tfRegexp = /def +([^\\( ]*)/gm.exec(tfCode);
+      const tfName = tfRegexp ? tfRegexp[1] : '';
       return [`${tfName}.py`, tfCode];
     });
 
@@ -337,7 +337,7 @@ abstract class BaseExperimentService {
       });
     else delete bibi.transferFunction;
 
-    let tfFiles = tfs.map(([tfName, tfCode]) => this.saveFile(tfName, tfCode));
+    const tfFiles = tfs.map(([tfName, tfCode]) => this.saveFile(tfName, tfCode));
 
     return Promise.all([
       ...tfFiles,
@@ -357,7 +357,7 @@ class CloneExperimentService extends BaseExperimentService {
 
   // eslint-disable-next-line no-unused-vars
   async getFile(filename, filetype) {
-    let response = await this.storageRequestHandler.getFile(
+    const response = await this.storageRequestHandler.getFile(
       filename,
       this.experimentId,
       this.contextId,
@@ -367,7 +367,7 @@ class CloneExperimentService extends BaseExperimentService {
   }
 
   async saveFile(filename, fileContent, contentType = 'text/plain') {
-    let res = await this.storageRequestHandler.createOrUpdate(
+    const res = await this.storageRequestHandler.createOrUpdate(
       filename,
       fileContent,
       contentType,
@@ -413,7 +413,7 @@ class TemplateExperimentService extends BaseExperimentService {
     if (!this.experimentDirectory) await this.getExperimentFolder();
 
     let fullfileName;
-    if (filetype == FileType.BRAIN)
+    if (filetype === FILE_TYPE.BRAIN)
       fullfileName = path.join(this.config.modelsPath, filename);
     else fullfileName = path.join(this.experimentDirectory, filename);
 

@@ -23,10 +23,8 @@
  * ---LICENSE-END**/
 'use strict';
 
-import BaseStorage from '../BaseStorage';
 import Authenticator from '../BaseAuthenticator';
-import utils_original from './utils';
-import DB_original from './DB';
+import BaseStorage from '../BaseStorage';
 
 const q = require('q'),
   path = require('path'),
@@ -34,22 +32,24 @@ const q = require('q'),
   USER_DATA_FOLDER = 'USER_DATA',
   INTERNALS = ['FS_db', USER_DATA_FOLDER];
 
-//mocked in the tests thus non const
-let DB = DB_original,
-  utils = utils_original,
+// mocked in the tests thus non const
+// tslint:disable: prefer-const
+let DB = require('./DB').default,
+  utils = require('./utils').default,
   fs = require('fs'),
   rmdir = require('rmdir'),
   fsExtra = require('fs-extra');
+// tslint:enable: prefer-const
 
 export class Storage extends BaseStorage {
   userIdHasAccessToPath(userId, filename) {
-    let experiment = filename.split('/')[0];
+    const experiment = filename.split('/')[0];
     return DB.instance.experiments
       .findOne({
         $or: [
-          { $and: [{ token: userId, experiment: experiment }] },
-          { $and: [{ experiment: experiment, shared_users: { $in: userId } }] },
-          { $and: [{ experiment: experiment, shared_option: 'Public' }] }
+          { $and: [{ token: userId, experiment }] },
+          { $and: [{ experiment, shared_users: { $in: userId } }] },
+          { $and: [{ experiment, shared_option: 'Public' }] }
         ]
       })
       .then(res => res || q.reject(Authenticator.AUTHORIZATION_ERROR));
@@ -66,7 +66,7 @@ export class Storage extends BaseStorage {
       );
     } else filePath = path.join(utils.storagePath, filename);
     if (!filePath.startsWith(utils.storagePath))
-      //file name attempts at going somewhere else (ie '../../someosfile' or '/usr/someimportantfile')
+      // file name attempts at going somewhere else (ie '../../someosfile' or '/usr/someimportantfile')
       return q.reject(Authenticator.AUTHORIZATION_ERROR);
     return filePath;
   }
@@ -77,7 +77,7 @@ export class Storage extends BaseStorage {
       .then(fullpath => q.all([fullpath, q.denodeify(fs.readdir)(fullpath)]))
       .then(([fullpath, files]) =>
         files.map(f => {
-          let stat = fs.statSync(path.join(fullpath, f));
+          const stat = fs.statSync(path.join(fullpath, f));
           return {
             name: f,
             uuid: path.join(experiment, f),
@@ -91,7 +91,7 @@ export class Storage extends BaseStorage {
 
   getFile(filename, experiment, token, userId, byname) {
     if (byname) filename = path.join(experiment, filename);
-    let basename = path.basename(filename);
+    const basename = path.basename(filename);
     return this.userIdHasAccessToPath(userId, filename)
       .then(() => this.calculateFilePath(experiment, filename))
       .then(filePath => q.denodeify(fs.readFile)(filePath))
@@ -134,7 +134,7 @@ export class Storage extends BaseStorage {
   }
 
   createCustomModel(modelType, modelData, userId, modelName) {
-    let newFileName = path.join(modelType, modelName);
+    const newFileName = path.join(modelType, modelName);
     return DB.instance.models
       .findOne({ fileName: newFileName, token: userId })
       .then(existingExp => {
@@ -184,10 +184,10 @@ export class Storage extends BaseStorage {
       .then(() => {
         return DB.instance.experiments.remove({
           token: userId,
-          experiment: experiment
+          experiment
         });
       })
-      .then(() => {});
+      .then(() => undefined);
   }
 
   deleteFolder(foldername, experiment, token, userId) {
@@ -225,8 +225,8 @@ export class Storage extends BaseStorage {
       this.userIdHasAccessToPath(userId, fullFoldername)
         .then(() => this.calculateFilePath(experiment, fullFoldername))
         .then(folderpath => q.denodeify(fs.mkdir)(folderpath))
-        //if folder exists no need to throw error
-        .catch(err => (err.code == 'EEXIST' ? q.resolve() : q.reject(err)))
+        // if folder exists no need to throw error
+        .catch(err => (err.code === 'EEXIST' ? q.resolve() : q.reject(err)))
         .then(() => ({
           uuid: fullFoldername,
           entity_type: 'folder',
@@ -266,7 +266,7 @@ export class Storage extends BaseStorage {
     folders = folders.filter(fileSystemEntry =>
       this.isDirectory(fileSystemEntry)
     );
-    let folderActions = folders.map(e =>
+    const folderActions = folders.map(e =>
       DB.instance.experiments.findOne({ experiment: e }).then(found => {
         if (found === null && INTERNALS.indexOf(e) === -1) {
           return DB.instance.experiments.insert({
@@ -306,7 +306,7 @@ export class Storage extends BaseStorage {
     return this.listExperiments(token, userId, null, {
       all: true
     }).then(res => {
-      var copiedExpName = utils.generateUniqueExperimentId(
+      const copiedExpName = utils.generateUniqueExperimentId(
         experiment,
         0,
         res.map(exp => exp.name)
@@ -358,7 +358,7 @@ export class Storage extends BaseStorage {
   }
 
   deleteSharedUserFromExperiment(experimentId, userId) {
-    if (userId == 'all')
+    if (userId === 'all')
       return DB.instance.experiments.update(
         { experiment: experimentId },
         { $set: { shared_users: [] } },

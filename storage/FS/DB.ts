@@ -23,57 +23,42 @@
  * ---LICENSE-END**/
 'use strict';
 
-import utils_original from './utils';
-import DBCollection_original from './Collection';
+import fs from 'fs';
+import path from 'path';
+import Tingodb from 'tingodb';
 
-const fs = require('fs'),
-  path = require('path'),
-  tingodb = require('tingodb')();
+const tingodb = Tingodb();
 
-//test mocked
-let utils = utils_original,
-  DBCollection = DBCollection_original;
+// test mocked
+// tslint:disable: prefer-const variable-name
+let utils = require('./utils').default,
+  DBCollection = require('./Collection').default;
+// tslint:enable: prefer-const variable-name
 
-//wraps tingo db
+// wraps tingo db
 export default class DB {
-  private static _instance?: DB;
-  private _users;
-  private _experiments;
-  private _models;
-  private _gdpr;
+  private static readonly DB_FOLDER = 'FS_db';
+  private static _instance: DB;
+  public readonly users;
+  public readonly experiments;
+  public readonly models;
+  public readonly gdpr;
 
-  static get DB_FOLDER() {
-    return 'FS_db';
-  }
-
-  static get instance() {
+  // lazy instantiation to allow for unit test pre-mocking
+  public static get instance() {
     if (!this._instance) this._instance = new DB();
     return this._instance;
   }
 
-  get users() {
-    return this._users;
-  }
-  get experiments() {
-    return this._experiments;
-  }
-  get models() {
-    return this._models;
-  }
-  get gdpr() {
-    return this._gdpr;
-  }
   constructor() {
-    this.loadDB(path.join(utils.storagePath, DB.DB_FOLDER));
-  }
+    const dbDirectory = path.join(utils.storagePath, DB.DB_FOLDER);
 
-  loadDB(dbDirectory) {
     fs.existsSync(dbDirectory) || fs.mkdirSync(dbDirectory);
 
-    let db = new tingodb.Db(dbDirectory, {});
-    this._users = new DBCollection(db.collection('users'));
-    this._experiments = new DBCollection(db.collection('experiments'));
-    this._models = new DBCollection(db.collection('models'));
-    this._gdpr = new DBCollection(db.collection('gdpr'));
+    const db = new tingodb.Db(dbDirectory, {});
+    this.users = new DBCollection(db.collection('users'));
+    this.experiments = new DBCollection(db.collection('experiments'));
+    this.models = new DBCollection(db.collection('models'));
+    this.gdpr = new DBCollection(db.collection('gdpr'));
   }
 }

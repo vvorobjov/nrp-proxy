@@ -30,7 +30,8 @@ const fs = require('fs'),
   base64 = require('file-base64'),
   q = require('q');
 
-//not a constant, because mocked on unit test
+// not a constant, because mocked on unit test
+// tslint:disable-next-line: prefer-const
 let glob = require('glob');
 
 abstract class ModelLoader {
@@ -46,7 +47,7 @@ abstract class ModelLoader {
   abstract parseFile(file): Promise<any>;
 
   loadModels(modelsPath) {
-    let loadModel = f =>
+    const loadModel = f =>
       this.parseFile(f).then(m => {
         if (m) {
           m.path = path.relative(modelsPath, f);
@@ -85,7 +86,7 @@ class BrainsModelLoader extends ModelLoader {
   }
 
   parseFileContent(fileContent) {
-    let firstComment = fileContent.match(/^"""([^"]*)"""/m);
+    const firstComment = fileContent.match(/^"""([^"]*)"""/m);
     return firstComment && firstComment[1].trim();
   }
 
@@ -93,14 +94,17 @@ class BrainsModelLoader extends ModelLoader {
     return q.denodeify(fs.readFile)(file, 'utf8')
       .then(fileContent => this.parseFileContent(fileContent))
       .then(docString => {
-        let name = path.basename(file, path.extname(file)),
-          description = docString,
-          maturity = 'development',
-          maturityDocString = BrainsModelLoader.maturity_regexp.exec(docString);
+        const name = path.basename(file, path.extname(file));
+        const maturityDocString = BrainsModelLoader.maturity_regexp.exec(
+          docString
+        );
+
+        let description = docString,
+          maturity = 'development';
 
         if (maturityDocString) {
           // doc string contains a maturity level, split it into adequate fields
-          if (maturityDocString[1] == 'production') maturity = 'production';
+          if (maturityDocString[1] === 'production') maturity = 'production';
           description = docString.replace(
             BrainsModelLoader.maturity_regexp,
             ''
@@ -125,7 +129,7 @@ abstract class XmlConfigModelLoader extends ModelLoader {
   parseFile(file) {
     const props2read = ['name', 'description', 'thumbnail', 'maturity'];
 
-    let loadThumbnail = (model, directory) => {
+    const loadThumbnail = (model, directory) => {
       if (!model.thumbnail) return model;
 
       return q.denodeify(base64.encode)(
@@ -139,7 +143,7 @@ abstract class XmlConfigModelLoader extends ModelLoader {
     return q.denodeify(fs.readFile)(file, 'utf8')
       .then(q.denodeify(xml2js))
       .then(json => {
-        let mapped = _.fromPairs(
+        const mapped = _.fromPairs(
           props2read.map(p => [
             p,
             _(json.model[p])
@@ -147,7 +151,7 @@ abstract class XmlConfigModelLoader extends ModelLoader {
               .trim() || null
           ])
         );
-        if (mapped.maturity != 'production') mapped.maturity = 'development';
+        if (mapped.maturity !== 'production') mapped.maturity = 'development';
         return mapped;
       })
       .then(model => loadThumbnail(model, path.dirname(file)))
@@ -200,7 +204,7 @@ export default class ModelsService {
 
   async getModelConfig(modelType, modelId) {
     const models = await this.getModels(modelType);
-    const model = models.find(m => m.id == modelId);
+    const model = models.find(m => m.id === modelId);
     if (!model) throw `No ${modelType} named ${modelId} was found.`;
     return path.join(this.modelsPath, model.path);
   }

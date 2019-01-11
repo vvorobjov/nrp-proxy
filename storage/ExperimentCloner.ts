@@ -23,8 +23,8 @@
  * ---LICENSE-END**/
 'use strict';
 
-import CustomModelsService from './CustomModelsService';
 import X2JS from 'x2js';
+import CustomModelsService from './CustomModelsService';
 
 const path = require('path'),
   q = require('q'),
@@ -33,10 +33,12 @@ const path = require('path'),
   exec = require('child_process').exec,
   walk = require('walk');
 
-//constants below are overriden in unit tests
+// constants below are overriden in unit tests
+// tslint:disable: prefer-const
 let fs = require('fs-extra'),
   readFile = q.denodeify(fs.readFile),
   tmp = require('tmp');
+// tslint:enable: prefer-const
 
 const ensureArrayProp = (obj, prop) => {
   if (!obj[prop]) return false;
@@ -47,7 +49,7 @@ const ensureArrayProp = (obj, prop) => {
 abstract class ExperimentCloner {
   protected tmpFolder = tmp.dirSync({ unsafeCleanup: true });
   protected experimentFolder?;
-  private downloadedFiles: Promise<string>[] = [];
+  private downloadedFiles: Array<Promise<string>> = [];
 
   constructor(protected storage, protected config, protected expModelsPaths?) {}
 
@@ -62,22 +64,22 @@ abstract class ExperimentCloner {
   );
 
   async createUniqueExperimentId(token, userId, expPath, contextId) {
-    //finds an unused name for a new experiment in the form 'templatename_0'
-    let dirname = path.dirname(expPath);
-    let expList = await this.storage.listExperiments(token, userId, contextId, {
+    // finds an unused name for a new experiment in the form 'templatename_0'
+    const dirname = path.dirname(expPath);
+    const expList = await this.storage.listExperiments(token, userId, contextId, {
       all: true
     });
 
-    let expNames = _.keyBy(expList, 'name');
+    const expNames = _.keyBy(expList, 'name');
     let suffix = 0;
     while (expNames[`${dirname}_${suffix}`]) suffix += 1;
     return `${dirname}_${suffix}`;
   }
 
   async cloneExperiment(token, userId, expPath, contextId, defaultName) {
-    //clones the experiment
+    // clones the experiment
 
-    var expName;
+    let expName;
 
     expName = await this.createUniqueExperimentId(
       token,
@@ -86,7 +88,7 @@ abstract class ExperimentCloner {
       contextId
     );
 
-    let { uuid: expUUID } = await this.storage.createExperiment(
+    const { uuid: expUUID } = await this.storage.createExperiment(
       expName,
       token,
       userId,
@@ -97,7 +99,7 @@ abstract class ExperimentCloner {
         path.join(this.config.experimentsPath, expPath)
       );
 
-      let bibiConf = await this.flattenExperiment(
+      const bibiConf = await this.flattenExperiment(
         expPath,
         expUUID,
         token,
@@ -107,7 +109,7 @@ abstract class ExperimentCloner {
 
       await this.flattenBibiConf(bibiConf, expUUID, token, userId);
 
-      let files = await this.readDownloadedFiles();
+      const files = await this.readDownloadedFiles();
 
       await this.uploadDownloadedFiles(files, expUUID, token, userId);
 
@@ -127,10 +129,10 @@ abstract class ExperimentCloner {
   }
 
   async copyResourcesFolder(experimentFolder, expName, expUUID, token, userId) {
-    let resExpPath = path.join(this.experimentFolder, 'resources');
-    let resPath = path.join(expUUID, 'resources');
+    const resExpPath = path.join(this.experimentFolder, 'resources');
+    const resPath = path.join(expUUID, 'resources');
     if (fs.existsSync(path.join(experimentFolder, 'resources'))) {
-      var files = await this.downloadResourcesfiles(resExpPath);
+      const files = await this.downloadResourcesfiles(resExpPath);
       await this.storage.createFolder('resources', expName, token, userId);
       await this.uploadDownloadedFiles(files, resPath, token, userId);
     } else {
@@ -147,11 +149,11 @@ abstract class ExperimentCloner {
   }
 
   async downloadResourcesfiles(resExpPath) {
-    var files = [] as any[];
-    var options = {
+    const files = [] as any[];
+    const options = {
       listeners: {
-        file: function(root, fileStats, next) {
-          var name = root.substring(
+        file(root, fileStats, next) {
+          const name = root.substring(
             root.indexOf('resources') + 10,
             root.length
           );
@@ -162,7 +164,7 @@ abstract class ExperimentCloner {
           });
           next();
         },
-        errors: function(root, nodeStatsArray, next) {
+        errors(root, nodeStatsArray, next) {
           next();
         }
       }
@@ -172,7 +174,7 @@ abstract class ExperimentCloner {
   }
 
   uploadDownloadedFiles(files, expUUID, token, userId) {
-    //uploads all the files copied locally
+    // uploads all the files copied locally
     return q.all(
       files.map(file =>
         this.storage.createOrUpdate(
@@ -188,15 +190,15 @@ abstract class ExperimentCloner {
   }
 
   async readDownloadedFiles() {
-    //reads all files copied locally into a structure { name, content, contentType}
+    // reads all files copied locally into a structure { name, content, contentType}
     let files = await q.all(this.downloadedFiles);
 
     files = files.map(f => {
-      let mimetype = new Set(['.png', '.jpg']).has(path.extname(f))
+      const mimetype = new Set(['.png', '.jpg']).has(path.extname(f))
         ? 'application/octet-stream'
         : 'text/plain';
 
-      const pathRelativeToTemp = f.substring(this.tmpFolder.name.length + 1); //remove tmpFolder path (plus a slash) from f
+      const pathRelativeToTemp = f.substring(this.tmpFolder.name.length + 1); // remove tmpFolder path (plus a slash) from f
 
       return {
         name: pathRelativeToTemp,
@@ -211,10 +213,10 @@ abstract class ExperimentCloner {
   }
 
   async flattenExperiment(expPath, expUUID, token, userId, defaultName) {
-    //copies the experiment files into a a temporary flatten structure
+    // copies the experiment files into a a temporary flatten structure
     console.log('Flattening experiment');
 
-    let fullExpPath = await this.getExperimentFileFullPath(
+    const fullExpPath = await this.getExperimentFileFullPath(
       expPath,
       expUUID,
       token,
@@ -222,17 +224,17 @@ abstract class ExperimentCloner {
       defaultName
     );
 
-    let experimentConf = await readFile(fullExpPath, 'utf8').then(expContent =>
+    const experimentConf = await readFile(fullExpPath, 'utf8').then(expContent =>
       new X2JS().xml2js(expContent)
     );
 
-    let experiment = experimentConf.ExD;
+    const experiment = experimentConf.ExD;
     if (
       experiment.experimentControl &&
       experiment.experimentControl.stateMachine
     ) {
       ensureArrayProp(experiment.experimentControl, 'stateMachine');
-      for (let sm of experiment.experimentControl.stateMachine) {
+      for (const sm of experiment.experimentControl.stateMachine) {
         this.downloadFile(sm._src);
       }
     }
@@ -256,16 +258,16 @@ abstract class ExperimentCloner {
       );
     }
     if (ensureArrayProp(experiment, 'configuration'))
-      for (let conf of experiment.configuration) this.downloadFile(conf._src);
+      for (const conf of experiment.configuration) this.downloadFile(conf._src);
 
     if (experiment.rosLaunch) this.downloadFile(experiment.rosLaunch._src);
 
-    let expFile = path.join(
+    const expFile = path.join(
       this.tmpFolder.name,
       'experiment_configuration.exc'
     );
 
-    let bibiConf = experimentConf.ExD.bibiConf._src;
+    const bibiConf = experimentConf.ExD.bibiConf._src;
     experiment.bibiConf._src = 'bibi_configuration.bibi';
 
     fs.writeFileSync(expFile, pd.xml(new X2JS().js2xml(experimentConf)));
@@ -275,10 +277,10 @@ abstract class ExperimentCloner {
   }
 
   async copyH5File(pythonModuleName) {
-    //in case we have an h5 file we have to copy it over as well
+    // in case we have an h5 file we have to copy it over as well
     const pathToPythonScript = path.join(__dirname, 'h5FileExtractor.py');
     try {
-      let h5FileName = (await q.denodeify(exec)(
+      const h5FileName = (await q.denodeify(exec)(
         `python ${pathToPythonScript} ${pythonModuleName}`
       ))[1];
       const brainModelPath = path.join(this.config.modelsPath, 'brain_model');
@@ -289,20 +291,20 @@ abstract class ExperimentCloner {
   }
 
   async flattenBibiConf(bibiConfFile, expUUID, token, userId) {
-    //copies the bibi files into a a temporary flatten structure
-    let bibiFullPath = await this.getBibiFullPath(
+    // copies the bibi files into a a temporary flatten structure
+    const bibiFullPath = await this.getBibiFullPath(
       bibiConfFile,
       expUUID,
       token,
       userId
     );
-    let bibi = await readFile(bibiFullPath, 'utf8').then(bibiContent =>
+    const bibi = await readFile(bibiFullPath, 'utf8').then(bibiContent =>
       new X2JS().xml2js(bibiContent)
     );
-    let bibiConf = bibi.bibi;
+    const bibiConf = bibi.bibi;
 
     if (ensureArrayProp(bibiConf, 'configuration')) {
-      for (let conf of bibiConf.configuration) {
+      for (const conf of bibiConf.configuration) {
         this.downloadFile(conf._src);
       }
     }
@@ -319,7 +321,7 @@ abstract class ExperimentCloner {
             this.expModelsPaths.robotPath.custom === false)
         ) {
           const bodyModelFile = model.__text || model;
-          if (model._assetPath == undefined) {
+          if (model._assetPath === undefined) {
             model = {
               __text: bodyModelFile,
               _assetPath: path.dirname(bodyModelFile),
@@ -328,15 +330,15 @@ abstract class ExperimentCloner {
               __prefix: bibiConf.__prefix
             };
           }
-          var robotid = model._robotId ? model._robotId : 'robot';
-          var destFile = path.join(robotid, path.basename(bodyModelFile));
+          const robotid = model._robotId ? model._robotId : 'robot';
+          const destFile = path.join(robotid, path.basename(bodyModelFile));
           this.downloadFile(model.__text, this.config.modelsPath, destFile);
 
           // find and upload roslaunch file into experiments directory
-          var sdfFolder = path.dirname(
+          const sdfFolder = path.dirname(
             path.join(this.config.modelsPath, model.__text)
           );
-          var launchFile = fs.readdirSync(sdfFolder).filter(f => {
+          const launchFile = fs.readdirSync(sdfFolder).filter(f => {
             return path.extname(f).toLowerCase() === '.launch';
           });
           if (launchFile.length) {
@@ -356,7 +358,7 @@ abstract class ExperimentCloner {
         this.expModelsPaths.brainPath === undefined ||
         this.expModelsPaths.brainPath.custom === false)
     ) {
-      let brainFile =
+      const brainFile =
         bibiConf.brainModel.file.__text || bibiConf.brainModel.file;
 
       this.downloadFile(
@@ -374,12 +376,12 @@ abstract class ExperimentCloner {
     }
 
     if (ensureArrayProp(bibiConf, 'transferFunction'))
-      for (let tf of bibiConf.transferFunction)
+      for (const tf of bibiConf.transferFunction)
         if (tf._src) {
           this.downloadFile(tf._src);
         }
 
-    let bibiFile = path.join(this.tmpFolder.name, 'bibi_configuration.bibi');
+    const bibiFile = path.join(this.tmpFolder.name, 'bibi_configuration.bibi');
 
     fs.writeFileSync(bibiFile, pd.xml(new X2JS().js2xml(bibi)));
     this.downloadedFiles.push(q.resolve(bibiFile));
@@ -427,7 +429,7 @@ export class NewExperimentCloner extends ExperimentCloner {
       path.dirname(this.newExpConfigurationPath),
       fs
         .readdirSync(path.dirname(this.newExpConfigurationPath))
-        .filter(file => path.extname(file) == '.bibi')[0]
+        .filter(file => path.extname(file) === '.bibi')[0]
     );
   }
 
@@ -462,8 +464,8 @@ export class NewExperimentCloner extends ExperimentCloner {
       ).then(robotContent => new X2JS().xml2js(robotContent));
     }
     return {
-      robotModelConfig: robotModelConfig,
-      robotRelPath: robotRelPath
+      robotModelConfig,
+      robotRelPath
     };
   }
 
@@ -492,13 +494,13 @@ export class NewExperimentCloner extends ExperimentCloner {
     );
 
     // Copy available launch file
-    var launchfile = await customModelsService.getFilesWithExt(
+    const launchfile = await customModelsService.getFilesWithExt(
       zipedModelContents,
       '.launch'
     );
     if (launchfile.length) {
-      var name = launchfile[0].name;
-      var data = await launchfile[0].async('string');
+      const name = launchfile[0].name;
+      const data = await launchfile[0].async('string');
       await this.storage.createOrUpdate(
         name,
         data,
@@ -514,7 +516,7 @@ export class NewExperimentCloner extends ExperimentCloner {
 
   async getBibiFullPath(bibiConf, expUUID, token, userId) {
     let brainFilePath;
-    let bibi = await readFile(this.newExpBibiPath, 'utf8').then(bibiContent =>
+    const bibi = await readFile(this.newExpBibiPath, 'utf8').then(bibiContent =>
       new X2JS().xml2js(bibiContent)
     );
 
@@ -526,7 +528,7 @@ export class NewExperimentCloner extends ExperimentCloner {
 
     if (this.expModelsPaths.robotPath && robotModelConfig) {
       const customAsset = this.expModelsPaths.robotPath.custom,
-        bodyModel_text = customAsset
+        bodyModelText = customAsset
           ? robotModelConfig.robotRelPath
           : path.join(
               robotModelConfig.robotRelPath,
@@ -536,9 +538,9 @@ export class NewExperimentCloner extends ExperimentCloner {
           ? path.basename(this.expModelsPaths.robotPath.path)
           : path.dirname(this.expModelsPaths.robotPath.path);
 
-      //value of the model is the relative path, e.g: robotType/model.sdf
+      // value of the model is the relative path, e.g: robotType/model.sdf
       bibi.bibi.bodyModel = {
-        __text: bodyModel_text,
+        __text: bodyModelText,
         _customAsset: customAsset,
         _assetPath: assetPath,
         _robotId: bibi.bibi.bodyModel._robotId
@@ -645,9 +647,9 @@ export class NewExperimentCloner extends ExperimentCloner {
   }
 
   async handleEnvironmentFiles(experimentConf, expUUID, token, userId) {
-    //handle zipped models
+    // handle zipped models
     if (this.expModelsPaths.environmentPath.custom) {
-      let envRelPath = (await this.handleZippedModel(
+      const envRelPath = (await this.handleZippedModel(
         token,
         expUUID,
         userId,
@@ -666,18 +668,18 @@ export class NewExperimentCloner extends ExperimentCloner {
         }
       };
     } else {
-      let envRelPath = _.takeRight(
+      const envRelPath = _.takeRight(
         this.expModelsPaths.environmentPath.path.split(path.sep),
         2
       );
 
-      let envConfigPath = path.join(
+      const envConfigPath = path.join(
         this.config.modelsPath,
         envRelPath[0],
         envRelPath[1]
       );
 
-      let envModelConfig = await readFile(
+      const envModelConfig = await readFile(
         envConfigPath,
         'utf8'
       ).then(envContent => new X2JS().xml2js(envContent));

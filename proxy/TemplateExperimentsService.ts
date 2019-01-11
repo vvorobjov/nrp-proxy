@@ -24,13 +24,13 @@
 'use strict';
 
 import X2JS from 'x2js';
-import StorageRequestHandler_original from '../storage/requestHandler';
-import utils_original from '../storage/FS/utils';
 import configurationManager from '../utils/configurationManager';
 
 // mocked modules
-let utils = utils_original,
-  StorageRequestHandler = StorageRequestHandler_original;
+// tslint:disable: prefer-const variable-name
+let utils = require('../storage/FS/utils').default,
+  StorageRequestHandler = require('../storage/requestHandler').default;
+// tslint:enable: prefer-const variable-name
 
 const fs = require('fs'),
   q = require('q'),
@@ -38,13 +38,14 @@ const fs = require('fs'),
   readFile = q.denodeify(fs.readFile);
 
 configurationManager.initialize();
-var storageRequestHandler;
+let storageRequestHandler;
 const cxml = require('cxml');
-var parser = new cxml.Parser();
+const parser = new cxml.Parser();
 
-let ExDConfig = require('../xmlns/schemas.humanbrainproject.eu/SP10/2014/ExDConfig.js');
+const EXD_CONFIG = require('../xmlns/schemas.humanbrainproject.eu/SP10/2014/ExDConfig.js');
 
-//not a constant, because mocked on unit test
+// not a constant, because mocked on unit test
+// tslint:disable-next-line: prefer-const
 let glob = q.denodeify(require('glob'));
 
 export default class ExperimentsService {
@@ -108,7 +109,7 @@ export default class ExperimentsService {
         : this.experimentsPath,
       expPath = path.dirname(fileConfigPath);
     return parser
-      .parse(experimentContent, ExDConfig.document)
+      .parse(experimentContent, EXD_CONFIG.document)
       .then(({ ExD: exc }) => {
         return q.all([
           exc,
@@ -124,9 +125,11 @@ export default class ExperimentsService {
           if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
 
           if (bibi.bodyModel.length && !bibi.bodyModel[0]._robotId) {
-            robotPaths['robot'] = bibi.bodyModel[0].__text || bibi.bodyModel[0]; // legacy config
+            robotPaths = {
+              robot: bibi.bodyModel[0].__text || bibi.bodyModel[0]
+            }; // legacy config
           } else if (bibi.bodyModel.length) {
-            bibi.bodyModel.forEach(function(model) {
+            bibi.bodyModel.forEach(model => {
               if (!model._robotId) {
                 console.error(
                   'Multiple bodyModels has been defined with same or no names.' +
@@ -139,11 +142,11 @@ export default class ExperimentsService {
         }
 
         return {
-          id: id,
+          id,
           name: exc.name || id,
           isShared: isExperimentShared,
           thumbnail: exc.thumbnail,
-          robotPaths: robotPaths,
+          robotPaths,
           path: expPath,
           physicsEngine:
             exc.physicsEngine._exists === false ? 'ode' : exc.physicsEngine,
@@ -151,7 +154,8 @@ export default class ExperimentsService {
           description:
             exc.description || 'No description available for this experiment.',
           experimentConfiguration: fileConfigPath,
-          maturity: exc.maturity == 'production' ? 'production' : 'development',
+          maturity:
+            exc.maturity === 'production' ? 'production' : 'development',
           timeout: exc.timeout || 600,
           brainProcesses:
             exc.bibiConf.processes._exists === false

@@ -24,7 +24,8 @@
 'use strict';
 
 // modifiable for unit tests
-let { default: DB } = require('./FS/DB');
+// tslint:disable-next-line: prefer-const
+let DB = require('./FS/DB').default;
 type UserId = string;
 
 export default class GDPR {

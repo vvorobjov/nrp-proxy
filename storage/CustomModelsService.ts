@@ -27,7 +27,9 @@ const xml2js = require('xml2js').parseString,
   q = require('q'),
   path = require('path');
 
-let JSZip = require('jszip');
+// mocked in tests
+// tslint:disable-next-line: prefer-const
+let jszip = require('jszip');
 
 export default class CustomModelsService {
   logConfig(zip, basename) {
@@ -35,7 +37,7 @@ export default class CustomModelsService {
       `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
     );
 
-    let zipfile = zip.file(path.join(basename, 'model.config'));
+    const zipfile = zip.file(path.join(basename, 'model.config'));
     if (!zipfile) return exception;
 
     return zipfile
@@ -50,7 +52,7 @@ export default class CustomModelsService {
   }
 
   validateZip(zip) {
-    var reject = ['name', 'description']
+    const reject = ['name', 'description']
       .map(item => {
         if (!zip[item])
           return q.reject(
@@ -63,7 +65,7 @@ export default class CustomModelsService {
   }
 
   logThumbnail(zip, basename) {
-    let zipfile = zip.file(path.join(basename, 'thumbnail.png'));
+    const zipfile = zip.file(path.join(basename, 'thumbnail.png'));
     if (!zipfile) return;
 
     return zipfile
@@ -71,15 +73,15 @@ export default class CustomModelsService {
       .then(data => 'data:image/png;base64,' + data);
   }
 
-  getZipModelMetaData(filePath, fileContent, fileName = undefined) {
-    return JSZip.loadAsync(fileContent).then(zip => {
+  getZipModelMetaData(filePath, fileContent, fileName?) {
+    return jszip.loadAsync(fileContent).then(zip => {
       const exception = q.reject(
         `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
       );
 
       try {
         const basename = this.getZipBasename(zip);
-        if (!basename || basename == 'model.config') return exception;
+        if (!basename || basename === 'model.config') return exception;
         return q
           .all([
             this.logConfig(zip, basename),
@@ -88,9 +90,9 @@ export default class CustomModelsService {
           .then(([config, thumbnail]) => ({
             name: config.name,
             description: config.description,
-            thumbnail: thumbnail,
-            path: encodeURIComponent(filePath), //escape slashes
-            fileName: fileName
+            thumbnail,
+            path: encodeURIComponent(filePath), // escape slashes
+            fileName
           }))
           .catch(err =>
             q.reject(`Failed to load model '${filePath}'.\nErr: ${err}`)
@@ -102,9 +104,9 @@ export default class CustomModelsService {
   }
 
   extractFileFromZip(fileContent, fileName) {
-    return JSZip.loadAsync(fileContent).then(async zip => {
+    return jszip.loadAsync(fileContent).then(async zip => {
       const basename = this.getZipBasename(zip);
-      let modelData = zip.file(path.join(basename, fileName));
+      const modelData = zip.file(path.join(basename, fileName));
       if (!modelData)
         return q.reject(
           `The model zip file should have a file called ${fileName} inside the root folder`
@@ -120,23 +122,23 @@ export default class CustomModelsService {
   }
 
   getFilesWithExt(zipRawData, ext) {
-    return JSZip.loadAsync(zipRawData).then(async zip =>
+    return jszip.loadAsync(zipRawData).then(async zip =>
       zip.filter((relativePath, file) => file.name.toLowerCase().endsWith(ext))
     );
   }
 
-  extractModelMetadataFromZip(fileContent, type = undefined) {
-    return JSZip.loadAsync(fileContent).then(async zip => {
+  extractModelMetadataFromZip(fileContent, type?) {
+    return jszip.loadAsync(fileContent).then(async zip => {
       const exception = q.reject(
         `Error: Zip structure is wrong. Could not find model.config.`
       );
 
       const basename = this.getZipBasename(zip);
-      if (!basename || basename == 'model.config') return exception;
+      if (!basename || basename === 'model.config') return exception;
 
-      let modelConfig = await this.logConfig(zip, basename);
+      const modelConfig = await this.logConfig(zip, basename);
       let modelData;
-      if (type == 'brainPath') {
+      if (type === 'brainPath') {
         modelData = zip.file(path.join(basename, modelConfig.brain));
       } else {
         modelData = zip.file(path.join(basename, modelConfig.sdf));
@@ -149,7 +151,7 @@ export default class CustomModelsService {
       return {
         data: await modelData.async('string'),
         name:
-          type == 'robotPath'
+          type === 'robotPath'
             ? modelData.name
             : modelData.name.split(path.sep)[1],
         relPath: modelData.name,

@@ -9,7 +9,7 @@ let fakeJSZip = {
 };
 
 CustomModelsService = rewire('../../storage/CustomModelsService');
-CustomModelsService.__set__('JSZip', fakeJSZip);
+CustomModelsService.__set__('jszip', fakeJSZip);
 customModelsService = new CustomModelsService.default();
 
 describe('CustomModelsService', () => {

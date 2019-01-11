@@ -28,8 +28,9 @@ import BaseAuthenticator from '../BaseAuthenticator';
 const q = require('q'),
   path = require('path');
 
-//mocked in the tests thus non const
-let { default: DB } = require('./DB');
+// mocked in the tests thus non const
+// tslint:disable-next-line: prefer-const
+let DB  = require('./DB').default;
 
 export class Authenticator extends BaseAuthenticator {
   login(usr, pwd) {

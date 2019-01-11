@@ -23,16 +23,16 @@
  * ---LICENSE-END**/
 'use strict';
 
-const STORAGE_PATH_ENV = 'STORAGE_PATH', //STORAGE_PATH variable
+const STORAGE_PATH_ENV = 'STORAGE_PATH', // STORAGE_PATH variable
   DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
 
-//storagePath = 'STORAGE_PATH' env variable is defined, or $HOME/.opt/nrpStorage by default
-let storagePath =
+// storagePath = 'STORAGE_PATH' env variable is defined, or $HOME/.opt/nrpStorage by default
+const storagePath =
   process.env[STORAGE_PATH_ENV] ||
   DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v] as string);
 
-let generateUniqueExperimentId = (basename, suffix, existingExperiments) => {
-  var newName = [basename, suffix].join('_');
+const generateUniqueExperimentId = (basename, suffix, existingExperiments) => {
+  const newName = [basename, suffix].join('_');
   if (existingExperiments.includes(newName)) {
     suffix += 1;
     return generateUniqueExperimentId(basename, suffix, existingExperiments);

@@ -27,15 +27,18 @@ import CustomModelService from './CustomModelsService';
 import * as ExperimentCloner from './ExperimentCloner';
 
 // test mocked
+// tslint:disable: prefer-const
 let { TemplateExperimentCloner, NewExperimentCloner } = ExperimentCloner,
-  { default: GDPR } = require('./GDPR');
+  GDPR = require('./GDPR').default;
+// tslint:enable: prefer-const
 
 const q = require('q'),
   path = require('path');
 
-//mocked in the unit tests
-
+// mocked on unit tests
+// tslint:disable-next-line: prefer-const
 let customModelService = new CustomModelService();
+
 const gdprService = new GDPR();
 
 export default class RequestHandler {
@@ -48,9 +51,9 @@ export default class RequestHandler {
 
   constructor(private config) {
     try {
-      if (!config.storage) throw "'storage' key missing in the config file";
+      if (!config.storage) throw `'storage' key missing in the config file`;
       if (!config.authentication)
-        throw "'authentication' key missing in the config file";
+        throw `'authentication' key missing in the config file`;
 
       this.loadDependenciesInjection();
 
@@ -320,7 +323,7 @@ ${ex.stack}`);
 
   async cloneExperiment(token, expPath, contextId) {
     await this.authenticator.checkToken(token);
-    let userId = await this.getUserIdentifier(token);
+    const userId = await this.getUserIdentifier(token);
 
     return new TemplateExperimentCloner(
       this.storage,
@@ -367,7 +370,7 @@ ${ex.stack}`);
 
   async cloneNewExperiment(token, contextId, modelsPaths, defaultName) {
     await this.authenticator.checkToken(token);
-    let userId = await this.getUserIdentifier(token);
+    const userId = await this.getUserIdentifier(token);
 
     return new NewExperimentCloner(
       this.storage,

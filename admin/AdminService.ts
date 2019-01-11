@@ -20,14 +20,14 @@ export default class AdminService {
   }
 
   async getServersStatus() {
-    let serversStatus = await this.proxyRequestHandler.getServersStatus();
-    for (let serverStatus of serversStatus)
+    const serversStatus = await this.proxyRequestHandler.getServersStatus();
+    for (const serverStatus of serversStatus)
       serverStatus.restarting = this.serversRestarting.has(serverStatus.server);
 
     return serversStatus;
   }
 
-  restartServer(server: String): Promise<any> {
+  restartServer(server: string): Promise<any> {
     if (this.serversRestarting.has(server)) return q.reject('Server');
     this.serversRestarting.add(server);
 

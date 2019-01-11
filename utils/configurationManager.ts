@@ -31,10 +31,10 @@ const path = require('path'),
   q = require('q');
 
 let CONFIG_FILE;
-let configuration = q.defer();
+const configuration = q.defer();
 let configFile;
 
-let initialize = () => {
+const initialize = () => {
   CONFIG_FILE = path.resolve('./config.json');
 };
 
@@ -44,14 +44,14 @@ const PATH_CONFIG_PROPERTIES = [
   'restart-backend-cmd'
 ];
 
-let resolveReplaceEnvVariables = path => {
-  return path.replace(/\$([A-Za-z]*)/g, (m, v) => process.env[v]);
+const resolveReplaceEnvVariables = path => {
+  return path.replace(/\$([A-Za-z]*)/g, (_m, v) => process.env[v]);
 };
 
-let loadConfigFile = () => {
+const loadConfigFile = () => {
   try {
     configFile = JSON.parse(fs.readFileSync(CONFIG_FILE));
-    for (let pathProp of PATH_CONFIG_PROPERTIES) {
+    for (const pathProp of PATH_CONFIG_PROPERTIES) {
       if (!configFile[pathProp])
         throw `${pathProp} is missing from the config file`;
       configFile[pathProp] = resolveReplaceEnvVariables(configFile[pathProp]);
@@ -69,7 +69,7 @@ let loadConfigFile = () => {
   }
 };
 
-let onConfigChange = (curr, prev) => {
+const onConfigChange = curr => {
   if (curr !== 'change') {
     console.log(
       'config.json has been deleted! Continuing with the previously-parsed version.'
@@ -81,25 +81,25 @@ let onConfigChange = (curr, prev) => {
 };
 
 // watcher for config file to re-parse if the file has been edited
-let watch = () => {
+const watch = () => {
   fs.watch(CONFIG_FILE, onConfigChange);
 };
 
-let getState = key => {
+const getState = key => {
   return configFile.states && configFile.states[key];
 };
 
-let setState = (key, value) => {
+const setState = (key, value) => {
   if (!configFile.states) configFile.states = {};
   configFile.states[key] = value;
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(configFile));
 };
 
 export default {
-  watch: watch,
-  initialize: initialize,
-  loadConfigFile: loadConfigFile,
+  watch,
+  initialize,
+  loadConfigFile,
   configuration: configuration.promise,
-  getState: getState,
-  setState: setState
+  getState,
+  setState
 };

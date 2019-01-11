@@ -41,20 +41,20 @@ export class Authenticator extends BaseAuthenticator {
   }
 
   checkToken(token) {
-    if (this.config.storage == 'Collab') {
+    if (this.config.storage === 'Collab') {
       // No need to check token, it will be done by the underlying Collab storage requests
       return q.when(true);
     }
 
-    //do we have the token in cache?
+    // do we have the token in cache?
     if (this.authCache.has(token)) {
-      let cache = this.authCache.get(token);
+      const cache = this.authCache.get(token);
       if (Date.now() - cache.time <= Authenticator.TOKEN_CACHE_DURATION_MS) {
-        //cache still time valid
+        // cache still time valid
         return q.when(cache.userinfo);
       } else this.authCache.delete(token);
     }
-    //no valid cache, we verify the token by trying to retrieve the user info
+    // no valid cache, we verify the token by trying to retrieve the user info
     return identity.getUserInfo('me', token).then(userinfo => {
       this.authCache.set(token, { time: Date.now(), userinfo });
       return userinfo;
