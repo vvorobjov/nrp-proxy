@@ -35,6 +35,7 @@ import AdminService from './admin/AdminService';
 import ExperimentServiceFactory from './proxy/ExperimentServiceFactory';
 import proxyRequestHandler from './proxy/requestHandler';
 import StorageRequestHandler from './storage/requestHandler';
+import pizDaintRequestHandler from './piz_daint/requestHandler';
 import configurationManager from './utils/configurationManager';
 import loggerManager from './utils/loggerManager';
 
@@ -47,6 +48,7 @@ const config = configurationManager.loadConfigFile();
 configurationManager.watch();
 
 proxyRequestHandler.initialize(config);
+pizDaintRequestHandler.initialize(config);
 
 const storageRequestHandler = new StorageRequestHandler(config),
   adminService = new AdminService(config, proxyRequestHandler),
@@ -553,9 +555,43 @@ app.get('/experiment/:experiment/transferFunctions', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/pizdaintjob', async (req, res) => {
+app.get('/submitjob', async (req, res) => {
   try {
-    res.send(await proxyRequestHandler.submitJob(getAuthToken(req)));
+    res.send(await pizDaintRequestHandler.setUpJob(getAuthToken(req)));
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+app.get('/getjobs', async (req, res) => {
+  try {
+    res.send(await pizDaintRequestHandler.getJobs(getAuthToken(req)));
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+app.get('/getjobinfo', async (req, res) => {
+  try {
+    res.send(
+      await pizDaintRequestHandler.getJobStatus(
+        getAuthToken(req),
+        req.query.jobUrl
+      )
+    );
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+app.get('/getjoboutcome', async (req, res) => {
+  try {
+    res.send(
+      await pizDaintRequestHandler.getJobOutcome(
+        getAuthToken(req),
+        req.query.jobUrl
+      )
+    );
   } catch (err) {
     handleError(res, err);
   }

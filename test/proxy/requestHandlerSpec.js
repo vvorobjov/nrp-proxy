@@ -95,20 +95,6 @@ describe('requestHandler', function() {
       .should.eventually.deep.equal(myobj);
   });
 
-  it('submitJob should get job location after submitting job', function() {
-    const resp = [{ statusCode: 200, headers: { location: '/job_location' } }];
-    requestHandlerRewired.__set__('request', () => {
-      return new Promise(function(resolve) {
-        resolve(resp);
-      });
-    });
-    var fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24';
-
-    return requestHandler
-      .submitJob(fakeToken)
-      .should.eventually.deep.equal('/job_location');
-  });
-
   it('should return available servers for a given experiment', async () => {
     revert = requestHandlerRewired.__set__(
       'experimentList',

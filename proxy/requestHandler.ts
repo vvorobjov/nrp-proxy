@@ -167,34 +167,6 @@ function getJoinableServers(experimentId) {
   return deferred.promise;
 }
 
-async function submitJob(authToken) {
-  const baseUrl = configuration.job_url;
-  const options = {
-    method: 'POST',
-    url: baseUrl,
-    agentOptions: {
-      rejectUnauthorized: false
-    },
-    headers: { Authorization: `Bearer ${authToken}` },
-    body: { Executable: '/bin/ls', Resources: { Runtime: '1200' } },
-    json: true
-  };
-  let res;
-  try {
-    const responseArray = await request(options);
-    res = responseArray[0];
-  } catch (err) {
-    throw new Error(`Failed to execute request ${options.url}. ERROR: ${err}`);
-  }
-  if (res.statusCode < 200 || res.statusCode >= 300) {
-    throw new Error(
-      `Failed to execute request ${options.url}. ERROR: ${res.body
-        .errorMessage}`
-    );
-  }
-  return res.headers.location;
-}
-
 function getAvailableServers() {
   return q.resolve(availableServers);
 }
@@ -263,6 +235,5 @@ export default {
   getJoinableServers,
   filterJoinableExperimentByContext,
   getModels,
-  getModelConfig,
-  submitJob
+  getModelConfig
 };
