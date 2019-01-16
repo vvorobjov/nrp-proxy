@@ -32,10 +32,10 @@ import _ from 'lodash';
 import path from 'path';
 import ActivityLogger from './activity_logs/ActivityLogger';
 import AdminService from './admin/AdminService';
+import pizDaintRequestHandler from './piz_daint/requestHandler';
 import ExperimentServiceFactory from './proxy/ExperimentServiceFactory';
 import proxyRequestHandler from './proxy/requestHandler';
 import StorageRequestHandler from './storage/requestHandler';
-import pizDaintRequestHandler from './piz_daint/requestHandler';
 import configurationManager from './utils/configurationManager';
 import loggerManager from './utils/loggerManager';
 
@@ -192,10 +192,16 @@ const handleError = (res, err) => {
     } else console.error('[ERROR] ' + err);
     res.status(500).send(err);
   } else {
-    if (err.code !== 204)
+    const errMsg =
+      err.code === 403
+        ? 'Authentication error'
+        : err.msg ? err.msg : `code: ${err.code}`;
+
+    if (err.code !== 204) {
       // 204= file not found
-      console.error('[ERROR] ' + err.msg);
-    res.status(err.code).send(err.msg);
+      console.error(`[ERROR] ${errMsg}`);
+    }
+    res.status(err.code).send(errMsg);
   }
 };
 
@@ -553,6 +559,17 @@ app.get('/experiment/:experiment/transferFunctions', (req, res) => {
     .getTransferFunctions()
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
+});
+
+app.get('/experiment/:experiment/csvfiles', async (req, res) => {
+  try {
+    const csvFiles = await experimentServiceFactory
+      .createExperimentService(req.params.experiment, getAuthToken(req))
+      .getCSVFiles();
+    res.send(csvFiles);
+  } catch (err) {
+    handleError(res, err);
+  }
 });
 
 app.get('/submitjob', async (req, res) => {

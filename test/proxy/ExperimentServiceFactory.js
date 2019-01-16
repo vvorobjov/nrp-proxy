@@ -151,7 +151,7 @@ var expectedBibiConfObject = {
     }
   }
 };
-var experimentId = 1234,
+var experimentId = '1234',
   contextId = 111 - 222 - 333;
 var rh;
 
@@ -222,5 +222,42 @@ describe('ExperimentServiceFactory', function() {
       expect(res.timeout).to.equal(600);
       expect(res.maturity).to.equal('development');
     });
+  });
+
+  it('.getCSVFiles() should get the csv files', async () => {
+    sinon.stub(rh, 'listFiles', folder => {
+      switch (folder) {
+        case experimentId:
+          return q.when([
+            {
+              name: 'NOT_csv_records',
+              type: 'folder'
+            },
+            {
+              name: 'csv_records_2',
+              type: 'folder'
+            },
+            {
+              name: 'csv_records_1',
+              type: 'folder'
+            }
+          ]);
+        default:
+          return q.when([
+            {
+              uuid: `${folder}/csvfile`
+            }
+          ]);
+      }
+    });
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    const csvFiles = await es.getCSVFiles();
+
+    expect(csvFiles).to.eql([
+      { uuid: '1234%2Fcsv_records_2%2Fcsvfile' },
+      { uuid: '1234%2Fcsv_records_1%2Fcsvfile' }
+    ]);
+    return csvFiles;
   });
 });

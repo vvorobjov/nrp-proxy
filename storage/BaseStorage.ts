@@ -23,8 +23,19 @@
  * ---LICENSE-END**/
 'use strict';
 
+export type FileType = 'file' | 'folder';
+
+export type File = {
+  name: string;
+  uuid: string;
+  size: number;
+  type: FileType;
+  modifiedOn: number;
+};
+
 export default abstract class BaseStorage {
-  abstract listFiles(experiment, token, userId);
+
+  abstract listFiles(experiment, token, userId): File[];
   abstract getFile(filename, experiment, token, userId, byname);
   abstract deleteFile(filename, experiment, token, userId, byname);
   abstract deleteFolder(foldername, experiment, token, userId, byname);

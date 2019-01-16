@@ -69,7 +69,7 @@
     "prettify": "node_modules/prettier/bin/prettier.js  \"**/*.{js,json}\" --write",
     "lint": "./node_modules/tslint/bin/tslint {activity_logs,admin,proxy,test,storage,utils}/**/*.ts",
     "test": "nyc mocha -r ts-node/register test/*/* --exit",
-    "pretest": "npm run lint",
+    "pretest": "lint-staged && npm run lint",
     "precommit": "lint-staged",
     "generate_experiments_xsd": "rm -rf {xmlns,cache}; node_modules/http-serve/bin/http-serve $HBP/Experiments -p 8998 -s -c-1 & SERVER_PID=$!;sleep 1; node_modules/cxsd/cxsd-cli.js http://127.0.0.1:8998/ExDConfFile.xsd ; kill $SERVER_PID",
     "generate_config_xsd": "rm -rf {xmlns,cache}; node_modules/http-serve/bin/http-serve $HBP/Models -p 8998 -s -c-1 & SERVER_PID=$!;sleep 1; node_modules/cxsd/cxsd-cli.js http://127.0.0.1:8998/model_configuration.xsd ; kill $SERVER_PID",
@@ -90,7 +90,8 @@
       "test"
     ],
     "reporter": [
-      "text"
+      "text",
+      "html"
     ]
   },
   "lint-staged": {

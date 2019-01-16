@@ -15,6 +15,7 @@
     "no-console": false,
     "member-access": false,
     "arrow-parens": false,
+    "interface-over-type-literal": false,
     "no-var-keyword": true,
     "quotemark": [true, "single", "backtick"],
     "curly": false,

@@ -23,14 +23,16 @@
  * ---LICENSE-END**/
 'use strict';
 
+import fs from 'fs';
+import _ from 'lodash';
+import path from 'path';
+import { pd } from 'pretty-data';
+import q from 'q';
 import X2JS from 'x2js';
+import { File } from '../storage/BaseStorage';
+import StorageRequestHandler from '../storage/requestHandler';
 
-const path = require('path'),
-  _ = require('lodash'),
-  q = require('q'),
-  fs = require('fs'),
-  pd = require('pretty-data').pd,
-  glob = q.denodeify(require('glob')),
+const glob = q.denodeify(require('glob')),
   xmlFormat = xml => pd.xml(xml);
 
 export default class ExperimentServiceFactory {
@@ -68,12 +70,6 @@ const FILE_TYPE = {
 abstract class BaseExperimentService {
   constructor(protected experimentId, protected contextId) {}
 
-  abstract async getFile(filename, type);
-
-  abstract async saveFile(filename, fileContent, contentType?): Promise<any>;
-
-  abstract async getExcFileName();
-
   async getExc() {
     const excFilename = await this.getExcFileName();
     const exc = await this.getFile(excFilename, FILE_TYPE.EXC);
@@ -89,7 +85,7 @@ abstract class BaseExperimentService {
 
   async getConfig() {
     // eslint-disable-next-line no-unused-vars
-    const [{ ExD }, _file, exc] = await this.getExc();
+    const [{ ExD }, file, exc] = await this.getExc();
 
     let bibiConfSrc;
     try {
@@ -337,17 +333,53 @@ abstract class BaseExperimentService {
       });
     else delete bibi.transferFunction;
 
-    const tfFiles = tfs.map(([tfName, tfCode]) => this.saveFile(tfName, tfCode));
+    const tfFiles = tfs.map(([tfName, tfCode]) =>
+      this.saveFile(tfName, tfCode)
+    );
 
     return Promise.all([
       ...tfFiles,
       this.saveFile(bibiFileName, xmlFormat(new X2JS().js2xml(bibiFile)))
     ]).then(() => ({}));
   }
+
+  async getCSVFiles() {
+    const CSV_FOLDER_PREFIX = 'csv_records';
+    const files = await this.listFiles();
+    const csvFolders = files
+      .filter(f => f.type === 'folder')
+      .filter(f => f.name.startsWith(CSV_FOLDER_PREFIX));
+
+    const csvFolderFiles = await Promise.all(
+      csvFolders.map(folder => this.listFiles(folder.name))
+    );
+    const csvFiles = _.flatMap(csvFolderFiles).map(file => ({
+      ...file,
+      uuid: encodeURIComponent(file.uuid)
+    }));
+
+    return csvFiles;
+  }
+
+  protected abstract async getFile(filename, type);
+
+  protected abstract async listFiles(dirname?: string): Promise<File[]>;
+
+  protected abstract async saveFile(
+    filename,
+    fileContent,
+    contentType?
+  ): Promise<any>;
+
+  protected abstract async getExcFileName();
 }
 
 class CloneExperimentService extends BaseExperimentService {
-  constructor(experimentId, contextId, private storageRequestHandler) {
+  constructor(
+    experimentId,
+    contextId,
+    private storageRequestHandler: StorageRequestHandler
+  ) {
     super(experimentId, contextId);
   }
 
@@ -355,7 +387,6 @@ class CloneExperimentService extends BaseExperimentService {
     return 'experiment_configuration.exc';
   }
 
-  // eslint-disable-next-line no-unused-vars
   async getFile(filename, filetype) {
     const response = await this.storageRequestHandler.getFile(
       filename,
@@ -366,15 +397,21 @@ class CloneExperimentService extends BaseExperimentService {
     return response.body;
   }
 
+  async listFiles(dirname = '') {
+    return this.storageRequestHandler.listFiles(
+      path.join(this.experimentId, dirname),
+      this.contextId
+    );
+  }
+
   async saveFile(filename, fileContent, contentType = 'text/plain') {
-    const res = await this.storageRequestHandler.createOrUpdate(
+    return this.storageRequestHandler.createOrUpdate(
       filename,
       fileContent,
       contentType,
       this.experimentId,
       this.contextId
     );
-    return res;
   }
 }
 class TemplateExperimentService extends BaseExperimentService {
@@ -403,6 +440,7 @@ class TemplateExperimentService extends BaseExperimentService {
       throw `Could not find experiment file of pattern ${experimentGlob}`;
 
     this.experimentDirectory = path.dirname(experimentFiles[0]);
+    return this.experimentDirectory;
   }
 
   async getExcFileName() {
@@ -410,7 +448,8 @@ class TemplateExperimentService extends BaseExperimentService {
   }
 
   async getFile(filename, filetype) {
-    if (!this.experimentDirectory) await this.getExperimentFolder();
+    if (!this.experimentDirectory)
+      this.experimentDirectory = await this.getExperimentFolder();
 
     let fullfileName;
     if (filetype === FILE_TYPE.BRAIN)
@@ -420,7 +459,10 @@ class TemplateExperimentService extends BaseExperimentService {
     return q.denodeify(fs.readFile)(fullfileName, 'utf8');
   }
 
-  // eslint-disable-next-line no-unused-vars
+  async listFiles(dirname): Promise<File[]> {
+    throw `Not implemented`;
+  }
+
   async saveFile(filename, fileContent, contentType) {
     throw `Unexpected request to save '${fileContent}'. Template experiments cannot be modified`;
   }

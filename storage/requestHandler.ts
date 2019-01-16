@@ -23,6 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
+import { File } from './BaseStorage';
 import CustomModelService from './CustomModelsService';
 import * as ExperimentCloner from './ExperimentCloner';
 
@@ -118,7 +119,7 @@ ${ex.stack}`);
     return id;
   }
 
-  listFiles(parentDir, token) {
+  listFiles(parentDir: string, token: string): Promise<File[]> {
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
