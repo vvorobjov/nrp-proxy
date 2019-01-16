@@ -127,16 +127,15 @@ function updateExperimentList() {
 }
 
 function getServersStatus() {
-  const serversStatus = [] as any[];
-  for (const key in healthStatus) {
-    serversStatus.push({
-      server: key,
-      health: healthStatus[key],
+  return Promise.resolve(
+    availableServers.map((server: any) => ({
+      server: server.id,
+      api: server.gzweb['nrp-services'],
+      health: healthStatus[server.id],
       runningSimulation:
-        simulationList[key] && simulationList[key].runningSimulation
-    });
-  }
-  return q.resolve(serversStatus);
+        simulationList[server.id] && simulationList[server.id].runningSimulation
+    }))
+  );
 }
 
 function getServer(serverId) {
@@ -144,7 +143,7 @@ function getServer(serverId) {
     return q.resolve(configuration.servers[serverId]);
 
   console.error('Wrong Server ID');
-  return q.reject('\'serverId\' not found\n');
+  return q.reject(`'serverId' not found\n`);
 }
 
 function getJoinableServers(experimentId) {
