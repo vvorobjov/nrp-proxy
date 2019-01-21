@@ -95,6 +95,10 @@
     ]
   },
   "lint-staged": {
+    "*.{js,json}": [
+        "node_modules/prettier/bin/prettier.js --write",
+        "git add"
+    ],
     "*.ts": [
       "./node_modules/tslint/bin/tslint --fix",
       "git add"
