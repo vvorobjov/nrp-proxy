@@ -35,7 +35,7 @@ const fs = require('fs'),
 let glob = require('glob');
 
 abstract class ModelLoader {
-  private models = [];
+  protected models = [];
 
   get modelList() {
     return this.models;
@@ -127,7 +127,7 @@ abstract class XmlConfigModelLoader extends ModelLoader {
   }
 
   parseFile(file) {
-    const props2read = ['name', 'description', 'thumbnail', 'maturity'];
+    const props2read = ['name', 'description', 'thumbnail', 'maturity', 'sdf'];
 
     const loadThumbnail = (model, directory) => {
       if (!model.thumbnail) return model;
@@ -152,6 +152,11 @@ abstract class XmlConfigModelLoader extends ModelLoader {
           ])
         );
         if (mapped.maturity !== 'production') mapped.maturity = 'development';
+        mapped.sdf =
+          typeof json.model.sdf === 'object'
+            ? json.model.sdf[0]._
+            : mapped.sdf;
+        if (typeof mapped.sdf === 'undefined') mapped.sdf = null;
         return mapped;
       })
       .then(model => loadThumbnail(model, path.dirname(file)))
@@ -162,6 +167,33 @@ abstract class XmlConfigModelLoader extends ModelLoader {
 class RobotsModelLoader extends XmlConfigModelLoader {
   get modelType() {
     return 'robots';
+  }
+
+  loadModels(modelsPath) {
+    const loadModel = f =>
+      this.parseFile(f).then(m => {
+        if (m) {
+          m.path = path.relative(modelsPath, f);
+          m.path = m.path.replace(this.modelType + path.sep, ''); // flattened path
+          m.id = m.path.split(path.sep)[0];
+        }
+        return m;
+      });
+
+    return (this.models = q.denodeify(glob)(
+      path.join(modelsPath, this.filePattern)
+    )
+      .then(files =>
+        q.all(
+          _(files)
+            .map(_.bind(loadModel, this))
+            .value()
+        )
+      )
+      .then(models => models.filter(m => !!m))
+      .catch(err =>
+        console.error(`Failed to load ${this.modelType}. Error: ${err}`)
+      ));
   }
 }
 

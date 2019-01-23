@@ -49,6 +49,7 @@ describe('CustomModelsService', () => {
       .logThumbnail(testZip, 'basename')
       .should.eventually.equal('data:image/png;base64,test');
   });
+
   it('should extract file from Zip', () => {
     customModelsService.logConfig = function() {
       return q.when({ name: 'config', description: 'description' });
@@ -62,12 +63,30 @@ describe('CustomModelsService', () => {
     customModelsService.getZipBasename = function() {
       return q.when('basename');
     };
+    customModelsService.extractModelMetadataFromZip = function() {
+      return q.when({
+        relPath: 'modelID/myfile.zip',
+        modelConfig: {
+          model: {
+            sdf: [
+              {
+                _: 'model.sdf'
+              }
+            ]
+          }
+        }
+      });
+    };
+
     var expectedResult = {
       name: 'config',
       description: 'description',
       thumbnail: 'thumbnail',
-      path: 'filePath',
-      fileName: 'fileName'
+      path: 'modelID/model.config',
+      fileName: 'fileName',
+      zipURI: 'filePath',
+      id: 'modelID',
+      sdf: 'model.sdf'
     };
 
     return customModelsService

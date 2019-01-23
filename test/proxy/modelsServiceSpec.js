@@ -42,9 +42,7 @@ describe('ModelsService', () => {
       'robots',
       'lauron_model'
     );
-    robotconfig.should.contain(
-      '/test/data/models/robots/lauron_model/model.config'
-    );
+    robotconfig.should.contain('/test/data/models/lauron_model/model.config');
   });
 
   it(`should throw if model not found`, async () => {

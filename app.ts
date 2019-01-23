@@ -390,6 +390,13 @@ app.post('/storage/custommodels/:modelType/:modelName', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.put('/storage/custommodel/:modelPath', (req, res) => {
+  storageRequestHandler
+    .unzipCustomModel(req.params.modelPath, getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
 app.get('/storage/custommodel/:modelPath', (req, res) => {
   storageRequestHandler
     .getCustomModel(req.params.modelPath, getAuthToken(req))
@@ -466,18 +473,18 @@ app.post('/storage/:experiment/*', (req, res) => {
 
   (req.query.type === 'folder'
     ? storageRequestHandler.createFolder(
-        req.params['0'],
-        req.params.experiment,
-        getAuthToken(req)
-      )
+      req.params['0'],
+      req.params.experiment,
+      getAuthToken(req)
+    )
     : storageRequestHandler.createOrUpdate(
-        req.params['0'],
-        req.body,
-        req.get('content-type'),
-        req.params.experiment,
-        getAuthToken(req),
-        req.query.append
-      )
+      req.params['0'],
+      req.body,
+      req.get('content-type'),
+      req.params.experiment,
+      getAuthToken(req),
+      req.query.append
+    )
   )
     .then(r => res.send(r || ''))
     .catch(_.partial(handleError, res));
