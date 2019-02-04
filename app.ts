@@ -678,7 +678,6 @@ app.post('/activity_log/:activity', async (req, res) => {
       );
       logData.user = userInfo.displayName;
     }
-
     const clientIP = getReqIp(req);
     const ipdata = await iplocation(clientIP);
     const r = await activityLogger.log(req.params.activity, {
@@ -701,8 +700,8 @@ app.post('/checkupdate', async (req, res) => {
 
   activityLogger.log('check_update', {
     ...req.body,
-    city: ipdata.city,
-    country: ipdata.country
+    city: String(ipdata.city),
+    country: String(ipdata.country)
   });
 
   res.send({ version });
