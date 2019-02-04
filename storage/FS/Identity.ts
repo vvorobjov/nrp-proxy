@@ -63,9 +63,8 @@ export class Identity extends BaseIdentity {
   }
 
   getUserInfo(user, token) {
-    let findCondition, userId;
-    if (user === 'me' || user === 'default-owner') {
-      userId = 'default-owner';
+    let findCondition;
+    if (user === 'me') {
       findCondition = { token };
     } else findCondition = { user };
 
@@ -76,7 +75,7 @@ export class Identity extends BaseIdentity {
           res || q.reject({ code: 404, msg: 'getUserInfo: user id not found' })
       )
       .then(res => ({
-        id: userId || res.user,
+        id: res.user,
         displayName: res.user
       }));
   }

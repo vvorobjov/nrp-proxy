@@ -126,16 +126,14 @@ function updateExperimentList() {
     );
 }
 
-function getServersStatus() {
-  return Promise.resolve(
-    availableServers.map((server: any) => ({
-      server: server.id,
-      api: server.gzweb['nrp-services'],
-      health: healthStatus[server.id],
-      runningSimulation:
-        simulationList[server.id] && simulationList[server.id].runningSimulation
-    }))
-  );
+async function getServersStatus() {
+  return _.map(configuration.servers, (server: any) => ({
+    server: server.id,
+    api: server.gzweb['nrp-services'],
+    health: healthStatus[server.id],
+    runningSimulation:
+      simulationList[server.id] && simulationList[server.id].runningSimulation
+  }));
 }
 
 function getServer(serverId) {

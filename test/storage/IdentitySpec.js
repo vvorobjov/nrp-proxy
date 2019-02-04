@@ -28,7 +28,7 @@ describe('FSidentity', () => {
 
   it(`should return self user info`, () => {
     return identity.getUserInfo('me', fakeToken).should.eventually.deep.equal({
-      id: 'default-owner',
+      id: 'nrpuser',
       displayName: 'nrpuser'
     });
   });
