@@ -99,6 +99,7 @@ abstract class BaseExperimentService {
     const maturity = getExDProp(ExD.maturity);
     const config = {
       timeout: Number(getExDProp(ExD.timeout)) || 600,
+      timeoutType: ExD.timeout && ExD.timeout._time === 'simulation' ? 'simulation' : 'real',
       name: getExDProp(ExD.name),
       thumbnail: getExDProp(ExD.thumbnail),
       description: getExDProp(ExD.description),
