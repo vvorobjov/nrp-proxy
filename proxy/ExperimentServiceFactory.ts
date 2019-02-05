@@ -40,7 +40,7 @@ export default class ExperimentServiceFactory {
     private storageRequestHandler,
     private config,
     private proxyRequestHandler
-  ) {}
+  ) { }
 
   createExperimentService(experimentId, contextId, template?) {
     if (template) {
@@ -68,7 +68,7 @@ const FILE_TYPE = {
 };
 
 abstract class BaseExperimentService {
-  constructor(protected experimentId, protected contextId) {}
+  constructor(protected experimentId, protected contextId) { }
 
   async getExc() {
     const excFilename = await this.getExcFileName();
@@ -218,7 +218,7 @@ abstract class BaseExperimentService {
         if (!model._robotId) {
           console.error(
             'Multiple bodyModels has been defined with same or no names.' +
-              'Please check bibi config file.'
+            'Please check bibi config file.'
           );
         }
         robots.push(model._robotId);
@@ -253,38 +253,66 @@ abstract class BaseExperimentService {
     });
   }
 
-  async setBrain(brain, populations) {
+  async setBrain(brain, populations, removePopulations = false, newBrain?) {
     const [bibiFile, bibiFileName] = await this.getBibi();
     const bibi = bibiFile.bibi;
-    const brainModelFile = bibi.brainModel.file.toString();
+    let brainModelFile;
+    if (bibi.brainModel) {
+      brainModelFile = bibi.brainModel.file.toString();
 
-    if (populations.length > 0)
-      bibi.brainModel.populations = populations.map(pop => {
-        if (pop.list) {
-          return {
-            _population: pop.name,
-            __prefix: bibi.brainModel.__prefix,
-            '_xsi:type':
-              (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
-              'List',
-            element: pop.list.map(nb => ({
+      if (populations.length > 0)
+        bibi.brainModel.populations = populations.map(pop => {
+          if (pop.list) {
+            return {
+              _population: pop.name,
               __prefix: bibi.brainModel.__prefix,
-              __text: `${nb}`
-            }))
-          };
-        } else {
-          return {
-            _population: pop.name,
-            _from: pop.from,
-            _step: pop.step,
-            _to: pop.to,
-            __prefix: bibi.brainModel.__prefix,
-            '_xsi:type':
-              (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
-              'Range'
-          };
+              '_xsi:type':
+                (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
+                'List',
+              element: pop.list.map(nb => ({
+                __prefix: bibi.brainModel.__prefix,
+                __text: `${nb}`
+              }))
+            };
+          } else {
+            return {
+              _population: pop.name,
+              _from: pop.from,
+              _step: pop.step,
+              _to: pop.to,
+              __prefix: bibi.brainModel.__prefix,
+              '_xsi:type':
+                (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
+                'Range'
+            };
+          }
+        });
+
+      if (removePopulations)
+        delete bibiFile.bibi.brainModel.populations;
+      if (newBrain) {
+        bibiFile.bibi.brainModel.file.__text = newBrain;
+        brainModelFile = newBrain;
+      }
+    } else {
+      bibiFile.bibi.__prefix = 'ns1';
+      bibiFile.bibi['_xmlns:ns1'] = bibiFile.bibi._xmlns;
+      delete bibiFile.bibi._xmlns;
+      bibiFile.bibi.brainModel = {
+        __prefix: 'ns1',
+        file: {
+          __prefix: 'ns1',
+          __text: undefined
         }
-      });
+      };
+      if (newBrain) {
+        brainModelFile = newBrain;
+        bibiFile.bibi.brainModel.file.__text = newBrain;
+      } else {
+        brainModelFile = 'brain_script.py';
+        bibiFile.bibi.brainModel.file.__text = brainModelFile;
+      }
+    }
 
     return Promise.all([
       this.saveFile(brainModelFile, brain),

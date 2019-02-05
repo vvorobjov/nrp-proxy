@@ -121,6 +121,19 @@ xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_c
   <bodyModel>husky_model/model.sdf</bodyModel>
   <transferFunction xsi:type="PythonTransferFunction" src="csv_robot_position.py"/>
 </bibi>`;
+var mockedBibiBody2 = `
+<?xml version="1.0" encoding="UTF-8"?>
+<bibi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns="http://schemas.humanbrainproject.eu/SP10/2014/BIBI"
+xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_configuration.xsd">
+  <brainModel>
+    <ns1:file>brain_model/braitenberg.py</ns1:file>
+    <populations population="sensors" xsi:type="Range" from="0" to="5"/>
+    <populations population="actors" xsi:type="Range" from="5" to="8"/>
+  </brainModel>
+  <bodyModel>husky_model/model.sdf</bodyModel>
+  <transferFunction xsi:type="PythonTransferFunction" src="csv_robot_position.py"/>
+</bibi>`;
 var expectedBibiConfObject = {
   bibi: {
     _xmlns: 'http://schemas.humanbrainproject.eu/SP10/2014/BIBI',
@@ -259,5 +272,44 @@ describe('ExperimentServiceFactory', function() {
       { uuid: '1234%2Fcsv_records_1%2Fcsvfile' }
     ]);
     return csvFiles;
+  });
+
+  it('.setBrain() with an existing should set brain in the storage', async () => {
+    sinon
+      .stub(rh, 'getFile')
+      .returns(Promise.resolve({ body: mockedBibiBody2 }));
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    sinon
+      .stub(es, 'getExc')
+      .returns(
+        Promise.resolve([expectedExcConfObject, 'experiment_configuration.exc'])
+      );
+    sinon.stub(es, 'saveFile').returns(Promise.resolve());
+    return es
+      .setBrain('testBrain', [{ list: ['test'] }], true, 'newBrain')
+      .should.eventually.deep.equal({});
+  });
+
+  it('.setBrain() without an existing should set brain in the storage', async () => {
+    var mockedBibiWithoutBrain = `
+<?xml version="1.0" encoding="UTF-8"?>
+<bibi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns="http://schemas.humanbrainproject.eu/SP10/2014/BIBI"
+xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_configuration.xsd"/>`;
+    sinon
+      .stub(rh, 'getFile')
+      .returns(Promise.resolve({ body: mockedBibiWithoutBrain }));
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    sinon
+      .stub(es, 'getExc')
+      .returns(
+        Promise.resolve([expectedExcConfObject, 'experiment_configuration.exc'])
+      );
+    sinon.stub(es, 'saveFile').returns(Promise.resolve());
+    return es
+      .setBrain('testBrain', [{ list: ['test'] }], true, 'newBrain')
+      .should.eventually.deep.equal({});
   });
 });

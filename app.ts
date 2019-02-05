@@ -538,7 +538,7 @@ app.get('/experiment/:experiment/brain', async (req, res) => {
 app.put('/experiment/:experiment/brain', async (req, res) => {
   experimentServiceFactory
     .createExperimentService(req.params.experiment, getAuthToken(req))
-    .setBrain(req.body.brain, req.body.populations)
+    .setBrain(req.body.brain, req.body.populations, req.body.removePopulations, req.body.newBrain)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });

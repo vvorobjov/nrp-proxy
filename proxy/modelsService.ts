@@ -87,34 +87,41 @@ class BrainsModelLoader extends ModelLoader {
 
   parseFileContent(fileContent) {
     const firstComment = fileContent.match(/^"""([^"]*)"""/m);
-    return firstComment && firstComment[1].trim();
+    return { docString: firstComment && firstComment[1].trim(), fileContent};
   }
 
   parseFile(file) {
     return q.denodeify(fs.readFile)(file, 'utf8')
       .then(fileContent => this.parseFileContent(fileContent))
-      .then(docString => {
-        const name = path.basename(file, path.extname(file));
-        const maturityDocString = BrainsModelLoader.maturity_regexp.exec(
-          docString
-        );
-
-        let description = docString,
-          maturity = 'development';
+      .then(async parsedFile => {
+        const name = path.basename(file, path.extname(file)),
+        maturityDocString = BrainsModelLoader.maturity_regexp.exec(parsedFile.docString);
+        let description = parsedFile.docString,
+        maturity = 'development';
 
         if (maturityDocString) {
           // doc string contains a maturity level, split it into adequate fields
           if (maturityDocString[1] === 'production') maturity = 'production';
-          description = docString.replace(
+          description = parsedFile.docString.replace(
             BrainsModelLoader.maturity_regexp,
             ''
           );
         }
 
+        let thumbnail;
+        try {
+          thumbnail = await q.denodeify(base64.encode)(path.resolve(__dirname, '../img/brain.png'))
+            .then(b64 => 'data:image;base64,' + b64);
+        } catch (err) {
+          thumbnail = undefined;
+        }
+
         return {
           name,
           description,
-          maturity
+          maturity,
+          thumbnail,
+          script: parsedFile.fileContent
         };
       })
       .catch(err => console.error(`Failed to read  ${file}. Error: ${err}`));

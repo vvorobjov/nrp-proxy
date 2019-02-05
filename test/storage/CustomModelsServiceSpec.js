@@ -5,7 +5,10 @@ const chai = require('chai'),
   q = require('q');
 let CustomModelsService, customModelsService;
 let fakeJSZip = {
-  loadAsync: () => q.when('test')
+  loadAsync: () =>
+    q.when({
+      file: () => 'data'
+    })
 };
 
 CustomModelsService = rewire('../../storage/CustomModelsService');
@@ -50,9 +53,13 @@ describe('CustomModelsService', () => {
       .should.eventually.equal('data:image/png;base64,test');
   });
 
-  it('should extract file from Zip', () => {
+  it('should extract metadata from Zip', () => {
     customModelsService.logConfig = function() {
-      return q.when({ name: 'config', description: 'description' });
+      return q.when({
+        name: 'config',
+        description: 'description',
+        brain: undefined
+      });
     };
     customModelsService.logThumbnail = function() {
       return q.when('thumbnail');
@@ -86,11 +93,26 @@ describe('CustomModelsService', () => {
       fileName: 'fileName',
       zipURI: 'filePath',
       id: 'modelID',
-      sdf: 'model.sdf'
+      sdf: 'model.sdf',
+      script: undefined
     };
 
     return customModelsService
       .getZipModelMetaData('filePath', 'Test.zip', 'fileName')
       .should.eventually.deep.equal(expectedResult);
+  });
+
+  it('should extract file from Zip', () => {
+    customModelsService.getZipBasename = function() {
+      return 'basename';
+    };
+    // Interestingly enough , mocking the JSzip async function is virtually impossible
+    // since async is now a reserved keyword in the new NodeJS framework, and thus
+    // is treated as a keyword and not as an object property when I try to mock it
+    // Best we can do for this test is check that the function fails.
+    return assert.isRejected(
+      customModelsService.extractFileFromZip('fileContent', 'fileName'),
+      'modelData.async is not a function'
+    );
   });
 });
