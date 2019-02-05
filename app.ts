@@ -90,6 +90,29 @@ const isAdmin = req => {
     .then(groups => groups.some(g => g.name === 'hbp-sp10-administrators'));
 };
 
+const handleError = (res, err) => {
+  const errType = Object.prototype.toString.call(err).slice(8, -1);
+
+  if (errType === 'String' || errType === 'Error' || !err.code) {
+    if (errType === 'Error') {
+      console.error('[ERROR] ' + err + '\n' + err.stack);
+      err = err.message;
+    } else console.error('[ERROR] ' + err);
+    res.status(500).send(err);
+  } else {
+    const errMsg =
+      err.code === 403
+        ? 'Authentication error'
+        : err.msg ? err.msg : `code: ${err.code}`;
+
+    if (err.code !== 204) {
+      // 204= file not found
+      console.error(`[ERROR] ${errMsg}`);
+    }
+    res.status(err.code).send(errMsg);
+  }
+};
+
 app.post(/^\/admin\//, checkAdminRights);
 
 app.get('/admin/status', (_req, res, next) => {
@@ -118,6 +141,13 @@ app.post('/admin/restart/:server', (req, res, next) =>
     .restartServer(req.params.server)
     .then(r => res.send(r))
     .catch(next)
+);
+
+app.post('/admin/backendlogs/:server', (req, res, next) =>
+  adminService
+    .retrieveServerLogs(req.params.server)
+    .then(r => res.sendFile(r))
+    .catch(_.partial(handleError, res))
 );
 
 app.get('/experimentImage/:experiment', (req, res, next) => {
@@ -181,29 +211,6 @@ app.get('/models/:modelType/:modelId/config', (req, res, next) => {
 app.use(bodyParser.json({ limit: '200mb' }));
 app.use(bodyParser.raw({ limit: '200mb' }));
 app.use(bodyParser.text({ type: () => true, limit: '200mb' }));
-
-const handleError = (res, err) => {
-  const errType = Object.prototype.toString.call(err).slice(8, -1);
-
-  if (errType === 'String' || errType === 'Error' || !err.code) {
-    if (errType === 'Error') {
-      console.error('[ERROR] ' + err + '\n' + err.stack);
-      err = err.message;
-    } else console.error('[ERROR] ' + err);
-    res.status(500).send(err);
-  } else {
-    const errMsg =
-      err.code === 403
-        ? 'Authentication error'
-        : err.msg ? err.msg : `code: ${err.code}`;
-
-    if (err.code !== 204) {
-      // 204= file not found
-      console.error(`[ERROR] ${errMsg}`);
-    }
-    res.status(err.code).send(errMsg);
-  }
-};
 
 app.post('/authentication/authenticate', (req, res) => {
   storageRequestHandler

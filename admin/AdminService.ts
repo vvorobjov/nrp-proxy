@@ -1,10 +1,10 @@
+import { spawn } from 'child_process';
+import fs from 'fs';
+import q from 'q';
 import configurationManager from '../utils/configurationManager';
 
-const q = require('q'),
-  { spawn } = require('child_process');
-
 export default class AdminService {
-  private serversRestarting = new Set();
+  private busyServers = new Set();
 
   constructor(private config, private proxyRequestHandler) {}
 
@@ -22,24 +22,45 @@ export default class AdminService {
   async getServersStatus() {
     const serversStatus = await this.proxyRequestHandler.getServersStatus();
     for (const serverStatus of serversStatus)
-      serverStatus.restarting = this.serversRestarting.has(serverStatus.server);
+      serverStatus.busy = this.busyServers.has(serverStatus.server);
 
     return serversStatus;
   }
 
-  restartServer(server: string): Promise<any> {
-    if (this.serversRestarting.has(server)) return q.reject('Server');
-    this.serversRestarting.add(server);
+  restartServer(server: string): Promise<string> {
+    return this.executeScript('restart-backend', server);
+  }
+
+  retrieveServerLogs(server: string): Promise<string> {
+    const targetFileName = `/tmp/backend_log_file${server}_${Date.now()}.tar.gz`;
+    return this.executeScript(
+      'collect-backend-logs',
+      server,
+      targetFileName
+    ).then(() => targetFileName);
+  }
+
+  private executeScript(scriptName, server, ...args): Promise<string> {
+    if (!this.config.backendScripts || !this.config.backendScripts[scriptName])
+      return q.reject(`Could not find backend script ${scriptName}`);
+
+    const scriptFile = configurationManager.resolveReplaceEnvVariables(
+      this.config.backendScripts[scriptName]
+    );
+
+    if (this.busyServers.has(server))
+      return q.reject('Server is already processing a request');
+    this.busyServers.add(server);
 
     return q
       .Promise((resolve, reject) => {
-        const RESTART_CMD = this.config['restart-backend-cmd'];
+        console.log(`Executing script ${scriptFile} on ${server}`);
 
-        console.log(`Restarting ${server}`);
-
-        const prc = spawn(RESTART_CMD, [server], { detached: true });
-        let stdout, stderr;
-        stdout = stderr = '';
+        const prc = spawn(scriptFile, [server, ...args], {
+          detached: true
+        });
+        let stdout = '';
+        let stderr = '';
 
         prc.stdout.on('data', data => (stdout += data));
         prc.stderr.on('data', data => (stderr += data));
@@ -50,11 +71,10 @@ export default class AdminService {
         prc.on('error', err => reject(err));
       })
       .catch(err => {
-        console.error(`Failed to restart ${server}:\n${err}`);
-        throw err;
+        console.error(`Failed to execute script ${scriptFile} on ${server}:
+${err}`);
+        return err;
       })
-      .finally(() => {
-        this.serversRestarting.delete(server);
-      });
+      .finally(() => this.busyServers.delete(server));
   }
 }

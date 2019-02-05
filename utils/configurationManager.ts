@@ -40,12 +40,11 @@ const initialize = () => {
 
 const PATH_CONFIG_PROPERTIES = [
   'modelsPath',
-  'experimentsPath',
-  'restart-backend-cmd'
+  'experimentsPath'
 ];
 
-const resolveReplaceEnvVariables = path => {
-  return path.replace(/\$([A-Za-z]*)/g, (_m, v) => process.env[v]);
+const resolveReplaceEnvVariables = (str: string) => {
+  return str.replace(/\$([A-Za-z]*)/g, (_m, v) => process.env[v] || '');
 };
 
 const loadConfigFile = () => {
@@ -101,5 +100,6 @@ export default {
   loadConfigFile,
   configuration: configuration.promise,
   getState,
-  setState
+  setState,
+  resolveReplaceEnvVariables
 };
