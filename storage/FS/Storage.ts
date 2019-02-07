@@ -125,7 +125,7 @@ export class Storage extends BaseStorage {
     return DB.instance.models
       .findOne({ fileName: modelPath.uuid, token: userId })
       .then(existingExp => {
-        if (!existingExp) return q.reject('Model does not exists');
+        if (!existingExp) return q.reject(`The model: ${modelPath.uuid} does not exist in the Models database.`);
         return q
           .resolve(path.join(USER_DATA_FOLDER, modelPath.uuid))
           .then(relFolderName => this.calculateFilePath('', relFolderName))

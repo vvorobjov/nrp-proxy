@@ -165,7 +165,9 @@ describe('FSStorage', () => {
       .returns(Promise.resolve(null));
     return fsStorage
       .getCustomModel({ uuid: 'robots/husky_model.zip' }, fakeToken, 'admin')
-      .should.be.eventually.rejectedWith('Model does not exists');
+      .should.be.eventually.rejectedWith(
+        'The model: robots/husky_model.zip does not exist in the Models database.'
+      );
   });
 
   it(`should have return empty if there is an error in list models`, () => {

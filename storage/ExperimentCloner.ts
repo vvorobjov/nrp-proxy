@@ -418,8 +418,9 @@ export class NewExperimentCloner extends ExperimentCloner {
   constructor(storage, config, protected expModelsPaths, private templateExc) {
     super(storage, config);
 
-    console.info('this.config.experimentsPath' + this.config.experimentsPath);
-    console.info('this.templateExc' + this.templateExc);
+    console.info('configuring NewExperimentCloner');
+    console.info('this.config.experimentsPath: ' + this.config.experimentsPath);
+    console.info('this.templateExc: ' + this.templateExc);
 
     this.newExpConfigurationPath = path.join(
       this.config.experimentsPath,
