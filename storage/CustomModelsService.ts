@@ -96,7 +96,7 @@ export default class CustomModelsService {
             name: config.name,
             description: config.description,
             thumbnail: thumbnail ? thumbnail : defaultThumbnail,
-            zipURI: encodeURIComponent(filePath), // escape slashes
+            path: encodeURIComponent(filePath), // escape slashes
             fileName,
             script: config.brain ? await zip.file(path.join(basename, config.brain)).async('text').then(data => data) : undefined
           }))
@@ -105,7 +105,7 @@ export default class CustomModelsService {
               const metadata = await this.extractModelMetadataFromZip(fileContent);
               const modelFolder = metadata.relPath.split('/')[0];
               model.sdf = metadata.modelConfig.model.sdf[0]._;
-              model.path = modelFolder + '/model.config';
+              model.configPath = modelFolder + '/model.config';
               model.id = modelFolder;
             }
             return model;

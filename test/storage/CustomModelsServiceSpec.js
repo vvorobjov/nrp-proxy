@@ -89,9 +89,9 @@ describe('CustomModelsService', () => {
       name: 'config',
       description: 'description',
       thumbnail: 'thumbnail',
-      path: 'modelID/model.config',
+      configPath: 'modelID/model.config',
       fileName: 'fileName',
-      zipURI: 'filePath',
+      path: 'filePath',
       id: 'modelID',
       sdf: 'model.sdf',
       script: undefined
