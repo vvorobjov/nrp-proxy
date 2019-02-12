@@ -23,13 +23,15 @@
  * ---LICENSE-END**/
 'use strict';
 
-const q = require('q');
+const q = require('q'),
+  URL = require('url');
 
 // tslint:disable: prefer-const
 let request = q.denodeify(require('request')),
   fsReadFile = q.denodeify(require('fs').readFile);
 // tslint:enable: prefer-const
 let configuration;
+const proxyRequestHandler = require('../proxy/requestHandler').default;
 
 function initialize(config) {
   if (!config['daint-cscs']) {
@@ -37,6 +39,20 @@ function initialize(config) {
   } else {
     configuration = config['daint-cscs'];
   }
+}
+
+async function getIPAndPort(server?) {
+  let serverConfig;
+  if (!server) {
+    const servers = await proxyRequestHandler.getServersWithNoBackend();
+    if (servers.length === 0)
+      throw new Error('No server available to take this request');
+    serverConfig = servers[0];
+  } else {
+    serverConfig = await proxyRequestHandler.getServer(server);
+  }
+  const url = URL.parse(serverConfig.gzweb['nrp-services']);
+  return [url.hostname, url.port];
 }
 
 function readUpload(authToken, readPath, uploadPath) {
@@ -65,10 +81,10 @@ function uploadFilesForJob(authToken, uploadUrl) {
   ]);
 }
 
-async function setUpJob(authToken) {
+async function setUpJob(authToken, server) {
   try {
     console.log('Submiting job..');
-    const jobUrl = await submitJob(authToken);
+    const jobUrl = await submitJob(authToken, server);
     console.log('Getting job info..');
     const jobInfo = (await getJobStatus(authToken, jobUrl))._links;
     console.log('Uploading files..');
@@ -84,7 +100,10 @@ async function setUpJob(authToken) {
   }
 }
 
-async function submitJob(authToken) {
+async function submitJob(authToken, server) {
+  const serverConfig = await getIPAndPort(server);
+  let tunnelIP = serverConfig[0];
+  const tunnelPort = serverConfig[1];
   const baseUrl = configuration.job_url;
   const headers = getPizDaintHeaders(authToken, 'POST');
   // set UC_PREFER_INTERACTIVE_EXECUTION to 'true' to run on login-nodes
@@ -98,6 +117,14 @@ async function submitJob(authToken) {
     haveClientsStageIn: 'true',
     Environment: { TUNNEL_HOST: '148.187.97.12', TARGET_PORT: '8080' }
   };
+  if (body.Environment.TUNNEL_HOST !== tunnelIP) {
+    console.warn(
+      `You are not using the same IP for the backend as the hardcoded TUNNEL_HOST.
+      Since this feature is in test mode I'm going to change it.`);
+    tunnelIP = body.Environment.TUNNEL_HOST;
+  }
+  body.Environment.TUNNEL_HOST = tunnelIP;
+  body.Environment.TARGET_PORT = tunnelPort;
   const response = (await request(baseUrl, { ...headers, body }))[0];
   checkResponseStatus(baseUrl, response);
   return response.headers.location;

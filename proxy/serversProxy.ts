@@ -152,6 +152,15 @@ async function getExperimentsAndSimulations(configuration) {
     )
     .value();
 
+  // get servers that have no backend running on them
+  const downServers = _(configuration.servers)
+    .filter(
+      (config, serverId) =>
+      !simulations[serverId]
+    )
+    .shuffle()
+    .value();
+
   // build dictionary<expId, server> of joinnable servers
   const joinableServers = {};
   _.forOwn(simulations, ({ runningSimulation }, serverId) => {
@@ -168,8 +177,7 @@ async function getExperimentsAndSimulations(configuration) {
       });
     }
   });
-
-  return [joinableServers, simulations, availableServers, health];
+  return [joinableServers, simulations, availableServers, health, downServers];
 }
 
 export default {

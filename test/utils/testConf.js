@@ -38,7 +38,14 @@ var CTX_ID = 'ctxId',
   EXPERIMENT_ID = 'experimentId',
   BASE_URL = 'http://localhost';
 
-var SERVERS = ['geneva1', 'geneva2', 'geneva3', 'geneva4'];
+var SERVERS = [
+  'geneva1',
+  'geneva2',
+  'geneva3',
+  'geneva4',
+  'geneva5',
+  'geneva6'
+];
 
 var URL = 'http://localhost';
 var CLIENT_ID = 'CLIENT_ID';
@@ -55,7 +62,11 @@ var config = {
   },
   modelsPath: 'modelsPath',
   experimentsPath: 'test',
-  servers: {}
+  servers: {},
+  'daint-cscs': {
+    job_url: 'job_url',
+    job_file_location: 'job_file_location'
+  }
 };
 
 //build server config
@@ -144,6 +155,22 @@ var experimentList = {
           'nrp-services': 'http://localhost/geneva2'
         },
         id: 'geneva2'
+      }
+    ],
+    downServers: [
+      {
+        gzweb: {
+          assets: 'http://localhost/geneva5',
+          'nrp-services': 'http://localhost/geneva5'
+        },
+        id: 'geneva5'
+      },
+      {
+        gzweb: {
+          assets: 'http://localhost/geneva6',
+          'nrp-services': 'http://localhost/geneva6'
+        },
+        id: 'geneva6'
       }
     ],
     configuration: {
@@ -320,7 +347,8 @@ var mockFailedImageResponse = function() {
 
 var consoleMock = {
   log: function() {},
-  error: function() {}
+  error: function() {},
+  warn: function() {}
 };
 
 var mockSuccessfulOidcResponse = function() {

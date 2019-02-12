@@ -42,22 +42,45 @@ describe('serversProxy', function() {
     testConf.mockNonJsonResponses();
     var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
 
-    return exp.should.eventually.deep.equal([
-      {},
-      {},
-      [],
-      _.fromPairs(testConf.SERVERS.map(s => [s, null]))
-    ]);
+    return serversProxy
+      .getExperimentsAndSimulations(testConf.config)
+      .then(function(exp) {
+        expect(exp[0]).to.deep.equal({});
+        expect(exp[1]).to.deep.equal({});
+        expect(exp[2]).to.deep.equal([]);
+        expect(exp[3]).to.deep.equal(
+          _.fromPairs(testConf.SERVERS.map(s => [s, null]))
+        );
+        expect(exp[4]).to.have.members([
+          testConf.config.servers['geneva1'],
+          testConf.config.servers['geneva2'],
+          testConf.config.servers['geneva3'],
+          testConf.config.servers['geneva4'],
+          testConf.config.servers['geneva5'],
+          testConf.config.servers['geneva6']
+        ]);
+      });
   });
 
   it('should NOT fail to return experiments due to a failed response', function() {
     testConf.mockFailedResponses();
-    var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
-    return exp.should.eventually.deep.equal([
-      {},
-      {},
-      [],
-      _.fromPairs(testConf.SERVERS.map(s => [s, null]))
-    ]);
+    return serversProxy
+      .getExperimentsAndSimulations(testConf.config)
+      .then(function(exp) {
+        expect(exp[0]).to.deep.equal({});
+        expect(exp[1]).to.deep.equal({});
+        expect(exp[2]).to.deep.equal([]);
+        expect(exp[3]).to.deep.equal(
+          _.fromPairs(testConf.SERVERS.map(s => [s, null]))
+        );
+        expect(exp[4]).to.have.members([
+          testConf.config.servers['geneva1'],
+          testConf.config.servers['geneva2'],
+          testConf.config.servers['geneva3'],
+          testConf.config.servers['geneva4'],
+          testConf.config.servers['geneva5'],
+          testConf.config.servers['geneva6']
+        ]);
+      });
   });
 });

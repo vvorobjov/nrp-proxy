@@ -30,9 +30,9 @@ describe('requestHandler', function() {
     testConf.mockSuccessfulOidcResponse();
     requestHandler.initialize(testConf.config);
     requestHandlerRewired.__set__({
-      console: testConf.consoleMock,
       configuration: testConf.config
     });
+    //console: testConf.consoleMock,
   });
 
   afterEach(function() {
@@ -95,16 +95,17 @@ describe('requestHandler', function() {
       .should.eventually.deep.equal(myobj);
   });
 
-  it('should return available servers for a given experiment', async () => {
-    revert = requestHandlerRewired.__set__(
-      'experimentList',
-      testConf.experimentList
+  it('should return servers with no running simulation', async () => {
+    let noBackendServers = await requestHandler.getServersWithNoBackend();
+    expect(noBackendServers).to.have.deep.members(
+      testConf.experimentList['experiment1'].downServers
     );
+  });
+
+  it('should return available servers for a given experiment', async () => {
     let availableServers = await requestHandler.getAvailableServers();
-    const sortServers = servers =>
-      [...servers].sort((a, b) => a.id.localeCompare(b.id));
-    expect(sortServers(availableServers)).to.deep.equal(
-      sortServers(testConf.experimentList['experiment1'].availableServers)
+    expect(availableServers).to.have.deep.members(
+      testConf.experimentList['experiment1'].availableServers
     );
   });
 

@@ -41,6 +41,7 @@ let experimentList = {};
 let sharedExperimentsList = {};
 let simulationList = {};
 let availableServers = [];
+let downServers = [];
 let healthStatus = {};
 
 let configuration, modelsService, templateExperimentsService;
@@ -108,10 +109,11 @@ function updateExperimentList() {
     .getToken()
     .then(serversProxy.setToken)
     .then(() => serversProxy.getExperimentsAndSimulations(configuration))
-    .then(([joinableServers, simulations, serversAvailable, _healthStatus]) => {
+    .then(([joinableServers, simulations, serversAvailable, _healthStatus, _downServers]) => {
       simulationList = simulations;
       availableServers = serversAvailable;
       healthStatus = _healthStatus;
+      downServers = _downServers;
       // build experimentList with exp config + joinable servers + available servers
       _.forOwn(experimentList, (exp: any) => {
         exp.joinableServers =
@@ -166,6 +168,10 @@ function getJoinableServers(experimentId) {
 
 function getAvailableServers() {
   return q.resolve(availableServers);
+}
+
+function getServersWithNoBackend() {
+  return q.resolve(downServers);
 }
 
 function getExperiments() {
@@ -232,5 +238,6 @@ export default {
   getJoinableServers,
   filterJoinableExperimentByContext,
   getModels,
-  getModelConfig
+  getModelConfig,
+  getServersWithNoBackend,
 };

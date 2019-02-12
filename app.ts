@@ -193,6 +193,13 @@ app.get('/availableServers', (_req, res, next) => {
     .catch(next);
 });
 
+app.get('/serversWithNoBackend', (_req, res, next) => {
+  proxyRequestHandler
+    .getServersWithNoBackend()
+    .then(r => res.send(r))
+    .catch(next);
+});
+
 app.get('/models/:modelType', (req, res, next) => {
   proxyRequestHandler
     .getModels(req.params.modelType)
@@ -588,7 +595,7 @@ app.get('/experiment/:experiment/csvfiles', async (req, res) => {
 
 app.get('/submitjob', async (req, res) => {
   try {
-    res.send(await pizDaintRequestHandler.setUpJob(getAuthToken(req)));
+    res.send(await pizDaintRequestHandler.setUpJob(getAuthToken(req), req.query.server));
   } catch (err) {
     handleError(res, err);
   }

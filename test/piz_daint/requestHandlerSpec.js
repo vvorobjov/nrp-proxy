@@ -32,14 +32,48 @@ describe('requestHandler', function() {
 
   it('submitJob should get job location after submitting job', function() {
     const resp = [{ statusCode: 200, headers: { location: '/job_location' } }];
+    revert = requestHandlerRewired.__set__('getIPAndPort', () => {
+      return new Promise(function(resolve) {
+        resolve(['serverIP', 'serverPort']);
+      });
+    });
     requestHandlerRewired.__set__('request', () => {
       return new Promise(function(resolve) {
         resolve(resp);
       });
     });
     return requestHandlerRewired.__get__('submitJob')(
-      'fakeToken'
+      'fakeToken',
+      'server'
     ).should.eventually.deep.equal('/job_location');
+  });
+
+  it('getIPAndPort should get IP and port', function() {
+    let promise = new Promise(function(resolve) {
+      resolve({ gzweb: { 'nrp-services': 'http://localhost:9000' } });
+    });
+    let getServer = sinon.stub();
+    getServer.returns(promise);
+    revert = requestHandlerRewired.__set__({
+      'proxyRequestHandler.getServer': getServer
+    });
+    return requestHandlerRewired.__get__('getIPAndPort')(
+      'server'
+    ).should.eventually.deep.equal(['localhost', '9000']);
+  });
+
+  it('getIPAndPort should get IP and port when no server has been selected', function() {
+    let promise = new Promise(function(resolve) {
+      resolve([{ gzweb: { 'nrp-services': 'http://localhost:9000' } }]);
+    });
+    let getBackend = sinon.stub();
+    getBackend.returns(promise);
+    revert = requestHandlerRewired.__set__({
+      'proxyRequestHandler.getServersWithNoBackend': getBackend
+    });
+    return requestHandlerRewired.__get__(
+      'getIPAndPort'
+    )().should.eventually.deep.equal(['localhost', '9000']);
   });
 
   it('setUpJob should set up the job', async function() {
@@ -78,9 +112,11 @@ describe('requestHandler', function() {
       uploadFilesForJob: uploadFilesForJob,
       invokeAction: invokeAction
     });
-    var job_output = await requestHandler.setUpJob('fakeToken');
+    var job_output = await requestHandler.setUpJob('fakeToken', 'localhost');
     expect(job_output).to.equal('job_location');
-    expect(submitJob.firstCall.calledWithExactly('fakeToken')).to.equal(true);
+    expect(
+      submitJob.firstCall.calledWithExactly('fakeToken', 'localhost')
+    ).to.equal(true);
     expect(
       getJobStatus.firstCall.calledWithExactly('fakeToken', 'job_location')
     ).to.equal(true);
