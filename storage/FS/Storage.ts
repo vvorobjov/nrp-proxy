@@ -258,7 +258,7 @@ export class Storage extends BaseStorage {
 
   isDirectory(fileSystemEntry) {
     return fs
-      .lstatSync(path.join(utils.storagePath, fileSystemEntry))
+      .statSync(path.join(utils.storagePath, fileSystemEntry))
       .isDirectory();
   }
 
