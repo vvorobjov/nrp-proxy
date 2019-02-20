@@ -109,17 +109,25 @@ function updateExperimentList() {
     .getToken()
     .then(serversProxy.setToken)
     .then(() => serversProxy.getExperimentsAndSimulations(configuration))
-    .then(([joinableServers, simulations, serversAvailable, _healthStatus, _downServers]) => {
-      simulationList = simulations;
-      availableServers = serversAvailable;
-      healthStatus = _healthStatus;
-      downServers = _downServers;
-      // build experimentList with exp config + joinable servers + available servers
-      _.forOwn(experimentList, (exp: any) => {
-        exp.joinableServers =
-          joinableServers[exp.configuration.experimentConfiguration] || [];
-      });
-    })
+    .then(
+      ([
+        joinableServers,
+        simulations,
+        serversAvailable,
+        _healthStatus,
+        _downServers
+      ]) => {
+        simulationList = simulations;
+        availableServers = serversAvailable;
+        healthStatus = _healthStatus;
+        downServers = _downServers;
+        // build experimentList with exp config + joinable servers + available servers
+        _.forOwn(experimentList, (exp: any) => {
+          exp.joinableServers =
+            joinableServers[exp.configuration.experimentConfiguration] || [];
+        });
+      }
+    )
     .fail(err =>
       console.error('Polling Error. Failed to get experiments: ', err)
     )
@@ -211,7 +219,8 @@ function getSharedExperiments(req) {
     .loadSharedExperiments(req)
     .then(experiments => {
       sharedExperimentsList = _(experiments)
-        .map(exp => [
+        .filter(exp => exp)
+        .map((exp: any) => [
           exp.id,
           {
             configuration: exp,
@@ -239,5 +248,5 @@ export default {
   filterJoinableExperimentByContext,
   getModels,
   getModelConfig,
-  getServersWithNoBackend,
+  getServersWithNoBackend
 };

@@ -42,10 +42,9 @@ describe('requestHandler', function() {
         resolve(resp);
       });
     });
-    return requestHandlerRewired.__get__('submitJob')(
-      'fakeToken',
-      'server'
-    ).should.eventually.deep.equal('/job_location');
+    return requestHandlerRewired
+      .__get__('submitJob')('fakeToken', 'server')
+      .should.eventually.deep.equal('/job_location');
   });
 
   it('getIPAndPort should get IP and port', function() {
@@ -57,9 +56,9 @@ describe('requestHandler', function() {
     revert = requestHandlerRewired.__set__({
       'proxyRequestHandler.getServer': getServer
     });
-    return requestHandlerRewired.__get__('getIPAndPort')(
-      'server'
-    ).should.eventually.deep.equal(['localhost', '9000']);
+    return requestHandlerRewired
+      .__get__('getIPAndPort')('server')
+      .should.eventually.deep.equal(['localhost', '9000']);
   });
 
   it('getIPAndPort should get IP and port when no server has been selected', function() {
@@ -71,9 +70,9 @@ describe('requestHandler', function() {
     revert = requestHandlerRewired.__set__({
       'proxyRequestHandler.getServersWithNoBackend': getBackend
     });
-    return requestHandlerRewired.__get__(
-      'getIPAndPort'
-    )().should.eventually.deep.equal(['localhost', '9000']);
+    return requestHandlerRewired
+      .__get__('getIPAndPort')()
+      .should.eventually.deep.equal(['localhost', '9000']);
   });
 
   it('setUpJob should set up the job', async function() {

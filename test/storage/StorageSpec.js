@@ -365,24 +365,26 @@ describe('FSStorage', () => {
       'dbMock/' + fakeExperiment + '/tmp'
     );
     //create a temp file to be deleted
-    return q.denodeify(fs.writeFile)(tmpFilePath, 'fakeContent').then(() => {
-      //delete the temp file
-      return fsStorage
-        .deleteFile(
-          fakeExperiment + '/tmp',
-          fakeExperiment,
-          fakeToken,
-          fakeUserId
-        )
-        .then(() => {
-          //check if the file was indeed deleted
-          return expect(
-            fsStorage.listFiles(fakeExperiment, fakeToken, fakeUserId)
+    return q
+      .denodeify(fs.writeFile)(tmpFilePath, 'fakeContent')
+      .then(() => {
+        //delete the temp file
+        return fsStorage
+          .deleteFile(
+            fakeExperiment + '/tmp',
+            fakeExperiment,
+            fakeToken,
+            fakeUserId
           )
-            .to.eventually.be.an('array')
-            .that.not.include('tmp');
-        });
-    });
+          .then(() => {
+            //check if the file was indeed deleted
+            return expect(
+              fsStorage.listFiles(fakeExperiment, fakeToken, fakeUserId)
+            )
+              .to.eventually.be.an('array')
+              .that.not.include('tmp');
+          });
+      });
   });
 
   it('should remove a folder from the database if the folder does not exist in the FS', () => {

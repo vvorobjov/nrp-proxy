@@ -69,9 +69,7 @@ describe('requestHandler', function() {
     return requestHandler.getExperiments().should.eventually.deep.equal({});
   });
 
-  it('should return a response indicating that the server was not found', function(
-    done
-  ) {
+  it('should return a response indicating that the server was not found', function(done) {
     requestHandler.getServer('NonExistentServer').catch(function(data) {
       expect(data).to.equal("'serverId' not found\n");
       done();

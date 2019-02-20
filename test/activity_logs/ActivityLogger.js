@@ -51,8 +51,7 @@ describe('ActivityLogger', function() {
 
   it('logFirebase() should create an activity entry', function(done) {
     var al = new ActivityLogger(configFile);
-    al
-      .logFirebase('update', {})
+    al.logFirebase('update', {})
       .then(function() {
         expect(refMock.set.callCount).to.equal(1);
         done();
@@ -62,16 +61,13 @@ describe('ActivityLogger', function() {
       });
   });
 
-  it('log() should log to local file and to Firebase firestore as required by the app configuration', function(
-    done
-  ) {
+  it('log() should log to local file and to Firebase firestore as required by the app configuration', function(done) {
     sinon.stub(ActivityLogger.prototype, 'logLocal').returns(q.resolve());
     sinon.stub(ActivityLogger.prototype, 'logFirebase').returns(q.resolve());
     var al = new ActivityLogger(configFile);
     expect(al.config).to.be.defined;
     expect(al.db).to.be.defined;
-    al
-      .log('update', {})
+    al.log('update', {})
       .then(function() {
         expect(al.logLocal.called).to.equal(true);
         expect(al.logFirebase.called).to.equal(true);
@@ -84,16 +80,13 @@ describe('ActivityLogger', function() {
       });
   });
 
-  it('log() should log to local file and not to Firebase firestore as required by the app configuration', function(
-    done
-  ) {
+  it('log() should log to local file and not to Firebase firestore as required by the app configuration', function(done) {
     sinon.stub(ActivityLogger.prototype, 'logLocal').returns(q.resolve());
     sinon.stub(ActivityLogger.prototype, 'logFirebase').returns(q.resolve());
     var al = new ActivityLogger({ localfile: '/tmp/nrp_activity.log' });
     expect(al.config).to.be.defined;
     expect(al.db).to.be.undefined;
-    al
-      .log('update', {})
+    al.log('update', {})
       .then(function() {
         expect(al.logLocal.called).to.equal(true);
         expect(al.logFirebase.called).to.equal(false);

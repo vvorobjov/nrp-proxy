@@ -29,7 +29,7 @@ import * as ExperimentCloner from './ExperimentCloner';
 
 // test mocked
 // tslint:disable: prefer-const
-let {TemplateExperimentCloner, NewExperimentCloner} = ExperimentCloner,
+let { TemplateExperimentCloner, NewExperimentCloner } = ExperimentCloner,
   GDPR = require('./GDPR').default;
 // tslint:enable: prefer-const
 
@@ -75,12 +75,12 @@ export default class RequestHandler {
         path.join(__dirname, this.config.authentication)
       );
 
-      const {Storage} = await import(path.join(storageBasePath, 'Storage'));
-      const {Authenticator} = await import(path.join(
+      const { Storage } = await import(path.join(storageBasePath, 'Storage'));
+      const { Authenticator } = await import(path.join(
         authenticationBasePath,
         'Authenticator'
       ));
-      const {Identity} = await require(path.join(
+      const { Identity } = await require(path.join(
         authenticationBasePath,
         'Identity'
       ));
@@ -102,7 +102,7 @@ ${ex.stack}`);
   async getGDPRStatus(token) {
     const userId = await this.getUserIdentifier(token);
     const gdpr = await gdprService.getUserAcceptedGDPR(userId);
-    return {gdpr};
+    return { gdpr };
   }
 
   async acceptGDPRStatus(token) {
@@ -159,12 +159,14 @@ ${ex.stack}`);
       );
   }
 
-  createOrUpdate(filename,
-                 fileContent,
-                 contentType,
-                 parentDir,
-                 token,
-                 append = false) {
+  createOrUpdate(
+    filename,
+    fileContent,
+    contentType,
+    parentDir,
+    token,
+    append = false
+  ) {
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
@@ -190,16 +192,21 @@ ${ex.stack}`);
       );
   }
 
-  async listExperiments(token, contextId, options = {filter: undefined}) {
+  async listExperiments(token, contextId, options = { filter: undefined }) {
     const SPECIAL_FOLDERS = new Set(['robots', 'brains', 'environments']);
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
-    const exps = await this.storage.listExperiments(
+    const privateExps = await this.storage.listExperiments(
       token,
       userId,
       contextId,
       options
     );
+    const shared = await this.listExperimentsSharedByUser(token);
+    const exps = [
+      ...privateExps.map(exp => ({ ...exp, owned: true })),
+      ...shared.map(exp => ({ ...exp, owned: false }))
+    ];
     return options.filter
       ? exps.filter(e => e.name === options.filter)
       : exps.filter(e => !SPECIAL_FOLDERS.has(e.name));
@@ -276,11 +283,14 @@ ${ex.stack}`);
   async listCustomModels(customFolder, token, contextId) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
-    const modelsPaths = await this.storage.listCustomModels(customFolder, token, userId, contextId);
+    const modelsPaths = await this.storage.listCustomModels(
+      customFolder,
+      token,
+      userId,
+      contextId
+    );
     const models = await q.all(
-      modelsPaths.map(path =>
-        q.all([path, this.getCustomModel(path, token)])
-      )
+      modelsPaths.map(path => q.all([path, this.getCustomModel(path, token)]))
     );
     const metaData = await q.all(
       models.map(([path, data]) =>
@@ -289,14 +299,15 @@ ${ex.stack}`);
           data,
           path.fileName
         )
-      ));
+      )
+    );
 
     return metaData;
   }
 
   async unzipCustomModel(modelPath, token) {
     const decodedPath = decodeURIComponent(modelPath);
-    const parsedModel = {uuid: decodedPath, fileName: decodedPath};
+    const parsedModel = { uuid: decodedPath, fileName: decodedPath };
     const model = await this.getCustomModel(parsedModel, token);
     await customModelService.extractZip(model);
     return q.resolve();

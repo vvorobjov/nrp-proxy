@@ -16,5 +16,5 @@ pipelines:
           - source $HOME/.nvm/nvm.sh && nvm alias default 8 && nvm use default
           - npm install
           - echo "Checking for un-prettified file"
-          - node_modules/prettier/bin/prettier.js --list-different "{**/,}*.{js,scss}"
+          - node_modules/prettier/bin-prettier.js --list-different "{**/,}*.{js,scss}"
           - npm test

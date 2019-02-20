@@ -222,19 +222,21 @@ describe('Storage request handler', () => {
       'dbMock/' + fakeExperiment + '/tmp'
     );
     //create a temp file to be deleted
-    return q.denodeify(fs.writeFile)(tmpFilePath, 'fakeContent').then(() => {
-      //delete the temp file
-      return storageRequestHandler
-        .deleteFile(fakeExperiment + '/tmp', fakeExperiment, fakeToken)
-        .then(() => {
-          //check if the file was indeed deleted
-          return expect(
-            storageRequestHandler.listFiles(fakeExperiment, fakeToken)
-          )
-            .to.eventually.be.an('array')
-            .that.not.include('tmp');
-        });
-    });
+    return q
+      .denodeify(fs.writeFile)(tmpFilePath, 'fakeContent')
+      .then(() => {
+        //delete the temp file
+        return storageRequestHandler
+          .deleteFile(fakeExperiment + '/tmp', fakeExperiment, fakeToken)
+          .then(() => {
+            //check if the file was indeed deleted
+            return expect(
+              storageRequestHandler.listFiles(fakeExperiment, fakeToken)
+            )
+              .to.eventually.be.an('array')
+              .that.not.include('tmp');
+          });
+      });
   });
 
   it(`should get the list of the users`, () => {
@@ -376,7 +378,8 @@ describe('Storage request handler', () => {
      var storageRequestHandler2 = new StorageRequestHandler(configFile); */
     const expected = {
       uuid: fakeExperiment,
-      name: fakeExperiment
+      name: fakeExperiment,
+      owned: true
     };
     collectionMock.prototype.find = sinon
       .stub()
