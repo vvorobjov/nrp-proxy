@@ -387,13 +387,6 @@ describe('FSStorage', () => {
       });
   });
 
-  it('should remove a folder from the database if the folder does not exist in the FS', () => {
-    var mockExp = { experiment: 'nonExisting' };
-    var folders = ['exp1', 'exp2'];
-    var result = fsStorage.unregisterDeletedExperiments(mockExp, folders);
-    return expect(result).to.equal(false);
-  });
-
   //createOrUpdate
   it(`should create a new file when we call the createOrUpdateFunction`, () => {
     //create a tmp file

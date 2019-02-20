@@ -29,8 +29,7 @@ import BaseStorage from '../BaseStorage';
 const q = require('q'),
   path = require('path'),
   mime = require('mime-types'),
-  USER_DATA_FOLDER = 'USER_DATA',
-  INTERNALS = ['FS_db', USER_DATA_FOLDER];
+  USER_DATA_FOLDER = 'USER_DATA';
 
 // mocked in the tests thus non const
 // tslint:disable: prefer-const
@@ -42,6 +41,7 @@ let DB = require('./DB').default,
 // tslint:enable: prefer-const
 
 export class Storage extends BaseStorage {
+
   userIdHasAccessToPath(userId, filename) {
     const experiment = filename.split('/')[0];
     return DB.instance.experiments
@@ -235,24 +235,13 @@ export class Storage extends BaseStorage {
     );
   }
 
-  listExperiments(token, userId, contextId, options = { all: false }) {
+  async listExperiments(token, userId, contextId, options = { all: false }): Promise<Array<{ uuid: string, name: string }>> {
     if (options.all) {
-      return q.denodeify(fs.readdir)(utils.storagePath).then(res =>
-        res.map(file => ({ uuid: file, name: file }))
-      );
+      const storageContents: string[] = await q.denodeify(fs.readdir)(utils.storagePath);
+      return storageContents.map(file => ({ uuid: file, name: file }));
     } else {
-      return q.denodeify(fs.readdir)(utils.storagePath)
-        .then(folders => this.addNonRegisteredExperiments(folders, userId))
-        .then(folders => {
-          return DB.instance.experiments
-            .find({ token: userId })
-            .then(entries =>
-              entries.filter(e => this.unregisterDeletedExperiments(e, folders))
-            )
-            .then(entries =>
-              entries.map(e => ({ uuid: e.experiment, name: e.experiment }))
-            );
-        });
+      const userExperiments: Array<{ experiment: string }> = await DB.instance.experiments.find({ token: userId });
+      return userExperiments.map(e => ({ uuid: e.experiment, name: e.experiment }));
     }
   }
 
@@ -260,32 +249,6 @@ export class Storage extends BaseStorage {
     return fs
       .statSync(path.join(utils.storagePath, fileSystemEntry))
       .isDirectory();
-  }
-
-  async addNonRegisteredExperiments(folders, userId) {
-    folders = folders.filter(fileSystemEntry =>
-      this.isDirectory(fileSystemEntry)
-    );
-    const folderActions = folders.map(e =>
-      DB.instance.experiments.findOne({ experiment: e }).then(found => {
-        if (found === null && INTERNALS.indexOf(e) === -1) {
-          return DB.instance.experiments.insert({
-            token: userId,
-            experiment: e
-          });
-        }
-      })
-    );
-    await Promise.all(folderActions);
-    return folders;
-  }
-
-  unregisterDeletedExperiments(experimentEntry, folders) {
-    const isDeletedFolder = folders.indexOf(experimentEntry.experiment) === -1;
-    if (isDeletedFolder) {
-      DB.instance.experiments.remove(experimentEntry);
-    }
-    return !isDeletedFolder;
   }
 
   createExperiment(newExperiment, token, userId) {
@@ -389,8 +352,8 @@ export class Storage extends BaseStorage {
       contents.map(item =>
         (item.type === 'folder'
           ? fsExtra.ensureDir(
-              this.calculateFilePath('', path.join(destFolder, item.name))
-            )
+            this.calculateFilePath('', path.join(destFolder, item.name))
+          )
           : q.resolve()
         ).then(() =>
           fsExtra.copy(
