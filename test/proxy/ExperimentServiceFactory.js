@@ -268,8 +268,8 @@ describe('ExperimentServiceFactory', function() {
     const csvFiles = await es.getCSVFiles();
 
     expect(csvFiles).to.eql([
-      { uuid: '1234%2Fcsv_records_2%2Fcsvfile' },
-      { uuid: '1234%2Fcsv_records_1%2Fcsvfile' }
+      { folder: '2', uuid: '1234%2Fcsv_records_2%2Fcsvfile' },
+      { folder: '1', uuid: '1234%2Fcsv_records_1%2Fcsvfile' }
     ]);
     return csvFiles;
   });

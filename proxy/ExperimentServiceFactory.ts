@@ -40,7 +40,7 @@ export default class ExperimentServiceFactory {
     private storageRequestHandler,
     private config,
     private proxyRequestHandler
-  ) { }
+  ) {}
 
   createExperimentService(experimentId, contextId, template?) {
     if (template) {
@@ -68,7 +68,7 @@ const FILE_TYPE = {
 };
 
 abstract class BaseExperimentService {
-  constructor(protected experimentId, protected contextId) { }
+  constructor(protected experimentId, protected contextId) {}
 
   async getExc() {
     const excFilename = await this.getExcFileName();
@@ -99,7 +99,10 @@ abstract class BaseExperimentService {
     const maturity = getExDProp(ExD.maturity);
     const config = {
       timeout: Number(getExDProp(ExD.timeout)) || 600,
-      timeoutType: ExD.timeout && ExD.timeout._time === 'simulation' ? 'simulation' : 'real',
+      timeoutType:
+        ExD.timeout && ExD.timeout._time === 'simulation'
+          ? 'simulation'
+          : 'real',
       name: getExDProp(ExD.name),
       thumbnail: getExDProp(ExD.thumbnail),
       description: getExDProp(ExD.description),
@@ -218,7 +221,7 @@ abstract class BaseExperimentService {
         if (!model._robotId) {
           console.error(
             'Multiple bodyModels has been defined with same or no names.' +
-            'Please check bibi config file.'
+              'Please check bibi config file.'
           );
         }
         robots.push(model._robotId);
@@ -267,8 +270,9 @@ abstract class BaseExperimentService {
               _population: pop.name,
               __prefix: bibi.brainModel.__prefix,
               '_xsi:type':
-                (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
-                'List',
+                (bibi.brainModel.__prefix
+                  ? `${bibi.brainModel.__prefix}:`
+                  : '') + 'List',
               element: pop.list.map(nb => ({
                 __prefix: bibi.brainModel.__prefix,
                 __text: `${nb}`
@@ -282,14 +286,14 @@ abstract class BaseExperimentService {
               _to: pop.to,
               __prefix: bibi.brainModel.__prefix,
               '_xsi:type':
-                (bibi.brainModel.__prefix ? `${bibi.brainModel.__prefix}:` : '') +
-                'Range'
+                (bibi.brainModel.__prefix
+                  ? `${bibi.brainModel.__prefix}:`
+                  : '') + 'Range'
             };
           }
         });
 
-      if (removePopulations)
-        delete bibiFile.bibi.brainModel.populations;
+      if (removePopulations) delete bibiFile.bibi.brainModel.populations;
       if (newBrain) {
         bibiFile.bibi.brainModel.file.__text = newBrain;
         brainModelFile = newBrain;
@@ -373,14 +377,23 @@ abstract class BaseExperimentService {
   }
 
   async getCSVFiles() {
-    const CSV_FOLDER_PREFIX = 'csv_records';
+    const CSV_FOLDER_PREFIX = 'csv_records_';
     const files = await this.listFiles();
     const csvFolders = files
       .filter(f => f.type === 'folder')
       .filter(f => f.name.startsWith(CSV_FOLDER_PREFIX));
 
+    const getRunName = folder =>
+      folder.name.replace(new RegExp(`^${CSV_FOLDER_PREFIX}`), '');
     const csvFolderFiles = await Promise.all(
-      csvFolders.map(folder => this.listFiles(folder.name))
+      csvFolders.map(folder =>
+        this.listFiles(folder.name).then(files =>
+          files.map(file => ({
+            folder: getRunName(folder),
+            ...file
+          }))
+        )
+      )
     );
     const csvFiles = _.flatMap(csvFolderFiles).map(file => ({
       ...file,
@@ -461,8 +474,9 @@ class TemplateExperimentService extends BaseExperimentService {
       path.join(this.config.experimentsPath, this.experimentId)
     );
 
-    const experimentGlob = `${this.experimentFolder}/**/${this
-      .experimentId}.exc`;
+    const experimentGlob = `${this.experimentFolder}/**/${
+      this.experimentId
+    }.exc`;
     const experimentFiles = await glob(experimentGlob);
 
     if (!experimentFiles.length)
