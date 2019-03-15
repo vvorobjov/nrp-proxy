@@ -411,6 +411,13 @@ app.put('/storage/custommodel/:modelPath', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.delete('/storage/custommodel/:modelPath', (req, res) => {
+  storageRequestHandler
+    .deleteCustomModel(req.params.modelPath, getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
 app.get('/storage/custommodel/:modelPath', (req, res) => {
   storageRequestHandler
     .getCustomModel(req.params.modelPath, getAuthToken(req))

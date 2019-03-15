@@ -133,11 +133,15 @@ describe('Storage request handler', () => {
       callback();
     };
 
+    var fakeUnlink = (path, callback) => {
+      callback();
+    };
     RewiredFSStorage.__set__('fs.statSync', fakeStatSync);
     RewiredFSStorage.__set__('fs.mkdir', fakeMkdir);
     RewiredFSStorage.__set__('rmdir', fakeRmdir);
     RewiredFSStorage.__set__('fs.lstatSync', fakeLstatSync);
     RewiredFSStorage.__set__('fs.readdirSync', fakeReadDirSync);
+    RewiredFSStorage.__set__('fs.unlink', fakeUnlink);
     fsStorage = new RewiredFSStorage.Storage();
     RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator');
     RewiredFSAuthenticator.__set__('DB', RewiredDB.default);
@@ -263,13 +267,13 @@ describe('Storage request handler', () => {
         fakeToken,
         'contextId'
       )
-      .then(() => {
-        return storageRequestHandler
+      .then(() =>
+        storageRequestHandler
           .listExperimentsSharedByUser(adminToken)
           .then(folderContents => {
             expect(folderContents).to.deep.equal(expectedResult);
-          });
-      });
+          })
+      );
   });
 
   it(`should succesfully update the shared option of the experiment`, () => {
@@ -346,6 +350,91 @@ describe('Storage request handler', () => {
         'token'
       )
       .then(res => expect(res).to.deep.equal('value'));
+  });
+
+  it(`should fail to find a custom model which is not in the database`, () => {
+    const robot = '/robots/husky.zip';
+    storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
+    storageRequestHandler.authenticator.checkToken = () => q.resolve('nrpuser');
+
+    collectionMock.prototype.findOne = sinon.stub().returns(q.resolve(null));
+
+    return storageRequestHandler
+      .deleteCustomModel(robot, 'userId')
+      .catch(res =>
+        expect(res).to.deep.equal(
+          `The model: ${robot} does not exist in the Models database.`
+        )
+      );
+  });
+
+  it(`should fail to delete a custom model which is not in the FS`, () => {
+    const robot = '/robots/husky.zip';
+    RewiredFSStorage.__set__('fs.unlink', () => q.reject());
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(
+        Promise.resolve({ fileName: robot, token: 'token', type: 'robot' })
+      );
+
+    return storageRequestHandler
+      .deleteCustomModel(robot, 'userId')
+      .catch(res =>
+        expect(res).to.deep.equal(
+          `Could not find the model ${robot} to remove in the user storage.`
+        )
+      );
+  });
+
+  it(`should delete a custom model from the FS even when it fails to remove it from the DB`, () => {
+    const robot = '/robots/husky.zip';
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(
+        Promise.resolve({ fileName: robot, token: 'token', type: 'robot' })
+      );
+
+    collectionMock.prototype.remove = sinon
+      .stub()
+      .returns(Promise.resolve(null));
+
+    return storageRequestHandler
+      .deleteCustomModel(robot, 'userId')
+      .catch(res =>
+        expect(res).to.deep.equal(
+          `Could not delete the model ${robot} from the Models database.`
+        )
+      );
+  });
+
+  it(`should succesfully delete a custom model`, () => {
+    const robot = '/robots/husky.zip';
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(
+        Promise.resolve({ fileName: robot, token: 'token', type: 'robot' })
+      );
+    collectionMock.prototype.remove = sinon
+      .stub()
+      .returns(Promise.resolve({ value: 1 }));
+    return storageRequestHandler
+      .deleteCustomModel(robot, 'userId')
+      .then(res =>
+        expect(res).to.deep.equal(
+          `Succesfully deleted model ${robot} from the user storage.`
+        )
+      );
+  });
+
+  it(`should fail to delete a custom model which is not in the storage`, () => {
+    const robot = '/robots/husky.zip';
+    return storageRequestHandler
+      .deleteCustomModel(robot, 'userId')
+      .catch(res =>
+        expect(res).to.deep.equal(
+          `Could not find the model ${robot} to remove in the user storage.`
+        )
+      );
   });
 
   //deleteFile

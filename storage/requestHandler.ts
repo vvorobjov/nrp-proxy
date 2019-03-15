@@ -244,6 +244,13 @@ ${ex.stack}`);
       .then(userId => this.storage.getCustomModel(modelPath, token, userId));
   }
 
+  async deleteCustomModel(modelPath, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId => this.storage.deleteCustomModel(decodeURIComponent(modelPath), userId));
+  }
+
   async createCustomModel(modelType, token, modelName, modelData, contextId) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);

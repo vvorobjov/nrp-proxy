@@ -133,6 +133,31 @@ export class Storage extends BaseStorage {
       });
   }
 
+  async deleteCustomModel(modelPath, userId): Promise<string> {
+    const modelToDelete: { fileName: string, token: string, type: string } | null =
+      await DB.instance.models.findOne({ fileName: modelPath, token: userId });
+    // if the model is not in the DB (weird) log the problem. At this point we could try to remove it from the FS
+    // but maybe this would be undesired behaviour from the user side
+    if (!modelToDelete) return q.reject(`The model: ${modelPath} does not exist in the Models database.`);
+
+    let deletionResult: number | null;
+    try {
+      // remove the custom model from the FS
+      await q.denodeify(fs.unlink)(this.calculateFilePath('', path.join(USER_DATA_FOLDER, modelPath)));
+      // remove model from DB
+      deletionResult = await DB.instance.models.remove({ fileName: modelPath, token: userId });
+      if (!deletionResult)
+        return q.reject(`Could not delete the model ${modelPath} from the Models database.`);
+    } catch {
+      // even if the model is not in the FS (cause it could have been manually removed)
+      // still try to remove it from the DB
+      await DB.instance.models.remove({ fileName: modelPath, token: userId });
+      // if the FS call failed we log the problem
+      return q.reject(`Could not find the model ${modelPath} to remove in the user storage.`);
+    }
+    return q.resolve(`Succesfully deleted model ${modelPath} from the user storage.`);
+  }
+
   createCustomModel(modelType, modelData, userId, modelName) {
     const newFileName = path.join(modelType, modelName);
     return DB.instance.models
