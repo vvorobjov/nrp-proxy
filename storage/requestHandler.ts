@@ -390,14 +390,14 @@ ${ex.stack}`);
       .then(() => this.storage.listSharedUsersbyExperiment(experimentID));
   }
 
-  async cloneNewExperiment(token, contextId, modelsPaths, defaultName) {
+  async cloneNewExperiment(token, contextId, environmentPath, defaultName) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
 
     return new NewExperimentCloner(
       this.storage,
       this.config,
-      modelsPaths,
+      environmentPath,
       this.newExperimentPath
     ).cloneExperiment(
       token,

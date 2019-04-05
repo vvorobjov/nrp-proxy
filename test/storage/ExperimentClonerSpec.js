@@ -101,12 +101,12 @@ describe('Experiment cloner', () => {
     expect(createExperiment.callCount).to.equal(1);
     // we download the robot model, the env model, the brain
     // plus the .png and the .3ds files plus any tfs if they exist
-    expect(templateDownloadFile.callCount).to.equal(7);
-    expect(fsMock.copy.callCount).to.equal(7);
+    expect(templateDownloadFile.callCount).to.equal(5);
+    expect(fsMock.copy.callCount).to.equal(5);
     // we write the exc and bibi
     expect(fsMock.writeFileSync.callCount).to.equal(2);
     //should read everything
-    expect(fsMock.readFileSync.callCount).to.equal(9);
+    expect(fsMock.readFileSync.callCount).to.equal(7);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
     expect(
@@ -125,18 +125,14 @@ describe('Experiment cloner', () => {
     fsMock.writeFileSync.reset();
     fsMock.readFileSync.reset();
     var revert = ExperimentCloner.__set__('tmp', tmpMock);
-    const mockModelsPaths = {
-        brainPath: { path: 'brains/extended_braitenberg.py', custom: false },
-        environmentPath: {
-          path: 'environments/biologylab_world/model.config',
-          custom: false
-        },
-        robotPath: { path: 'robots/icub_model/model.config', custom: false }
+    const environmentPath = {
+        path: 'environments/biologylab_world/model.config',
+        custom: false
       },
       newCloner = new ExperimentCloner.NewExperimentCloner(
         storageMock,
         config,
-        mockModelsPaths,
+        environmentPath,
         'template_new/TemplateNew.exc'
       );
     var createUniqueExperimentId = sinon.spy(
@@ -156,13 +152,13 @@ describe('Experiment cloner', () => {
     expect(createExperiment.callCount).to.equal(1);
     // we download the robot model, the env model, the brain
     // plus the .png and the .3ds files plus any tfs if they exist
-    expect(downloadFile.callCount).to.equal(5);
-    expect(fsMock.copy.callCount).to.equal(5);
+    expect(downloadFile.callCount).to.equal(3);
+    expect(fsMock.copy.callCount).to.equal(3);
     // for the NewExperimentCloner experiment_configuration.exc and bibi_config are each written twice = 4
     expect(fsMock.writeFileSync.callCount).to.equal(4);
     // we read everything in the tmp dir so we can move it to the storage
     // so everything we downloaded plus the .exc and .bibi
-    expect(fsMock.readFileSync.callCount).to.equal(7);
+    expect(fsMock.readFileSync.callCount).to.equal(5);
 
     expect(createExperiment.firstCall.args[0]).to.equal('template_new_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
@@ -183,21 +179,14 @@ describe('Experiment cloner', () => {
     fsMock.readFileSync.reset();
 
     var revert = ExperimentCloner.__set__('tmp', tmpMock);
-    const mockModelsPaths = {
-        brainPath: {
-          path: 'brains/extended_braitenberg/extended_braitenberg.zip',
-          custom: true
-        },
-        environmentPath: {
-          path: 'environments/biologylab_world/model.zip',
-          custom: true
-        },
-        robotPath: { path: 'robots/icub_model/icub.zip', custom: true }
+    const environmentPath = {
+        path: 'environments/biologylab_world/model.zip',
+        custom: true
       },
       newCloner = new ExperimentCloner.NewExperimentCloner(
         storageMock,
         config,
-        mockModelsPaths,
+        environmentPath,
         'template_new/TemplateNew.exc'
       );
     var createUniqueExperimentId = sinon.spy(
@@ -247,18 +236,14 @@ describe('Experiment cloner', () => {
     };
 
     var revert = ExperimentCloner.__set__('tmp', tmpMock);
-    const mockModelsPaths = {
-        brainPath: { path: 'brains/extended_braitenberg.py', custom: false },
-        environmentPath: {
-          path: 'environments/biologylab_world/model.config',
-          custom: false
-        },
-        robotPath: { path: 'robots/icub_model/model.config', custom: false }
+    const environmentPath = {
+        path: 'environments/biologylab_world/model.config',
+        custom: false
       },
       newCloner = new ExperimentCloner.NewExperimentCloner(
         storageMock,
         config,
-        mockModelsPaths,
+        environmentPath,
         'template_resources/TemplateNew.exc'
       );
     var createUniqueExperimentId = sinon.spy(
@@ -278,13 +263,13 @@ describe('Experiment cloner', () => {
     expect(createExperiment.callCount).to.equal(1);
     // we download the robot model, the env model, the brain
     // plus the .png and the .3ds files plus any tfs if they exist
-    expect(downloadFile.callCount).to.equal(5);
-    expect(fsMock.copy.callCount).to.equal(5);
+    expect(downloadFile.callCount).to.equal(3);
+    expect(fsMock.copy.callCount).to.equal(3);
     // for the NewExperimentCloner experiment_configuration.exc and bibi_config are each written twice = 4
     expect(fsMock.writeFileSync.callCount).to.equal(4);
     // we read everything in the tmp dir so we can move it to the storage
     // so everything we downloaded plus the .exc and .bibi plus anything in resources
-    expect(fsMock.readFileSync.callCount).to.equal(11);
+    expect(fsMock.readFileSync.callCount).to.equal(9);
 
     expect(createExperiment.firstCall.args[0]).to.equal('template_resources_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
