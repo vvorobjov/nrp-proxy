@@ -40,7 +40,7 @@ export default class ExperimentServiceFactory {
     private storageRequestHandler,
     private config,
     private proxyRequestHandler
-  ) {}
+  ) { }
 
   createExperimentService(experimentId, contextId, template?) {
     if (template) {
@@ -68,7 +68,7 @@ const FILE_TYPE = {
 };
 
 abstract class BaseExperimentService {
-  constructor(protected experimentId, protected contextId) {}
+  constructor(protected experimentId, protected contextId) { }
 
   async getExc() {
     const excFilename = await this.getExcFileName();
@@ -175,12 +175,16 @@ abstract class BaseExperimentService {
   async setStateMachines(stateMachines) {
     const [excFile, excFileName] = await this.getExc();
     const exc = excFile.ExD;
+    if (!exc['_xmlns:xsi']) {
+      exc['_xmlns:xsi'] = 'http://www.w3.org/2001/XMLSchema-instance';
+    }
 
     const promises: Array<Promise<any>> = [];
     if (!_.isEmpty(stateMachines))
       exc.experimentControl = {
         __prefix: exc.__prefix,
         stateMachine: _.map(stateMachines, (sm, id) => ({
+          __prefix: exc.__prefix,
           _id: id,
           _src: `${id}.exd`,
           '_xsi:type':
@@ -221,7 +225,7 @@ abstract class BaseExperimentService {
         if (!model._robotId) {
           console.error(
             'Multiple bodyModels has been defined with same or no names.' +
-              'Please check bibi config file.'
+            'Please check bibi config file.'
           );
         }
         robots.push(model._robotId);
@@ -262,7 +266,6 @@ abstract class BaseExperimentService {
     let brainModelFile;
     if (bibi.brainModel) {
       brainModelFile = bibi.brainModel.file.toString();
-
       if (populations.length > 0)
         bibi.brainModel.populations = populations.map(pop => {
           if (pop.list) {
@@ -295,17 +298,20 @@ abstract class BaseExperimentService {
 
       if (removePopulations) delete bibiFile.bibi.brainModel.populations;
       if (newBrain) {
-        bibiFile.bibi.brainModel.file.__text = newBrain;
+        bibiFile.bibi.brainModel = {
+          __prefix: bibi.__prefix,
+          file: {
+            __prefix: bibi.__prefix,
+            __text: newBrain
+          }
+        };
         brainModelFile = newBrain;
       }
     } else {
-      bibiFile.bibi.__prefix = 'ns1';
-      bibiFile.bibi['_xmlns:ns1'] = bibiFile.bibi._xmlns;
-      delete bibiFile.bibi._xmlns;
       bibiFile.bibi.brainModel = {
-        __prefix: 'ns1',
+        __prefix: bibi.__prefix,
         file: {
-          __prefix: 'ns1',
+          __prefix: bibi.__prefix,
           __text: undefined
         }
       };
@@ -347,6 +353,9 @@ abstract class BaseExperimentService {
   async saveTransferFunctions(transferFunctions) {
     const [bibiFile, bibiFileName] = await this.getBibi();
     const bibi = bibiFile.bibi;
+    if (!bibi['_xmlns:xsi']) {
+      bibi['_xmlns:xsi'] = 'http://www.w3.org/2001/XMLSchema-instance';
+    }
 
     const tfs = transferFunctions.map(tfCode => {
       const tfRegexp = /def +([^\\( ]*)/gm.exec(tfCode);
@@ -476,7 +485,7 @@ class TemplateExperimentService extends BaseExperimentService {
 
     const experimentGlob = `${this.experimentFolder}/**/${
       this.experimentId
-    }.exc`;
+      }.exc`;
     const experimentFiles = await glob(experimentGlob);
 
     if (!experimentFiles.length)

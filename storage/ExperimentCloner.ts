@@ -51,7 +51,7 @@ abstract class ExperimentCloner {
   protected experimentFolder?;
   private downloadedFiles: Array<Promise<string>> = [];
 
-  constructor(protected storage, protected config, protected environmentPath?) { }
+  constructor(protected storage, protected config) { }
 
   abstract getBibiFullPath(bibiConfFile, expUUID, token, userId);
 
@@ -241,21 +241,16 @@ abstract class ExperimentCloner {
 
     this.downloadFile(experiment.thumbnail);
 
-    // if the model is zipped we don't need to do all this
-    if (
-      this.environmentPath === undefined ||
-      this.environmentPath.custom === false
-    ) {
-      this.downloadFile(
-        experiment.environmentModel._src,
-        this.config.modelsPath,
-        path.basename(experiment.environmentModel._src)
-      );
+    this.downloadFile(
+      experiment.environmentModel._src,
+      this.config.modelsPath,
+      path.basename(experiment.environmentModel._src)
+    );
 
-      experiment.environmentModel._src = path.basename(
-        experiment.environmentModel._src
-      );
-    }
+    experiment.environmentModel._src = path.basename(
+      experiment.environmentModel._src
+    );
+
     if (ensureArrayProp(experiment, 'configuration'))
       for (const conf of experiment.configuration) this.downloadFile(conf._src);
 
@@ -273,6 +268,20 @@ abstract class ExperimentCloner {
     this.downloadedFiles.push(q.resolve(expFile));
 
     return bibiConf;
+  }
+
+  async copyH5File(pythonModuleName) {
+    // in case we have an h5 file we have to copy it over as well
+    const pathToPythonScript = path.join(__dirname, 'h5FileExtractor.py');
+    try {
+      const h5FileName = (await q.denodeify(exec)(
+        `python ${pathToPythonScript} ${pythonModuleName}`
+      ))[1];
+      const brainModelPath = path.join(this.config.modelsPath, 'brain_model');
+      if (h5FileName) this.downloadFile(h5FileName, brainModelPath);
+    } catch (err) {
+      console.log('No h5 file to copy');
+    }
   }
 
   async flattenBibiConf(bibiConfFile, expUUID, token, userId) {
@@ -297,6 +306,57 @@ abstract class ExperimentCloner {
     if (bibiConf.bodyModel) {
       if (!Array.isArray(bibiConf.bodyModel))
         bibiConf.bodyModel = [bibiConf.bodyModel];
+
+      bibiConf.bodyModel.forEach(model => {
+        if (model) {
+          const bodyModelFile = model.__text || model;
+          if (model._assetPath === undefined) {
+            model = {
+              __text: bodyModelFile,
+              _assetPath: path.dirname(bodyModelFile),
+              _robotId: model._robotId ? model._robotId : 'robot',
+              _customAsset: false,
+              __prefix: bibiConf.__prefix
+            };
+          }
+          const robotid = model._robotId ? model._robotId : 'robot';
+          const destFile = path.join(robotid, path.basename(bodyModelFile));
+          this.downloadFile(model.__text, this.config.modelsPath, destFile);
+
+          // find and upload roslaunch file into experiments directory
+          const sdfFolder = path.dirname(
+            path.join(this.config.modelsPath, model.__text)
+          );
+          const launchFile = fs.readdirSync(sdfFolder).filter(f => {
+            return path.extname(f).toLowerCase() === '.launch';
+          });
+          if (launchFile.length) {
+            this.downloadFile(
+              launchFile[0],
+              sdfFolder,
+              path.join(robotid, launchFile[0])
+            );
+          }
+        }
+      });
+    }
+
+    if (bibiConf.brainModel) {
+      const brainFile =
+        bibiConf.brainModel.file.__text || bibiConf.brainModel.file;
+
+      this.downloadFile(
+        brainFile,
+        this.config.modelsPath,
+        path.basename(brainFile)
+      );
+
+      bibiConf.brainModel.file = {
+        __text: path.basename(brainFile),
+        __prefix: bibiConf.__prefix
+      };
+
+      await this.copyH5File(brainFile);
     }
 
     if (ensureArrayProp(bibiConf, 'transferFunction'))
@@ -427,7 +487,7 @@ export class NewExperimentCloner extends ExperimentCloner {
       'utf8'
     ).then(expContent => new X2JS().xml2js(expContent));
 
-    const envModelConfig = await this.handleEnvironmentFiles(
+    await this.handleEnvironmentFiles(
       experimentConf,
       expUUID,
       token,
