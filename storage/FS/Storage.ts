@@ -23,6 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
+import { unionWith } from 'lodash';
 import Authenticator from '../BaseAuthenticator';
 import BaseStorage from '../BaseStorage';
 
@@ -263,7 +264,14 @@ export class Storage extends BaseStorage {
   async listExperiments(token, userId, contextId, options = { all: false }): Promise<Array<{ uuid: string, name: string }>> {
     if (options.all) {
       const storageContents: string[] = await q.denodeify(fs.readdir)(utils.storagePath);
-      return storageContents.map(file => ({ uuid: file, name: file }));
+      const fsExperiments = storageContents.map(file => ({ uuid: file, name: file }));
+      const dbExperiments = (await DB.instance.experiments.find()).map(e => ({uuid: e.experiment, name: e.experiment}));
+      return unionWith(
+        fsExperiments,
+        dbExperiments,
+        (exp1, exp2) => exp1.uuid === exp2.uuid
+      );
+
     } else {
       const userExperiments: Array<{ experiment: string }> = await DB.instance.experiments.find({ token: userId });
       return userExperiments.map(e => ({ uuid: e.experiment, name: e.experiment }));
