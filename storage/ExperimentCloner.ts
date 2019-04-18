@@ -241,11 +241,13 @@ abstract class ExperimentCloner {
 
     this.downloadFile(experiment.thumbnail);
 
-    this.downloadFile(
-      experiment.environmentModel._src,
-      this.config.modelsPath,
-      path.basename(experiment.environmentModel._src)
-    );
+    if (! experiment.environmentModel._customModelPath) {
+      this.downloadFile(
+        experiment.environmentModel._src,
+        this.config.modelsPath,
+        path.basename(experiment.environmentModel._src)
+      );
+    }
 
     experiment.environmentModel._src = path.basename(
       experiment.environmentModel._src
