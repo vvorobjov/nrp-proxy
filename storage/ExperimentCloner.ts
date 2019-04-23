@@ -266,7 +266,8 @@ abstract class ExperimentCloner {
     const bibiConf = experimentConf.ExD.bibiConf._src;
     experiment.bibiConf._src = 'bibi_configuration.bibi';
 
-    fs.writeFileSync(expFile, pd.xml(new X2JS().js2xml(experimentConf)));
+    const xmlFile = pd.xml(new X2JS({escapeMode: false}).js2xml(experimentConf)); // In particular, we don't escape quotes in ExD.description
+    fs.writeFileSync(expFile, xmlFile);
     this.downloadedFiles.push(q.resolve(expFile));
 
     return bibiConf;

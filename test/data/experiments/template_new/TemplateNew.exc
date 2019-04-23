@@ -4,7 +4,7 @@
      xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig ../ExDConfFile.xsd">
     <name>Template Husky in empty environment</name>
     <thumbnail>TemplateNew.png</thumbnail>
-    <description>This experiment loads the Husky robot in an empty world, with an idle brain and basic transfer functions. You are free to edit it.</description>
+    <description>This experiment loads the Husky robot in an "empty" world, with an idle brain and basic transfer functions. You are free to edit it.</description>
     <timeout>840</timeout>
     <configuration type="3d-settings" src="TemplateNew.3ds"/>
     <maturity>production</maturity>

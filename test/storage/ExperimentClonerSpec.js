@@ -7,6 +7,8 @@ const chai = require('chai'),
   path = require('path'),
   fs = require('fs');
 
+import X2JS from 'x2js';
+
 var zippedRobotPath = path.join(
   __dirname,
   'dbMock',
@@ -14,7 +16,19 @@ var zippedRobotPath = path.join(
   'robots',
   'husky_model.zip'
 );
+
+const templateNewPath = path.join(
+  __dirname,
+  '..',
+  'data',
+  'experiments',
+  'template_new',
+  'TemplateNew.exc'
+);
+
 var robotZip = fs.readFileSync(zippedRobotPath);
+const templateNewFile = fs.readFileSync(templateNewPath);
+const templateNewXml = new X2JS().xml2js(templateNewFile.toString());
 class StorageMock {
   async listExperiments() {
     return [{ name: 'experiment1' }];
@@ -161,6 +175,15 @@ describe('Experiment cloner', () => {
     expect(fsMock.readFileSync.callCount).to.equal(7);
 
     expect(createExperiment.firstCall.args[0]).to.equal('template_new_0');
+
+    // Checks if the double quotes inside an XML tag, such as <description>, are handled properly
+    const descriptionWithQuotesInside = new X2JS().xml2js(
+      fsMock.writeFileSync.firstCall.args[1]
+    ).ExD.description;
+    expect(descriptionWithQuotesInside).to.equal(
+      templateNewXml.ExD.description
+    ); // templateNewXml.ExD.description contains double quotes
+
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(
       'template_new_0'
     );
