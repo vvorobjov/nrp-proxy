@@ -102,7 +102,7 @@ async function setUpJob(authToken, server) {
 
 async function submitJob(authToken, server) {
   const serverConfig = await getIPAndPort(server);
-  let tunnelIP = serverConfig[0];
+  const tunnelIP = serverConfig[0];
   const tunnelPort = serverConfig[1];
   const baseUrl = configuration.job_url;
   const headers = getPizDaintHeaders(authToken, 'POST');
@@ -117,12 +117,6 @@ async function submitJob(authToken, server) {
     haveClientsStageIn: 'true',
     Environment: { TUNNEL_HOST: '148.187.97.12', TARGET_PORT: '8080' }
   };
-  if (body.Environment.TUNNEL_HOST !== tunnelIP) {
-    console.warn(
-      `You are not using the same IP for the backend as the hardcoded TUNNEL_HOST.
-      Since this feature is in test mode I'm going to change it.`);
-    tunnelIP = body.Environment.TUNNEL_HOST;
-  }
   body.Environment.TUNNEL_HOST = tunnelIP;
   body.Environment.TARGET_PORT = tunnelPort;
   const response = (await request(baseUrl, { ...headers, body }))[0];
