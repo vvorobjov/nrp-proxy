@@ -83,6 +83,10 @@ abstract class BaseExperimentService {
     return [new X2JS().xml2js(bibi.toString()), exc.bibiConf._src];
   }
 
+  getTags(strTags) {
+    return strTags ? strTags.split(/\s/) : [];
+  }
+
   async getConfig() {
     // eslint-disable-next-line no-unused-vars
     const [{ ExD }, file, exc] = await this.getExc();
@@ -104,6 +108,7 @@ abstract class BaseExperimentService {
           ? 'simulation'
           : 'real',
       name: getExDProp(ExD.name),
+      tags: this.getTags(getExDProp(ExD.tags)),
       thumbnail: getExDProp(ExD.thumbnail),
       description: getExDProp(ExD.description),
       maturity: maturity === 'production' ? maturity : 'development',
