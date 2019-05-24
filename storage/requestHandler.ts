@@ -212,6 +212,13 @@ ${ex.stack}`);
       : exps.filter(e => !SPECIAL_FOLDERS.has(e.name));
   }
 
+  addUsertoSharedUserListinExperiment(newExperiment, userId, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.addUsertoSharedUserListinExperiment(newExperiment, userId)
+      );
+  }
   listExperimentsSharedByUser(token) {
     return this.authenticator
       .checkToken(token)
@@ -237,86 +244,89 @@ ${ex.stack}`);
       );
   }
 
-  getCustomModel(modelPath, token) {
+  getModelPath(type, name, token) {
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(userId => this.storage.getCustomModel(modelPath, token, userId));
+      .then(userName => this.storage.getModelPath(type, name));
   }
 
-  async deleteCustomModel(modelPath, token) {
+  getModelFolder(type, name, token) {
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(userId => this.storage.deleteCustomModel(decodeURIComponent(modelPath), userId));
+      .then(() => this.storage.getModelFolder(type, name));
   }
 
-  async createCustomModel(modelType, token, modelName, modelData, contextId) {
-    await this.authenticator.checkToken(token);
-    const userId = await this.getUserIdentifier(token);
+  async deleteCustomModel(modelType, modelName, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId => this.storage.deleteCustomModel(modelType, modelName, userId));
+  }
+
+  async createCustomModel(model, zipFile) {
+    await this.authenticator.checkToken(model.ownerId);
+    model.ownerName = await this.getUserIdentifier(model.ownerId);
     return this.storage.createCustomModel(
-      modelType,
-      modelData,
-      userId,
-      modelName,
-      token,
-      contextId
+      model, zipFile
     );
   }
 
-  async getCustomModelConfig(modelPath, token) {
-    const customModel = await this.getCustomModel(modelPath, token);
-    return customModelService.extractFileFromZip(customModel, 'model.config');
+  async getModelConfigFile(modelType, modelName, token) {
+    const userModel = await this.getModelFolder(modelType, modelName, token);
+    return customModelService.extractFileFromZip(userModel, 'model.config');
   }
 
-  createZip(token, modelType, zipName, zip, contextId) {
+  createZip(userName, modelType, zipName, zip) {
+    const model = {
+      ownerId: userName,
+      type: modelType,
+      path: path.join(modelType, zipName),
+    };
     return customModelService
-      .getZipModelMetaData(zipName, zip)
-      .then(res => customModelService.validateZip(res))
-      .then(() =>
-        this.createCustomModel(modelType, token, zipName, zip, contextId)
+      .getZipModelMetaData(model, zip)
+      .then(modelData =>
+        this.createCustomModel(modelData, zip)
       );
   }
 
-  listAllCustomModels(customFolder, token, contextId) {
+  listModelsbyType(customFolder, token) {
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
       .then(userId =>
-        this.storage.listAllCustomModels(customFolder, token, userId, contextId)
+        this.storage.listModelsbyType(customFolder)
       );
   }
 
-  async listCustomModels(customFolder, token, contextId) {
+  async listUserModelsbyType(modelType, token) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
-    const modelsPaths = await this.storage.listCustomModels(
-      customFolder,
-      token,
-      userId,
-      contextId
-    );
+    const userModels = await this.storage.listUserModelsbyType(modelType, userId);
     const models = await q.all(
-      modelsPaths.map(path => q.all([path, this.getCustomModel(path, token)]))
-    );
-    const metaData = await q.all(
-      models.map(([path, data]) =>
-        this.customModelService.getZipModelMetaData(
-          path.uuid,
-          data,
-          path.fileName
-        )
+      userModels.map(userModel =>
+        q.all([userModel, this.getModelFolder(userModel.modelType,
+          userModel.fileName,
+          token)])
       )
     );
-
+    const metaData = await q.all(
+      models.map(([model, data]) =>
+        this.customModelService.getZipModelMetaData(
+          model,
+          data
+        )
+      ));
     return metaData;
   }
 
-  async unzipCustomModel(modelPath, token) {
+  async unzipCustomModel(modelType, modelName, token) {
+    const modelPath = path.join(modelType, modelName);
     const decodedPath = decodeURIComponent(modelPath);
-    const parsedModel = { uuid: decodedPath, fileName: decodedPath };
-    const model = await this.getCustomModel(parsedModel, token);
-    await customModelService.extractZip(model);
+    const parsedModel = {uuid: decodedPath, fileName: decodedPath};
+    const userModel = await this.getModelFolder(modelType, modelName, token);
+    await customModelService.extractZip(userModel);
     return q.resolve();
   }
 
@@ -352,21 +362,42 @@ ${ex.stack}`);
       this.config
     ).cloneExperiment(token, userId, expPath, contextId, undefined);
   }
-
-  updateSharedExperimentMode(experimentId, sharedValue, token) {
+  /*shared models*/
+  addUsertoSharedUserListinModel(modelType, modelId, userId, token) {
     return this.authenticator
       .checkToken(token)
       .then(() =>
-        this.storage.updateSharedExperimentMode(experimentId, sharedValue)
+        this.storage.addUsertoSharedUserListinModel(modelType, modelId, userId)
       );
   }
 
-  addUsertoSharedUserListinExperiment(newExperiment, userId, token) {
+  listSharedUsersbyModel(modelType, modelID, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.storage.listSharedUsersbyModel(modelType, modelID));
+  }
+
+  updateSharedModelMode(modelType, modelId, sharedValue, token) {
     return this.authenticator
       .checkToken(token)
       .then(() =>
-        this.storage.addUsertoSharedUserListinExperiment(newExperiment, userId)
+        this.storage.updateSharedModelMode(modelType, modelId, sharedValue)
       );
+  }
+
+  getSharedModelMode(modelType, modelID, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.storage.getSharedModelMode(modelType, modelID));
+  }
+
+  deleteSharedUserFromModel(modeltType, modelId, userId, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.deleteSharedUserFromModel(modeltType, modelId, userId)
+      )
+      .then(res => res);
   }
 
   deleteSharedUserFromExperiment(experimentId, userId, token) {
@@ -378,6 +409,64 @@ ${ex.stack}`);
       .then(res => res);
   }
 
+  listSharedModels(modelType, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId =>
+         this.storage.listSharedModels(modelType, userId)
+      )
+      .then(sharedModels => {
+        return q.all(
+          sharedModels.map(sharedModel =>
+            q.all([sharedModel, this.getModelFolder(sharedModel.modelType, sharedModel.fileName, token)])
+          )
+        );
+      }
+      )
+      .then(models =>
+        q.all(
+          models.map(([model, data]) =>
+            this.customModelService.getZipModelMetaData(
+              model,
+              data
+            )
+          )
+        )
+      );
+  }
+
+  listAllModels(type, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(ownerId =>
+        this.storage.listAllModels(type, ownerId ))
+      .then(allModels =>
+          q.all(
+          allModels.map(model =>
+              q.all([model, this.getModelFolder(model.type, model.name, token)])
+          )
+        )
+      )
+      .then(models =>
+        q.all(
+          models.map(([model, data]) =>
+              this.customModelService.getZipModelMetaData(
+                model,
+                data
+            )
+          )
+        )
+      );
+  }
+  updateSharedExperimentMode(experimentId, sharedValue, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() =>
+        this.storage.updateSharedExperimentMode(experimentId, sharedValue)
+      );
+  }
   getExperimentSharedMode(experimentID, token) {
     return this.authenticator
       .checkToken(token)

@@ -103,7 +103,7 @@ export class Storage extends BaseStorage {
     );
   }
 
-  getCustomModel(modelPath, token, userId) {
+  getModelFolder(modelPath, token, userId) {
     return this.getFile(modelPath.uuid, null, token, userId).then(
       res => res.body
     );
@@ -261,5 +261,68 @@ export class Storage extends BaseStorage {
           )
       );
     });
+  }
+
+  listAllModels(modelType, userId) {
+    throw 'not implemented';
+  }
+
+  addUsertoSharedUserListinModel(modelType, modelName, userId) {
+    throw 'not implemented';
+  }
+
+  listSharedUsersbyModel(modelType, modelID) {
+    throw 'not implemented';
+  }
+
+  updateSharedModelMode(modelType, modelID, sharedValue) {
+    throw 'not implemented';
+  }
+
+  getSharedModelMode(modelType, modelID) {
+    throw 'not implemented';
+  }
+
+  deleteSharedUserFromModel(modelType, modelID, userId) {
+    throw 'not implemented';
+  }
+
+  listSharedModels(modelType, userId) {
+    throw 'not implemented';
+  }
+  listUserModelsbyType(modelType, token, userId) {
+    throw 'not implemented';
+  }
+
+  isDirectory(fileSystemEntry) {
+    throw 'not implemented';
+  }
+
+  getExperimentSharedMode(experimentID) {
+    throw 'not implemented';
+  }
+
+  updateSharedExperimentMode(experimentID, sharedValue) {
+    throw 'not implemented';
+  }
+
+  listSharedUsersbyExperiment(experimentID) {
+    throw 'not implemented';
+  }
+
+  listExperimentsSharedByUser(userId) {
+    throw 'not implemented';
+  }
+
+  deleteSharedUserFromExperiment(experimentId, userId) {
+    throw 'not implemented';
+  }
+
+  addUsertoSharedUserListinExperiment(newExperiment, userId) {
+    throw 'not implemented';
+  }
+
+  copyFolderContents(contents, destFolder) {
+    throw 'not implemented';
   }
 }

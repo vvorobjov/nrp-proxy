@@ -404,10 +404,6 @@ export class NewExperimentCloner extends ExperimentCloner {
   constructor(storage, config, protected environmentPath, private templateExc) {
     super(storage, config);
 
-    console.info('configuring NewExperimentCloner');
-    console.info('this.config.experimentsPath: ' + this.config.experimentsPath);
-    console.info('this.templateExc: ' + this.templateExc);
-
     this.newExpConfigurationPath = path.join(
       this.config.experimentsPath,
       this.templateExc
@@ -422,10 +418,10 @@ export class NewExperimentCloner extends ExperimentCloner {
 
   async handleZippedEnvironment(token, expUUID, userId) {
     const customModelsService = new CustomModelsService();
-    const zipedModelContents = await this.storage.getCustomModel(
-      { uuid: this.environmentPath.path },
-      token,
-      userId
+
+    const zipedModelContents = await this.storage.getModelFolder(
+      'environments',
+      this.environmentPath.name
     );
     const zipMetaData = await customModelsService
       .extractModelMetadataFromZip(zipedModelContents, 'environments')

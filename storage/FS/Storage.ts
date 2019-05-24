@@ -38,7 +38,8 @@ let DB = require('./DB').default,
   utils = require('./utils').default,
   fs = require('fs'),
   rmdir = require('rmdir'),
-  fsExtra = require('fs-extra');
+  fsExtra = require('fs-extra'),
+  customModelAbsPath = path.join(utils.storagePath, USER_DATA_FOLDER);
 // tslint:enable: prefer-const
 
 export class Storage extends BaseStorage {
@@ -120,86 +121,207 @@ export class Storage extends BaseStorage {
       );
   }
 
-  getCustomModel(modelPath, token, userId) {
-    // Unfortunately we have to do that since the backend sends an unparsed json
-    if (typeof modelPath !== 'object') modelPath = JSON.parse(modelPath);
+  listAllModels(modelType, userName) {
     return DB.instance.models
-      .findOne({ fileName: modelPath.uuid, token: userId })
-      .then(existingExp => {
-        if (!existingExp) return q.reject(`The model: ${modelPath.uuid} does not exist in the Models database.`);
-        return q
-          .resolve(path.join(USER_DATA_FOLDER, modelPath.uuid))
-          .then(relFolderName => this.calculateFilePath('', relFolderName))
-          .then(folderName => q.denodeify(fs.readFile)(folderName));
+      .find({
+        $or: [{ $and: [{ ownerName: userName }, { type: modelType }] },
+        {
+          $or: [
+            { $and: [{ sharedOption: 'Public' }, { type: modelType }] },
+            {
+              $and: [
+                { type: modelType },
+                { sharedOption: 'Shared' }
+              ]
+            }
+          ]
+        }
+        ]
+      })
+      .then(res => {
+        if (typeof res !== 'undefined' && res) {
+          return res.filter(element => {
+            if (element.ownerName === userName)
+              return true;
+            else {
+              if (typeof element.sharedUsers !== 'undefined' && res) {
+                return element.sharedUsers.find(sharingUser => {
+                  return sharingUser === userName;
+                }) === userName;
+              } else
+                return true;
+            }
+          });
+        }
+      }
+      )
+      .then(res => {
+        if (typeof res !== 'undefined' && res) {
+          return res.map(f => ({
+            name: f.name,
+            path: f.path,
+            ownerName: f.ownerName,
+            type: f.type,
+            isShared: ((f.sharedOption === 'Public' || f.sharedOption === 'Shared')
+              && f.ownerName !== userName) ? true : false
+          }));
+        } else
+          return [];
+      }
+      );
+  }
+
+  addUsertoSharedUserListinModel(modelType, modelName, userName) {
+    return DB.instance.models
+      .findOne({ $and: [{ name: modelName }, { type: modelType }] })
+      .then(existingModel => {
+        if (existingModel)
+          return DB.instance.models.update(
+            { _id: existingModel._id },
+            { $addToSet: { sharedUsers: userName } }
+          );
+        return q.reject(`The model: ${modelName} does not exist in the Models database.`);
       });
   }
 
-  async deleteCustomModel(modelPath, userId): Promise<string> {
-    const modelToDelete: { fileName: string, token: string, type: string } | null =
-      await DB.instance.models.findOne({ fileName: modelPath, token: userId });
+  listSharedUsersbyModel(modelType, modelName) {
+    return DB.instance.models
+      .findOne({ $and: [{ name: modelName }, { type: modelType }] })
+      .then(res =>
+        (res.sharedUsers ? res.sharedUsers : []));
+  }
+
+  updateSharedModelMode(modelType, modelName, modelSharedOption) {
+    return DB.instance.models.update(
+      { $and: [{ name: modelName }, { type: modelType }] },
+      { $set: { sharedOption: modelSharedOption } }
+    );
+  }
+
+  getSharedModelMode(modelType, modelName) {
+    return DB.instance.models
+      .findOne({ $and: [{ name: modelName }, { type: modelType }] })
+      .then(res => (
+        {
+          sharedOption: (res.sharedOption ? res.sharedOption : 'Private')
+        }
+      ));
+  }
+
+  deleteSharedUserFromModel(modelType, modelName, userName) {
+    if (userName === 'all')
+      return DB.instance.models.update(
+        { $and: [{ name: modelName }, { type: modelType }] },
+        { $set: { sharedUsers: [] } },
+        { multi: true }
+      );
+    else
+      return DB.instance.models.update(
+        { $and: [{ name: modelName }, { type: modelType }] },
+        { $pull: { sharedUsers: { $in: [userName] } } }
+      );
+  }
+
+  listSharedModels(modelType, userName) {
+    return DB.instance.models
+      .find({
+        $and: [
+          {
+            sharedOption: { $ne: 'Private' }, type: modelType,
+            $or: [
+              { sharedUsers: { $in: userName } },
+              { $and: [{ ownerName: { $ne: userName }, sharedOption: 'Public' }] }
+            ]
+          }
+        ]
+      })
+      .then(res => res.map(f => ({ name: f.name, type: f.type, ownerName: f.ownerName, path: f.path })));
+  }
+
+  getModelPath(modelType, modelName) {
+    return DB.instance.models
+      .findOne({ $and: [{ name: modelName }, { type: modelType }] })
+      .then(existingExp => {
+        if (!existingExp) return q.reject(`The model: ${modelName} does not exist in the Models database.`);
+        return existingExp.path;
+      });
+  }
+
+  getModelFolder(modelType, modelName) {
+    return DB.instance.models
+      .findOne({ $and: [{ name: modelName }, { type: modelType }] })
+      .then(existingExp => {
+        if (!existingExp) return q.reject(`The model: ${modelName} does not exist in the Models database.`);
+        return q.denodeify(fs.readFile)(path.join(customModelAbsPath, existingExp.path));
+      });
+  }
+
+  async deleteCustomModel(modelType, modelName, userName): Promise<string> {
+    const modelToDelete: { name: string, ownerId: string, type: string, path: string } | null =
+      await DB.instance.models.findOne({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
     // if the model is not in the DB (weird) log the problem. At this point we could try to remove it from the FS
     // but maybe this would be undesired behaviour from the user side
-    if (!modelToDelete) return q.reject(`The model: ${modelPath} does not exist in the Models database.`);
+    if (!modelToDelete) return q.reject(`The model: ${modelName} does not exist in the Models database.`);
 
     let deletionResult: number | null;
     try {
       // remove the custom model from the FS
-      await q.denodeify(fs.unlink)(this.calculateFilePath('', path.join(USER_DATA_FOLDER, modelPath)));
+      await q.denodeify(fs.unlink)(path.join(customModelAbsPath, modelToDelete.path));
       // remove model from DB
-      deletionResult = await DB.instance.models.remove({ fileName: modelPath, token: userId });
+      deletionResult = await DB.instance.models.remove({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
       if (!deletionResult)
-        return q.reject(`Could not delete the model ${modelPath} from the Models database.`);
+        return q.reject(`Could not delete the model ${modelName} from the Models database.`);
     } catch {
       // even if the model is not in the FS (cause it could have been manually removed)
       // still try to remove it from the DB
-      await DB.instance.models.remove({ fileName: modelPath, token: userId });
-      // if the FS call failed we log the problem
-      return q.reject(`Could not find the model ${modelPath} to remove in the user storage.`);
+      await await DB.instance.models.remove({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
+      // if the FS call failed, we log the problem
+      return q.reject(`Could not find the model ${modelName} to remove in the user storage.`);
     }
-    return q.resolve(`Succesfully deleted model ${modelPath} from the user storage.`);
+    return q.resolve(`Succesfully deleted model ${modelName} from the user storage.`);
   }
 
-  createCustomModel(modelType, modelData, userId, modelName) {
-    const newFileName = path.join(modelType, modelName);
+  createCustomModel(model, zip) {
     return DB.instance.models
-      .findOne({ fileName: newFileName, token: userId })
+      .findOne({ $and: [{ name: model.name }, { type: model.type }] })
       .then(existingExp => {
         if (!existingExp)
           DB.instance.models.insert({
-            token: userId,
-            fileName: newFileName,
-            type: modelType
+            ownerName: model.ownerName,
+            name: model.name,
+            type: model.type,
+            path: model.path,
           });
-        return q
-          .resolve(this.calculateFilePath(modelType, modelName, true))
-          .then(filePath =>
-            q.denodeify(fs.writeFile)(filePath, modelData, {
+        return q.denodeify(fs.writeFile)(path.join(customModelAbsPath, model.path), zip, {
               encoding: 'binary'
-            })
-          );
+            });
       });
   }
 
-  listAllCustomModels(customFolder) {
+  listModelsbyType(modelType) {
     return DB.instance.models
-      .find({ type: customFolder })
+      .find({ type: modelType })
       .then(res =>
         res.map(f => ({
-          uuid: f.fileName,
-          fileName: f.fileName,
-          userId: f.token
+          name: f.name,
+          path: f.path,
+          ownerName: f.ownerName,
+          type: f.type,
+          fileName: path.basename(f.path)
         }))
       )
       .catch(() => []);
   }
 
-  listCustomModels(customFolder, token, userId) {
+  listUserModelsbyType(modelType, userId) {
     return DB.instance.models
-      .find({ token: userId, type: customFolder })
+      .find({ token: userId, type: modelType })
       .then(res =>
         res.map(f => ({
-          uuid: f.fileName,
-          fileName: f.fileName
+          name: f.name,
+          path: f.path,
+          ownerId: f.ownerId,
+          type: f.type
         }))
       )
       .catch(() => []);
@@ -321,7 +443,11 @@ export class Storage extends BaseStorage {
   getExperimentSharedMode(experimentID) {
     return DB.instance.experiments
       .findOne({ experiment: experimentID })
-      .then(res => (res.shared_option ? res.shared_option : 'Private'));
+      .then(res => (
+        {
+          data: (res.shared_option ? res.shared_option : 'Private')
+        }
+      ));
   }
 
   updateSharedExperimentMode(experimentID, sharedValue) {

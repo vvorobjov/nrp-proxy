@@ -10,6 +10,12 @@ let fakeJSZip = {
       file: () => 'data'
     })
 };
+let fakeModel = {
+  ownerId: 'userId',
+  type: 'type',
+  path: 'modelType/filename',
+  isShared: false
+};
 
 CustomModelsService = rewire('../../storage/CustomModelsService');
 CustomModelsService.__set__('jszip', fakeJSZip);
@@ -58,47 +64,36 @@ describe('CustomModelsService', () => {
       return q.when({
         name: 'config',
         description: 'description',
-        brain: undefined
+        brain: undefined,
+        sdf: 'model.sdf',
+        configPath: 'modelID/model.config'
       });
     };
     customModelsService.logThumbnail = function() {
       return q.when('thumbnail');
     };
-    customModelsService.encodeURIComponent = function() {
-      return q.when('filePath');
-    };
     customModelsService.getZipBasename = function() {
-      return q.when('basename');
-    };
-    customModelsService.extractModelMetadataFromZip = function() {
-      return q.when({
-        relPath: 'modelID/myfile.zip',
-        modelConfig: {
-          model: {
-            sdf: [
-              {
-                _: 'model.sdf'
-              }
-            ]
-          }
-        }
-      });
+      return 'basename';
     };
 
     var expectedResult = {
       name: 'config',
+      ownerId: 'userId',
+      type: 'type',
+      fileName: 'filename',
+      isShared: false,
+      isCustom: true,
       description: 'description',
       thumbnail: 'thumbnail',
+      path: 'modelType/filename',
+      script: undefined,
+      sdf: 'basename/model.sdf',
       configPath: 'modelID/model.config',
-      fileName: 'fileName',
-      path: 'filePath',
-      id: 'modelID',
-      sdf: 'model.sdf',
-      script: undefined
+      description: 'description'
     };
 
     return customModelsService
-      .getZipModelMetaData('filePath', 'Test.zip', 'fileName')
+      .getZipModelMetaData(fakeModel, 'fileContent')
       .should.eventually.deep.equal(expectedResult);
   });
 

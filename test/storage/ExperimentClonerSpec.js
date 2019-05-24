@@ -42,7 +42,7 @@ class StorageMock {
     return {};
   }
 
-  async getCustomModel() {
+  async getModelFolder() {
     return robotZip;
   }
   async deleteExperiment() {

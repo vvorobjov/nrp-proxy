@@ -31,6 +31,8 @@ const storagePath =
   process.env[STORAGE_PATH_ENV] ||
   DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v] as string);
 
+const customModelFolder = 'USER_DATA';
+
 const generateUniqueExperimentId = (basename, suffix, existingExperiments) => {
   const newName = [basename, suffix].join('_');
   if (existingExperiments.includes(newName)) {

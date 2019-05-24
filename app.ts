@@ -207,13 +207,6 @@ app.get('/models/:modelType', (req, res, next) => {
     .catch(next);
 });
 
-app.get('/models/:modelType/:modelId/config', (req, res, next) => {
-  proxyRequestHandler
-    .getModelConfig(req.params.modelType, req.params.modelId)
-    .then(config => res.sendFile(config))
-    .catch(next);
-});
-
 // storage API
 app.use(bodyParser.json({ limit: '200mb' }));
 app.use(bodyParser.raw({ limit: '200mb' }));
@@ -295,7 +288,93 @@ app.post('/storage/clone', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/sharedmode/:experimentId/:sharedMode', (req, res) => {
+app.post('/storage/models/:type/:modelId/share/:userId', (req, res) => {
+  storageRequestHandler
+    .addUsertoSharedUserListinModel(
+      req.params.type, req.params.modelId,
+      req.params.userId,
+      getAuthToken(req)
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/models/:type/:modelId/sharedusers', (req, res) => {
+  storageRequestHandler
+    .listSharedUsersbyModel(req.params.type, req.params.modelId, getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.post('/storage/models/:modelType/:modelId/sharedmode/:sharedMode', (req, res) => {
+  storageRequestHandler
+    .updateSharedModelMode(
+      req.params.modelType, req.params.modelId,
+      req.params.sharedMode,
+      getAuthToken(req)
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/models/:modelType/:modelId/sharedmode', (req, res) => {
+  storageRequestHandler
+    .getSharedModelMode(req.params.modelType, req.params.modelId, getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.delete('/storage/models/:modelType/:modelId/sharedusers/:userId', (req, res) => {
+  storageRequestHandler
+    .deleteSharedUserFromModel(
+      req.params.modelType,
+      req.params.modelId,
+      req.params.userId,
+      getAuthToken(req),
+    )
+    .then(r => res.send(r || ''))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/models/shared/:modelType', (req, res) => {
+  storageRequestHandler
+    .listSharedModels(
+      req.params.modelType,
+      getAuthToken(req),
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/models/all/:modelType', (req, res) => {
+  // it returns all the models of the users: the ones he owns and the ones are sharing with him.
+  storageRequestHandler
+    .listAllModels(
+      req.params.modelType,
+      getAuthToken(req),
+   )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/models/:modelType', (req, res) => {
+  storageRequestHandler
+    .listModelsbyType(
+      req.params.modelType,
+      getAuthToken(req)
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/experiments/:experimentId/sharedusers', (req, res) => {
+  storageRequestHandler
+    .listSharedUsersbyExperiment(req.params.experimentId, getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.post('/storage/experiments/:experimentId/sharedmode/:sharedMode', (req, res) => {
   storageRequestHandler
     .updateSharedExperimentMode(
       req.params.experimentId,
@@ -306,21 +385,14 @@ app.post('/storage/sharedmode/:experimentId/:sharedMode', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/sharedusers/:experimentId', (req, res) => {
-  storageRequestHandler
-    .listSharedUsersbyExperiment(req.params.experimentId, getAuthToken(req))
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
-});
-
-app.get('/sharedExperiments', (req, res) => {
+app.get('/storage/experiments/shared', (req, res) => {
   proxyRequestHandler
     .getSharedExperiments(getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.delete('/storage/sharedusers/:experimentId/:userId', (req, res) => {
+app.delete('/storage/experiments/:experimentId/sharedusers/:userId', (req, res) => {
   storageRequestHandler
     .deleteSharedUserFromExperiment(
       req.params.experimentId,
@@ -331,7 +403,7 @@ app.delete('/storage/sharedusers/:experimentId/:userId', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/sharedusers/:experimentId/:userId', (req, res) => {
+app.post('/storage/experiments/:experimentId/sharedusers/:userId', (req, res) => {
   storageRequestHandler
     .addUsertoSharedUserListinExperiment(
       req.params.experimentId,
@@ -342,7 +414,7 @@ app.post('/storage/sharedusers/:experimentId/:userId', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/sharedvalue/:experimentId', (req, res) => {
+app.get('/storage/experiments/:experimentId/sharedmode', (req, res) => {
   storageRequestHandler
     .getExperimentSharedMode(req.params.experimentId, getAuthToken(req))
     .then(r => res.send(r))
@@ -361,78 +433,61 @@ app.post('/storage/clonenew', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/custommodels/:modelType', (req, res) => {
-  if (!~['brains', 'robots', 'environments'].indexOf(req.params.modelType))
-    return handleError(res, `Invalid model type: ${req.params.modelType}`);
-
+app.get('/storage/models/user/:modelType', (req, res) => {
   storageRequestHandler
-    .listCustomModels(
+    .listUserModelsbyType(
       req.params.modelType,
-      getAuthToken(req),
-      req.get('context-id')
-    )
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
-});
-app.get('/storage/custommodels/all/:modelType', (req, res) => {
-  if (!~['brains', 'robots', 'environments'].indexOf(req.params.modelType))
-    return handleError(res, `Invalid model type: ${req.params.modelType}`);
-
-  storageRequestHandler
-    .listAllCustomModels(
-      req.params.modelType,
-      getAuthToken(req),
-      req.get('context-id')
+      getAuthToken(req)
     )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/custommodels/:modelType/:modelName', (req, res) => {
-  if (!~['brains', 'robots', 'environments'].indexOf(req.params.modelType))
-    return handleError(res, `Invalid model type: ${req.params.modelType}`);
+app.delete('/storage/models/:modelType/:modelName', (req, res) => {
+  storageRequestHandler
+    .deleteCustomModel(req.params.modelType, req.params.modelName, getAuthToken(req))
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
 
+app.post('/storage/models/:modelType/:modelName', (req, res) => {
   storageRequestHandler
     .createZip(
       getAuthToken(req),
       req.params.modelType,
       req.params.modelName,
-      req.body,
-      req.get('context-id')
+      req.body
     )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/custommodel/:modelPath', (req, res) => {
+app.put('/storage/models/:modelType/:modelName', (req, res) => {
   storageRequestHandler
-    .unzipCustomModel(req.params.modelPath, getAuthToken(req))
+    .unzipCustomModel(req.params.modelType, req.params.modelName, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.delete('/storage/custommodel/:modelPath', (req, res) => {
+app.get('/storage/models/:modelType/:modelName', (req, res) => {
   storageRequestHandler
-    .deleteCustomModel(req.params.modelPath, getAuthToken(req))
+    .getModelFolder(req.params.modelType, req.params.modelName, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/custommodel/:modelPath', (req, res) => {
+app.get('/storage/models/path/:modelType/:modelName', (req, res) => {
   storageRequestHandler
-    .getCustomModel(req.params.modelPath, getAuthToken(req))
+    .getModelPath(req.params.modelType, req.params.modelName, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/custommodelconfig/:modelType/:modelPath', (req, res) => {
-  storageRequestHandler
-    .getCustomModelConfig(
-      { uuid: path.join(req.params.modelType, req.params.modelPath) },
-      getAuthToken(req)
-    )
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+app.get('/models/:modelType/:modelName/config', (req, res, next) => {
+  proxyRequestHandler
+    .getModelConfig(req.params.modelType, req.params.modelName)
+    .then(config => res.sendFile(config))
+    .catch(next);
 });
 
 app.get('/storage/:experiment/:filename', (req, res) => {

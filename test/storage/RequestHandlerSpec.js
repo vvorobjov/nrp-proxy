@@ -87,7 +87,9 @@ describe('Storage request handler', () => {
   let mkdirCalls = 0;
   let rmdirCalls = 0;
   beforeEach(async () => {
-    const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
+    const mockUtils = {
+      storagePath: path.join(__dirname, 'dbMock')
+    };
     RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
     RewiredDB.__set__('DBCollection', collectionMock);
@@ -153,11 +155,11 @@ describe('Storage request handler', () => {
   });
 
   it('should authenticate successfully', () => {
-    collectionMock.prototype.findOne = sinon
-      .stub()
-      .returns(
-        Promise.resolve({ token: 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24' })
-      );
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        token: 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24'
+      })
+    );
 
     return storageRequestHandler
       .authenticate('nrpuser', 'password')
@@ -171,7 +173,174 @@ describe('Storage request handler', () => {
 
     return storageRequestHandler
       .getGDPRStatus('nrpuser')
-      .should.eventually.deep.equal({ gdpr: false });
+      .should.eventually.deep.equal({
+        gdpr: false
+      });
+  });
+  /*models*/
+
+  it(`should succesfully get the shared option of the Model`, () => {
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        sharedOption: 'Private'
+      })
+    );
+    return storageRequestHandler
+      .getSharedModelMode('fakeModelType', 'fakeModelId')
+      .then(res =>
+        expect(res).to.deep.equal({
+          sharedOption: 'Private'
+        })
+      );
+  });
+
+  it('should add a user into the shared user list', () => {
+    collectionMock.prototype.insert = sinon
+      .stub()
+      .returns(Promise.resolve('userId'));
+    storageRequestHandler
+      .addUsertoSharedUserListinModel(
+        'fakeModelType',
+        'fakeModelType',
+        'userId'
+      )
+      .should.eventually.deep.equal(true);
+  });
+
+  it(`should get the list of shared users by Model`, () => {
+    var expectedResult = ['nrpuser', 'admin'];
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        sharedUsers: ['nrpuser', 'admin']
+      })
+    );
+    return storageRequestHandler
+      .listSharedUsersbyModel('modelType', 'modelname', fakeToken)
+      .then(userList => {
+        expect(userList).to.deep.equal(expectedResult);
+      });
+  });
+
+  it(`should succesfully update the shared option of the model`, () => {
+    var expected = [
+      1,
+      {
+        updatedExisting: true,
+        n: 1
+      }
+    ];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expected));
+    return storageRequestHandler
+      .updateSharedModelMode('fakeModelType', 'fakeModelId', 'public')
+      .then(res => {
+        expect(res).to.deep.equal(expected);
+      });
+  });
+
+  it(`should succesfully get the shared option of the experiment`, () => {
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        data: 'Private'
+      })
+    );
+    return storageRequestHandler
+      .getExperimentSharedMode('fakeModelType', 'fakeModelId')
+      .then(res =>
+        expect(res).to.deep.equal({
+          data: 'Private'
+        })
+      );
+  });
+
+  it(`should succesfully delete a shared user`, () => {
+    var expected = [
+      1,
+      {
+        updatedExisting: true,
+        n: 1
+      }
+    ];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expected));
+    return storageRequestHandler
+      .deleteSharedUserFromModel('fakeModelType', 'fakeModelId', 'userId')
+      .then(res => expect(res).to.deep.equal(expected));
+  });
+
+  it(`should get the model Path of an specific model`, () => {
+    storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
+    storageRequestHandler.storage.getModelPath = function() {
+      return q.when([
+        {
+          path: 'robots/husky_model.zip'
+        }
+      ]);
+    };
+
+    return storageRequestHandler
+      .getModelPath('robots', 'name', 'userid')
+      .should.eventually.deep.include({ path: 'robots/husky_model.zip' });
+  });
+
+  it(`should correctly return the shared models`, () => {
+    storageRequestHandler.customModelService.getZipModelMetaData = function() {
+      return q.when(config);
+    };
+    storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
+    storageRequestHandler.authenticator.checkToken = () => q.resolve('nrpuser');
+
+    storageRequestHandler.storage.listSharedModels = function() {
+      return q.when([
+        {
+          uuid: 'robots/husky_model.zip',
+          fileName: 'robots/husky_model.zip'
+        }
+      ]);
+    };
+    storageRequestHandler.storage.getModelFolder = function() {
+      return q.when([
+        {
+          path: 'robots/husky_model.zip',
+          data: []
+        }
+      ]);
+    };
+
+    return storageRequestHandler
+      .listSharedModels('robots', fakeToken)
+      .should.eventually.deep.include(config);
+  });
+
+  it(`should correctly return the shared models`, () => {
+    storageRequestHandler.customModelService.getZipModelMetaData = function() {
+      return q.when(config);
+    };
+    storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
+    storageRequestHandler.authenticator.checkToken = () => q.resolve('nrpuser');
+
+    storageRequestHandler.storage.listAllModels = function() {
+      return q.when([
+        {
+          uuid: 'robots/husky_model.zip',
+          fileName: 'robots/husky_model.zip'
+        }
+      ]);
+    };
+    storageRequestHandler.storage.getModelFolder = function() {
+      return q.when([
+        {
+          path: 'robots/husky_model.zip',
+          data: []
+        }
+      ]);
+    };
+
+    return storageRequestHandler
+      .listAllModels('robots', fakeToken)
+      .should.eventually.deep.include(config);
   });
 
   it('should set user accepted gdpr', () => {
@@ -245,20 +414,36 @@ describe('Storage request handler', () => {
 
   it(`should get the list of the users`, () => {
     var expectedResult = ['nrpuser', 'admin'];
-    collectionMock.prototype.find = sinon
-      .stub()
-      .returns(Promise.resolve([{ user: 'nrpuser' }, { user: 'admin' }]));
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          user: 'nrpuser'
+        },
+        {
+          user: 'admin'
+        }
+      ])
+    );
     return storageRequestHandler.getUsersList(fakeToken).then(userList => {
       expect(userList).to.deep.equal(expectedResult);
     });
   });
 
   it(`should create a new shared Experiment when we call the addExperimentSharedUserByUser`, () => {
-    var expectedResult = [{ uuid: fakeExperiment, name: fakeExperiment }];
+    var expectedResult = [
+      {
+        uuid: fakeExperiment,
+        name: fakeExperiment
+      }
+    ];
     var adminToken = '1d3409e4-8a4e-409d-b6c7-58dacc4b833e';
-    collectionMock.prototype.find = sinon
-      .stub()
-      .returns(Promise.resolve([{ experiment: fakeExperiment }]));
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          experiment: fakeExperiment
+        }
+      ])
+    );
 
     return storageRequestHandler
       .addUsertoSharedUserListinExperiment(
@@ -277,7 +462,13 @@ describe('Storage request handler', () => {
   });
 
   it(`should succesfully update the shared option of the experiment`, () => {
-    var expected = [1, { updatedExisting: true, n: 1 }];
+    var expected = [
+      1,
+      {
+        updatedExisting: true,
+        n: 1
+      }
+    ];
     collectionMock.prototype.update = sinon
       .stub()
       .returns(Promise.resolve(expected));
@@ -288,8 +479,24 @@ describe('Storage request handler', () => {
       });
   });
 
-  it(`should succesfully delete a shared user`, () => {
+  it(`should succesfully delete all shared user`, () => {
     var expected = [1, { updatedExisting: true, n: 1 }];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expected));
+    return storageRequestHandler
+      .deleteSharedUserFromExperiment('fakeExperiment', 'all')
+      .then(res => expect(res).to.deep.equal(expected));
+  });
+
+  it(`should succesfully delete a shared user`, () => {
+    var expected = [
+      1,
+      {
+        updatedExisting: true,
+        n: 1
+      }
+    ];
     collectionMock.prototype.update = sinon
       .stub()
       .returns(Promise.resolve(expected));
@@ -299,12 +506,18 @@ describe('Storage request handler', () => {
   });
 
   it(`should succesfully get the shared option of the experiment`, () => {
-    collectionMock.prototype.findOne = sinon
-      .stub()
-      .returns(Promise.resolve('Private'));
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        data: 'Private'
+      })
+    );
     return storageRequestHandler
       .getExperimentSharedMode('fakeExperiment', 'userId')
-      .then(res => expect(res).to.deep.equal('Private'));
+      .then(res =>
+        expect(res).to.deep.equal({
+          data: 'Private'
+        })
+      );
   });
 
   it(`should succesfully get the list of the shared users by experiment`, () => {
@@ -324,13 +537,26 @@ describe('Storage request handler', () => {
   });
 
   it(`should succesfully list all customs models`, () => {
-    var expectedResult = { uuid: 'file0', fileName: 'file0', userId: 'token0' };
-    collectionMock.prototype.find = sinon
-      .stub()
-      .returns(Promise.resolve([{ fileName: 'file0', token: 'token0' }]));
+    var expectedResult = {
+      name: 'modelname',
+      path: 'folder/filename',
+      ownerName: 'userId',
+      type: 'robots',
+      fileName: 'filename'
+    };
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          name: 'modelname',
+          path: 'folder/filename',
+          ownerName: 'userId',
+          type: 'robots'
+        }
+      ])
+    );
 
     return storageRequestHandler
-      .listAllCustomModels('customFolder', 'token', 'userId', 'contextId')
+      .listModelsbyType('customFolder', 'token', 'userId', 'contextId')
       .then(res => expect(res[0]).to.deep.equal(expectedResult));
   });
 
@@ -353,14 +579,14 @@ describe('Storage request handler', () => {
   });
 
   it(`should fail to find a custom model which is not in the database`, () => {
-    const robot = '/robots/husky.zip';
+    const robot = 'husky.zip';
     storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
     storageRequestHandler.authenticator.checkToken = () => q.resolve('nrpuser');
 
     collectionMock.prototype.findOne = sinon.stub().returns(q.resolve(null));
 
     return storageRequestHandler
-      .deleteCustomModel(robot, 'userId')
+      .deleteCustomModel('robots', 'husky.zip', 'userId')
       .catch(res =>
         expect(res).to.deep.equal(
           `The model: ${robot} does not exist in the Models database.`
@@ -369,16 +595,18 @@ describe('Storage request handler', () => {
   });
 
   it(`should fail to delete a custom model which is not in the FS`, () => {
-    const robot = '/robots/husky.zip';
+    const robot = 'husky.zip';
     RewiredFSStorage.__set__('fs.unlink', () => q.reject());
-    collectionMock.prototype.findOne = sinon
-      .stub()
-      .returns(
-        Promise.resolve({ fileName: robot, token: 'token', type: 'robot' })
-      );
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        fileName: robot,
+        token: 'token',
+        type: 'robot'
+      })
+    );
 
     return storageRequestHandler
-      .deleteCustomModel(robot, 'userId')
+      .deleteCustomModel('robots', 'husky.zip', 'userId')
       .catch(res =>
         expect(res).to.deep.equal(
           `Could not find the model ${robot} to remove in the user storage.`
@@ -386,39 +614,46 @@ describe('Storage request handler', () => {
       );
   });
 
-  it(`should delete a custom model from the FS even when it fails to remove it from the DB`, () => {
-    const robot = '/robots/husky.zip';
-    collectionMock.prototype.findOne = sinon
-      .stub()
-      .returns(
-        Promise.resolve({ fileName: robot, token: 'token', type: 'robot' })
-      );
+  it(`should not delete a custom model from the FS even when it fails to remove it from the DB`, () => {
+    const robot = 'husky.zip';
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        fileName: robot,
+        token: 'token',
+        type: 'robot'
+      })
+    );
 
     collectionMock.prototype.remove = sinon
       .stub()
       .returns(Promise.resolve(null));
 
     return storageRequestHandler
-      .deleteCustomModel(robot, 'userId')
+      .deleteCustomModel('robots', 'husky.zip', 'userId', 'userId')
       .catch(res =>
         expect(res).to.deep.equal(
-          `Could not delete the model ${robot} from the Models database.`
+          `Could not find the model ${robot} to remove in the user storage.`
         )
       );
   });
 
   it(`should succesfully delete a custom model`, () => {
-    const robot = '/robots/husky.zip';
-    collectionMock.prototype.findOne = sinon
-      .stub()
-      .returns(
-        Promise.resolve({ fileName: robot, token: 'token', type: 'robot' })
-      );
-    collectionMock.prototype.remove = sinon
-      .stub()
-      .returns(Promise.resolve({ value: 1 }));
+    const robot = 'husky';
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        fileName: robot,
+        token: 'shouldsuccesstoken',
+        type: 'shouldsuccessrobot',
+        path: 'shouldsuccesspath'
+      })
+    );
+    collectionMock.prototype.remove = sinon.stub().returns(
+      Promise.resolve({
+        value: 1
+      })
+    );
     return storageRequestHandler
-      .deleteCustomModel(robot, 'userId')
+      .deleteCustomModel('robots', 'husky', 'userId')
       .then(res =>
         expect(res).to.deep.equal(
           `Succesfully deleted model ${robot} from the user storage.`
@@ -427,9 +662,9 @@ describe('Storage request handler', () => {
   });
 
   it(`should fail to delete a custom model which is not in the storage`, () => {
-    const robot = '/robots/husky.zip';
+    const robot = 'husky';
     return storageRequestHandler
-      .deleteCustomModel(robot, 'userId')
+      .deleteCustomModel('robots', robot, 'userId')
       .catch(res =>
         expect(res).to.deep.equal(
           `Could not find the model ${robot} to remove in the user storage.`
@@ -470,9 +705,13 @@ describe('Storage request handler', () => {
       name: fakeExperiment,
       owned: true
     };
-    collectionMock.prototype.find = sinon
-      .stub()
-      .returns(Promise.resolve([{ experiment: fakeExperiment }]));
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          experiment: fakeExperiment
+        }
+      ])
+    );
 
     return storageRequestHandler
       .listExperiments(fakeToken)
@@ -511,7 +750,6 @@ describe('Storage request handler', () => {
       .should.eventually.contain('storage/FS/login.html');
   });
 
-  // listCustomModels success
   it(`should correctly return the user custom files`, () => {
     storageRequestHandler.customModelService.getZipModelMetaData = function() {
       return q.when(config);
@@ -519,45 +757,65 @@ describe('Storage request handler', () => {
     storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
     storageRequestHandler.authenticator.checkToken = () => q.resolve('nrpuser');
 
-    storageRequestHandler.storage.listCustomModels = function() {
+    storageRequestHandler.storage.listUserModelsbyType = function() {
       return q.when([
-        { uuid: 'robots/husky_model.zip', fileName: 'robots/husky_model.zip' }
+        {
+          modelType: 'robots',
+          fileName: 'husky_model.zip'
+        }
       ]);
     };
-    storageRequestHandler.storage.getCustomModel = function() {
-      return q.when([{ path: 'robots/husky_model.zip', data: [] }]);
+    storageRequestHandler.storage.getModelFolder = function() {
+      return q.when([
+        {
+          data: []
+        }
+      ]);
     };
 
     return storageRequestHandler
-      .listCustomModels('robots', fakeToken)
+      .listUserModelsbyType('robots', fakeToken)
       .should.eventually.deep.include(config);
   });
 
   // getUserInfo success
   it(`should successfully return the user info`, () => {
-    collectionMock.prototype.findOne = sinon
-      .stub()
-      .returns(Promise.resolve({ user: 'nrpuser' }));
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        user: 'nrpuser'
+      })
+    );
 
     return storageRequestHandler
       .getUserInfo('nrpuser', fakeToken)
-      .should.eventually.deep.equal({ id: 'nrpuser', displayName: 'nrpuser' });
+      .should.eventually.deep.equal({
+        id: 'nrpuser',
+        displayName: 'nrpuser'
+      });
   });
 
   // getUserGroups success
   it(`should successfully return the group info`, () => {
     return storageRequestHandler.getUserGroups(fakeToken).then(resp => {
-      resp[0].should.deep.equal({ name: 'hbp-sp10-user-edit-rights' });
+      resp[0].should.deep.equal({
+        name: 'hbp-sp10-user-edit-rights'
+      });
     });
   });
 
   // createZip success
   it(`should successfully create a custom model`, () => {
+    let fakeModel = {
+      ownerName: 'ownerName',
+      name: 'ownerName',
+      type: 'type',
+      path: 'path'
+    };
     storageRequestHandler.storage.createCustomModel = function() {
       return q.when('test 1');
     };
     return storageRequestHandler
-      .createCustomModel('robots', fakeToken, 'test.zip', null)
+      .createCustomModel(fakeModel, 'test.zip', null)
       .should.eventually.equal('test 1');
   });
 
@@ -597,14 +855,24 @@ describe('Storage request handler', () => {
       .should.eventually.equal('success');
   });
 
-  it('should get the getCustomModelConfig service object correctly', async () => {
+  it('should get the get ModelConfig service object correctly', async () => {
     var storageRequestHandler2 = new StorageRequestHandler(configFile);
-    storageRequestHandler2.getCustomModel = function() {
-      return q.when([{ path: 'robots/husky_model.zip', data: [] }]);
+    storageRequestHandler2.getModelFolder = function() {
+      return q.when([
+        {
+          path: 'robots/husky_model.zip',
+          data: []
+        }
+      ]);
     };
 
     return storageRequestHandler2
-      .getCustomModelConfig({ uuid: 'robots/husky_model.zip' }, fakeToken)
+      .getModelConfigFile(
+        {
+          uuid: 'robots/husky_model.zip'
+        },
+        fakeToken
+      )
       .should.eventually.deep.include(config);
   });
 });
@@ -625,7 +893,9 @@ describe('Request handler (not mocking the mkdir)', () => {
   it(`should successfully create an experiment given a correct token `, () => {
     storageRequestHandler = new StorageRequestHandler(configFile);
     //using the correct authentication DB
-    const mockUtils2 = { storagePath: path.join(__dirname, 'dbMock') };
+    const mockUtils2 = {
+      storagePath: path.join(__dirname, 'dbMock')
+    };
     RewiredDB2 = rewire('../../storage/FS/DB');
     RewiredDB2.__set__('utils', mockUtils2);
     RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator');
@@ -634,7 +904,9 @@ describe('Request handler (not mocking the mkdir)', () => {
     storageRequestHandler.authenticator = fsAuthenticator;
     //mocking the storage db
     let newPath = path.join(__dirname, 'dbMock2');
-    const mockUtils = { storagePath: path.join(__dirname, 'dbMock2') };
+    const mockUtils = {
+      storagePath: path.join(__dirname, 'dbMock2')
+    };
     RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
     RewiredFSStorage = rewire('../../storage/FS/Storage');

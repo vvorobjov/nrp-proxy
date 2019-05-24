@@ -9,7 +9,8 @@ const fs = require('fs'),
   path = require('path'),
   assert = chai.assert,
   q = require('q'),
-  sinon = require('sinon');
+  sinon = require('sinon'),
+  fakecustomModelAbsPath = path.join(__dirname, 'dbMock', 'USER_DATA');
 
 chai.use(chaiAsPromised);
 chai.use(chaiSubset);
@@ -54,6 +55,7 @@ describe('FSStorage', () => {
     RewiredDB.__set__('DBCollection', collectionMock);
     RewiredFSStorage = rewire('../../storage/FS/Storage');
     RewiredFSStorage.__set__('DB', RewiredDB.default);
+    RewiredFSStorage.__set__('customModelAbsPath', fakecustomModelAbsPath);
     RewiredFSStorage.__set__('utils', mockUtils);
     RewiredFSStorage.__set__('fsExtra', mockFsExtra);
     RewiredFSStorage.__set__('fs.statSync', fakeStatSync);
@@ -65,14 +67,135 @@ describe('FSStorage', () => {
     RewiredFSStorage.__set__('fs.mkdir', empty);
     fsStorage = new RewiredFSStorage.Storage();
   });
+  /* models inicio */
+  it(`should delete a shared user from a model`, () => {
+    var expectedResult = [1, { updatedExisting: true, n: 1 }];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expectedResult));
+    return fsStorage
+      .deleteSharedUserFromModel('fakeModelType', 'fakeModelID', 'fakeUserID')
+      .then(res => expect(res).to.deep.equal(expectedResult));
+  });
 
+  it(`should delete a all shared users from a model`, () => {
+    var expectedResult = [1, { updatedExisting: true, n: 1 }];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expectedResult));
+    return fsStorage
+      .deleteSharedUserFromModel('fakeModelType', 'fakeModelID', 'all')
+      .then(res => expect(res).to.deep.equal(expectedResult));
+  });
+
+  it(`should get list of Shared models`, () => {
+    var dBResult = [
+      {
+        name: 'fakeFileName',
+        type: 'fakeModelType',
+        ownerName: 'userId',
+        path: 'folder/model.zip'
+      }
+    ];
+
+    var expectedResult = [
+      {
+        name: 'fakeFileName',
+        type: 'fakeModelType',
+        ownerName: 'userId',
+        path: 'folder/model.zip'
+      }
+    ];
+
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve(dBResult));
+    return fsStorage
+      .listSharedModels('fakeModelType', 'fakeModelID')
+      .then(res => expect(res).to.deep.equal(expectedResult));
+  });
+
+  it(`should get Shared models Option`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve({ sharedOption: 'Private' }));
+    return fsStorage
+      .getSharedModelMode('fakeModelType', 'fakeModelID')
+      .then(res => expect(res).to.deep.equal({ sharedOption: 'Private' }));
+  });
+
+  it(`should list shared users by model`, () => {
+    var expectedResult = [1, { updatedExisting: true, n: 1 }];
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expectedResult));
+    return fsStorage
+      .updateSharedModelMode('fakeModelType', 'fakeModelID', 'public')
+      .then(res => expect(res).to.deep.equal(expectedResult));
+  });
+
+  it(`should list shared users by Models`, () => {
+    var dbresult = {
+      sharedUsers: ['user1']
+    };
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(dbresult));
+    return fsStorage
+      .listSharedUsersbyModel('fakeModelType', 'fakeModelID')
+      .then(res => expect(res).to.deep.equal(dbresult.sharedUsers));
+  });
+
+  it(`should list all customs models`, () => {
+    var dbresult = [
+      {
+        name: 'modelName',
+        ownerName: 'userId',
+        path: 'folder/model.zip',
+        type: 'robot',
+        sharedOption: 'Private'
+      }
+    ];
+    var expectedResult = [
+      {
+        name: 'modelName',
+        ownerName: 'userId',
+        path: 'folder/model.zip',
+        type: 'robot',
+        isShared: false
+      }
+    ];
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve(dbresult));
+    return fsStorage
+      .listAllModels('fakeModelType', 'fakeUserId')
+      .then(res => expect(res).to.deep.equal(expectedResult));
+  });
+
+  it(`should list shared users by model type`, () => {
+    var expectedResult = [1, { updatedExisting: true, n: 1 }];
+
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve(expectedResult));
+
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve({ _id: 'fakeId' }));
+    return fsStorage
+      .addUsertoSharedUserListinModel('fakeModelType', 'fakeUserId')
+      .then(res => expect(res).to.deep.equal(expectedResult));
+  });
+
+  /* models fin */
   it(`should get Shared Experiments Option`, () => {
     collectionMock.prototype.findOne = sinon
       .stub()
-      .returns(Promise.resolve('Private'));
+      .returns(Promise.resolve({ data: 'Private' }));
     return fsStorage
       .getExperimentSharedMode('expId')
-      .then(res => expect(res).to.deep.equal('Private'));
+      .then(res => expect(res).to.deep.equal({ data: 'Private' }));
   });
 
   it(`should list shared users by experiment`, () => {
@@ -90,7 +213,7 @@ describe('FSStorage', () => {
       token: 'user0',
       experiment: 'benchmark_p3dx_0',
       _id: 5,
-      shared_users: ['user1'],
+      shared_users: ['user1', 'user2'],
       shared_option: 'Shared'
     };
     collectionMock.prototype.findOne = sinon
@@ -111,52 +234,100 @@ describe('FSStorage', () => {
       .then(res => expect(res[0]).to.deep.equal(expectedResult));
   });
 
+  it(`should get the model Path of an specific model`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve({ path: 'robots/husky_model.zip' }));
+    return fsStorage
+      .getModelPath('robots', 'husky_model')
+      .then(res => res.should.equal('robots/husky_model.zip'));
+  });
+
   it(`should get a custom model`, () => {
     collectionMock.prototype.findOne = sinon
       .stub()
-      .returns(Promise.resolve('value'));
+      .returns(Promise.resolve({ path: 'robots/husky_model.zip' }));
     return fsStorage
-      .getCustomModel({ uuid: 'robots/husky_model.zip' }, fakeToken, 'admin')
+      .getModelFolder('robots', 'husky_model', 'admin')
       .then(res => expect(res).should.not.be.empty);
   });
 
   it(`should list all custom models`, () => {
-    collectionMock.prototype.find = sinon
-      .stub()
-      .returns(Promise.resolve([{ fileName: 'file0', token: 'token0' }]));
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          name: 'name',
+          path: 'model/filename.zip',
+          ownerName: 'userId',
+          type: 'robot',
+          fileName: 'file0'
+        }
+      ])
+    );
 
-    return fsStorage
-      .listAllCustomModels('customFolder')
-      .then(res =>
-        res.should.deep.equal([
-          { uuid: 'file0', fileName: 'file0', userId: 'token0' }
-        ])
-      );
+    return fsStorage.listModelsbyType('customFolder').then(res =>
+      res.should.deep.equal([
+        {
+          name: 'name',
+          path: 'model/filename.zip',
+          ownerName: 'userId',
+          type: 'robot',
+          fileName: 'filename.zip'
+        }
+      ])
+    );
+  });
+  it(`should throw when we try to add an user when the exp does not exist`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(null));
+    return assert.isRejected(
+      fsStorage.addUsertoSharedUserListinModel(
+        'modelType',
+        'modelName',
+        'userName'
+      )
+    );
+  });
+
+  it(`should throw when we try to add an user when the exp does not exist`, () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(null));
+    return assert.isRejected(
+      fsStorage.addUsertoSharedUserListinExperiment('newExperiment', 'userid')
+    );
   });
 
   it(`should fail to list all custom models`, () => {
     collectionMock.prototype.find = sinon.stub().returns(Promise.reject());
     return fsStorage
-      .listAllCustomModels('customFolder')
+      .listModelsbyType('customFolder')
       .then(res => res.should.deep.equal([]));
   });
 
-  it(`should get a list custom model`, () => {
+  it(`should get a list custom model by user`, () => {
     const expected = {
-      uuid: fakeExperiment,
-      fileName: fakeExperiment
+      name: 'modelName',
+      path: 'foldername/filename.zip',
+      ownerId: 'userId',
+      type: 'robots'
     };
     collectionMock.prototype.find = sinon.stub().returns(
       Promise.resolve([
         {
-          uuid: fakeExperiment,
-          fileName: fakeExperiment
+          name: 'modelName',
+          path: 'foldername/filename.zip',
+          ownerId: 'userId',
+          type: 'robots'
         }
       ])
     );
     return fsStorage
-      .listCustomModels('robots', fakeToken, fakeUserId, 'contextId')
-      .then(res => expect(res).to.contain(expected));
+      .listUserModelsbyType('robots', fakeToken, fakeUserId)
+      .then(res => {
+        expect(res[0].name).to.be.equal('modelName');
+      });
   });
 
   it(`should have an error when here is not model `, () => {
@@ -164,33 +335,39 @@ describe('FSStorage', () => {
       .stub()
       .returns(Promise.resolve(null));
     return fsStorage
-      .getCustomModel({ uuid: 'robots/husky_model.zip' }, fakeToken, 'admin')
+      .getModelFolder('robots', 'husky_model.zip', 'admin')
       .should.be.eventually.rejectedWith(
-        'The model: robots/husky_model.zip does not exist in the Models database.'
+        'The model: husky_model.zip does not exist in the Models database.'
       );
   });
 
   it(`should have return empty if there is an error in list models`, () => {
     collectionMock.prototype.find = sinon.stub().returns(Promise.reject(null));
     return fsStorage
-      .listCustomModels({ uuid: 'robots/husky_model.zip' }, fakeToken, 'admin')
+      .listUserModelsbyType(
+        { uuid: 'robots/husky_model.zip' },
+        fakeToken,
+        'admin'
+      )
       .should.eventually.deep.equal([]);
   });
 
   it('should create custom model correctly', () => {
+    let fakeModel = {
+      ownerName: 'ownerName',
+      name: 'ownerName',
+      type: 'type',
+      path: 'path'
+    };
     collectionMock.prototype.findOne = sinon
       .stub()
       .returns(Promise.resolve(null));
     return fsStorage
-      .createCustomModel(
-        'robots',
-        'data',
-        fakeUserId,
-        'test.zip',
-        fakeToken,
-        'contextId'
-      )
-      .then(res => expect(res).should.not.be.empty);
+      .createCustomModel(fakeModel, 'zip')
+      .then(res => expect(res).should.not.be.empty)
+      .then(() => {
+        fs.unlinkSync(path.join(fakecustomModelAbsPath, fakeModel.path));
+      });
   });
 
   it(`should return an entry when we check an existing token`, () => {
@@ -881,7 +1058,7 @@ describe('Collab Storage', () => {
       .get('/storage/v1/api/file/modelPath/content/')
       .reply(200, { msg: 'Success!' });
     return collabStorage
-      .getCustomModel({ uuid: 'modelPath' }, fakeToken, fakeUserId)
+      .getModelFolder({ uuid: 'modelPath' }, fakeToken, fakeUserId)
       .then(res => JSON.parse(res).should.deep.equal({ msg: 'Success!' }));
   });
 

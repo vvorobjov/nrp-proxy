@@ -39,17 +39,18 @@ export default class CustomModelsService {
       `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
     );
 
-    const zipfile = zip.file(path.join(basename, 'model.config'));
-    if (!zipfile) return exception;
+    const configFileRelPath = zip.file(path.join(basename, 'model.config'));
+    if (!configFileRelPath) return exception;
 
-    return zipfile
+    return configFileRelPath
       .async('string')
       .then(q.denodeify(xml2js))
       .then(({ model: xml }) => ({
         name: xml.name && xml.name[0].trim(),
         description: xml.description && xml.description[0].trim(),
         sdf: xml.sdf ? xml.sdf[0]._ : undefined,
-        brain: xml.brain ? xml.brain[0] : undefined
+        brain: xml.brain ? xml.brain[0] : undefined,
+        configPath: configFileRelPath.name
       }));
   }
 
@@ -75,7 +76,7 @@ export default class CustomModelsService {
       .then(data => 'data:image/png;base64,' + data);
   }
 
-  getZipModelMetaData(filePath, fileContent, fileName?) {
+  getZipModelMetaData(model, fileContent) {
     return jszip.loadAsync(fileContent).then(async zip => {
       const exception = q.reject(
         `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
@@ -93,25 +94,22 @@ export default class CustomModelsService {
             this.logThumbnail(zip, basename)
           ])
           .then(async ([config, thumbnail]) => ({
-            name: config.name,
+            name: config.name.toLowerCase().replace(/ /g, '_'),
+            ownerId: model.ownerId,
+            type: model.type,
+            fileName: path.basename(model.path),
+            isShared: model.isShared,
+            isCustom: true,
+
             description: config.description,
             thumbnail: thumbnail ? thumbnail : defaultThumbnail,
-            path: encodeURIComponent(filePath), // escape slashes
-            fileName,
-            script: config.brain ? await zip.file(path.join(basename, config.brain)).async('text').then(data => data) : undefined
+            path: model.path, // escape slashes
+            script: config.brain ? await zip.file(path.join(basename, config.brain)).async('text').then(data => data) : undefined,
+            sdf: !config.brain ? path.join(basename, config.sdf) : undefined,
+            configPath: config.configPath
           }))
-          .then(async model => {
-            if (!model.script) {
-              const metadata = await this.extractModelMetadataFromZip(fileContent);
-              const modelFolder = metadata.relPath.split('/')[0];
-              model.sdf = metadata.modelConfig.model.sdf[0]._;
-              model.configPath = modelFolder + '/model.config';
-              model.id = modelFolder;
-            }
-            return model;
-          })
           .catch(err =>
-            q.reject(`Failed to load model '${filePath}'.\nErr: ${err}`)
+            q.reject(`Failed to load model '${model.location}'.\nErr: ${err}`)
           );
       } catch (err) {
         return exception;
