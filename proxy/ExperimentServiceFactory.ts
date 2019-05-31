@@ -112,6 +112,7 @@ abstract class BaseExperimentService {
       thumbnail: getExDProp(ExD.thumbnail),
       description: getExDProp(ExD.description),
       maturity: maturity === 'production' ? maturity : 'development',
+      cloneDate: getExDProp(ExD.cloneDate) ? getExDProp(ExD.cloneDate).replace(/T/, ' ') : undefined,
       cameraPose:
         ExD.cameraPose &&
         [

@@ -25,6 +25,7 @@
 
 import X2JS from 'x2js';
 import CustomModelsService from './CustomModelsService';
+import utils from './FS/utils';
 
 const path = require('path'),
   q = require('q'),
@@ -257,6 +258,8 @@ abstract class ExperimentCloner {
       for (const conf of experiment.configuration) this.downloadFile(conf._src);
 
     if (experiment.rosLaunch) this.downloadFile(experiment.rosLaunch._src);
+
+    experiment.cloneDate = utils.getCurrentTimeAndDate();
 
     const expFile = path.join(
       this.tmpFolder.name,

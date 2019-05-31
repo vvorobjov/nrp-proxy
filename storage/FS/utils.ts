@@ -43,7 +43,21 @@ const generateUniqueExperimentId = (basename, suffix, existingExperiments) => {
   }
 };
 
+const getCurrentTimeAndDate = () => {
+  function pad(n) {
+    return n < 10 ? '0' + n : n;
+  }
+  const date = new Date();
+  const day = date.getDate();
+  const month = date.getMonth();
+  const year = date.getFullYear();
+  const dayWithYear = year + '-' + pad(month + 1) + '-' + pad(day);
+  const time = date.toLocaleTimeString();
+  return dayWithYear + 'T' + time;
+};
+
 export default {
   storagePath,
-  generateUniqueExperimentId
+  generateUniqueExperimentId,
+  getCurrentTimeAndDate
 };

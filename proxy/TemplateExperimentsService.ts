@@ -110,15 +110,15 @@ export default class ExperimentsService {
       expPath = path.dirname(fileConfigPath);
     return parser
       .parse(experimentContent, EXD_CONFIG.document)
-      .then(({ ExD: exc }) => {
-        return q.all([
+      .then(({ ExD: exc }) =>
+        q.all([
           exc,
           readFile(
             path.join(configPath, expPath, exc.bibiConf.src),
             'utf8'
           ).then(data => new X2JS().xml2js(data))
-        ]);
-      })
+        ])
+      )
       .then(([exc, { bibi: bibi }]) => {
         let robotPaths = {};
         if (bibi.bodyModel) {
@@ -133,7 +133,7 @@ export default class ExperimentsService {
               if (!model._robotId) {
                 console.error(
                   'Multiple bodyModels has been defined with same or no names.' +
-                    'Please check bibi config file.'
+                  'Please check bibi config file.'
                 );
               }
               robotPaths[model._robotId] = model.__text || model;
@@ -156,7 +156,7 @@ export default class ExperimentsService {
           experimentConfiguration: fileConfigPath,
           maturity:
             exc.maturity === 'production' ? 'production' : 'development',
-          timeout: exc.timeout || 600,
+          timeout: exc.timeout.content || 600,
           brainProcesses:
             exc.bibiConf.processes._exists === false
               ? 1
@@ -171,13 +171,13 @@ export default class ExperimentsService {
             exc.visualModel._exists === false
               ? undefined
               : [
-                  ...['x', 'y', 'z', 'ux', 'uy', 'uz'].map(
-                    p => exc.visualModel.visualPose[p]
-                  ),
-                  exc.visualModel.scale._exists === false
-                    ? 1
-                    : exc.visualModel.scale
-                ]
+                ...['x', 'y', 'z', 'ux', 'uy', 'uz'].map(
+                  p => exc.visualModel.visualPose[p]
+                ),
+                exc.visualModel.scale._exists === false
+                  ? 1
+                  : exc.visualModel.scale
+              ]
         };
       });
   }

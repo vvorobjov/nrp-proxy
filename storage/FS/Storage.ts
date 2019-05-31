@@ -24,13 +24,15 @@
 'use strict';
 
 import { unionWith } from 'lodash';
+import X2JS from 'x2js';
 import Authenticator from '../BaseAuthenticator';
 import BaseStorage from '../BaseStorage';
 
 const q = require('q'),
   path = require('path'),
   mime = require('mime-types'),
-  USER_DATA_FOLDER = 'USER_DATA';
+  USER_DATA_FOLDER = 'USER_DATA',
+  pd = require('pretty-data').pd;
 
 // mocked in the tests thus non const
 // tslint:disable: prefer-const
@@ -387,7 +389,7 @@ export class Storage extends BaseStorage {
     if (options.all) {
       const storageContents: string[] = await q.denodeify(fs.readdir)(utils.storagePath);
       const fsExperiments = storageContents.map(file => ({ uuid: file, name: file }));
-      const dbExperiments = (await DB.instance.experiments.find()).map(e => ({uuid: e.experiment, name: e.experiment}));
+      const dbExperiments = (await DB.instance.experiments.find()).map(e => ({ uuid: e.experiment, name: e.experiment }));
       return unionWith(
         fsExperiments,
         dbExperiments,
@@ -420,24 +422,52 @@ export class Storage extends BaseStorage {
       });
   }
 
-  copyExperiment(experiment, token, userId) {
-    return this.listExperiments(token, userId, null, {
+  /*
+  Decorates the experiment_configuration file with an extra xml attribute. The attribute
+  is also checked for the __prefix value and if it exists in the .exc then we also
+  add it in the atribute itself. The expConf is read as a buffer and converted into a utf8 string
+  */
+  decorateExpConfigurationWithAttribute(attribute, value, expConf) {
+    const expConfString: string = new X2JS().xml2js(expConf.toString('utf8'));
+    const exD: string = 'ExD';
+    // only add the attribute if it is not there
+    if (expConfString[exD].__prefix) {
+      expConfString[exD][attribute] = {
+        __prefix: expConfString[exD].__prefix,
+        __text: value
+      };
+    } else {
+      expConfString[exD][attribute] = value;
+    }
+    return pd.xml(new X2JS({ escapeMode: false }).js2xml(expConfString));
+  }
+
+  async copyExperiment(experiment, token, userId) {
+    const experimentsList = await this.listExperiments(token, userId, null, {
       all: true
-    }).then(res => {
-      const copiedExpName = utils.generateUniqueExperimentId(
-        experiment,
-        0,
-        res.map(exp => exp.name)
-      );
-      return this.createExperiment(copiedExpName, token, userId)
-        .then(() => this.listFiles(experiment, token, userId))
-        .then(res =>
-          this.copyFolderContents(res, copiedExpName).then(() => ({
-            clonedExp: copiedExpName,
-            originalExp: experiment
-          }))
-        );
     });
+    const copiedExpName = utils.generateUniqueExperimentId(
+      experiment,
+      0,
+      experimentsList.map(exp => exp.name)
+    );
+    await this.createExperiment(copiedExpName, token, userId);
+    await this.copyFolderContents(experiment, copiedExpName);
+
+    // Decorate the experiment configuration with the cloneDate attribute
+    const experimentConfiguration = await this.getFile('experiment_configuration.exc', copiedExpName, token, userId, true);
+    const decoratedExpConf = this.decorateExpConfigurationWithAttribute('cloneDate', utils.getCurrentTimeAndDate(), experimentConfiguration.body);
+    await this.createOrUpdate('experiment_configuration.exc',
+      decoratedExpConf,
+      experimentConfiguration.contentType,
+      copiedExpName,
+      token,
+      userId);
+
+    return {
+      clonedExp: copiedExpName,
+      originalExp: experiment
+    };
   }
 
   getExperimentSharedMode(experimentID) {
@@ -506,21 +536,11 @@ export class Storage extends BaseStorage {
       });
   }
 
-  copyFolderContents(contents, destFolder) {
-    return q.all(
-      contents.map(item =>
-        (item.type === 'folder'
-          ? fsExtra.ensureDir(
-            this.calculateFilePath('', path.join(destFolder, item.name))
-          )
-          : q.resolve()
-        ).then(() =>
-          fsExtra.copy(
-            this.calculateFilePath('', item.uuid),
-            this.calculateFilePath('', path.join(destFolder, item.name))
-          )
-        )
-      )
-    );
+  async copyFolderContents(experiment, destFolder) {
+    // Filter out all the csv_records folders
+    const filterFunc = (src, dest) => {
+      return !dest.includes('/csv_records') && !dest.includes('/recordings');
+    };
+    return fsExtra.copySync(path.join(utils.storagePath, experiment), path.join(utils.storagePath, destFolder), { filter: filterFunc });
   }
 }

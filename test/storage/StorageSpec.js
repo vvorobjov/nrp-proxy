@@ -44,11 +44,13 @@ describe('FSStorage', () => {
   beforeEach(() => {
     const mockUtils = {
       storagePath: path.join(__dirname, 'dbMock'),
-      generateUniqueExperimentId: realUtils.generateUniqueExperimentId
+      generateUniqueExperimentId: realUtils.generateUniqueExperimentId,
+      getCurrentTimeAndDate: () => '2019-05-03T12:05:17'
     };
     const mockFsExtra = {
       copy: () => q.when('test'),
-      ensureDir: () => q.resolve()
+      ensureDir: () => q.resolve(),
+      copySync: () => q.resolve('copiedDirectory')
     };
     RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
@@ -381,32 +383,25 @@ describe('FSStorage', () => {
 
   //copy experiment
   it(`should copy an experiment correctly`, () => {
-    fsStorage.createExperiment = function() {
-      return new Promise(function(resolve) {
-        resolve('success');
-      });
-    };
-    fsStorage.listExperiments = function() {
-      return new Promise(function(resolve) {
-        resolve([{ uuid: 'uuid', name: 'name1' }]);
-      });
-    };
+    fsStorage.createExperiment = () => q.resolve('success');
+    fsStorage.listExperiments = () =>
+      q.resolve([{ uuid: 'uuid', name: 'name1' }]);
+    fsStorage.listFiles = () =>
+      q.resolve([
+        {
+          uuid: 'file_1',
+          name: 'file_1'
+        },
+        {
+          uuid: 'file_2',
+          name: 'file_2'
+        }
+      ]);
 
-    fsStorage.listFiles = function() {
-      return new Promise(function(resolve) {
-        resolve([
-          {
-            uuid: 'file_1',
-            name: 'file_1'
-          },
-          {
-            uuid: 'file_2',
-            name: 'file_2'
-          }
-        ]);
-      });
-    };
     sinon.stub(fsStorage, 'copyFolderContents').returns(q.when());
+    fsStorage.getFile = () => q.resolve({ body: 'expConfBody' });
+    sinon.stub(fsStorage, 'decorateExpConfigurationWithAttribute').returns({});
+    fsStorage.createOrUpdate = () => q.resolve();
     return fsStorage
       .copyExperiment('Exp_0', fakeToken, fakeUserId)
       .should.eventually.contain({ clonedExp: 'Exp_0_0' });
@@ -415,8 +410,44 @@ describe('FSStorage', () => {
   //copy folderContents
   it(`should copy folder contents`, () => {
     return fsStorage
-      .copyFolderContents([{ uuid: 'Exp_0', name: 'Exp_0' }], 'test')
-      .should.eventually.deep.equal(['test']);
+      .copyFolderContents('Exp_0', 'Exp_0_0')
+      .should.eventually.deep.equal('copiedDirectory');
+  });
+
+  //copy folderContents
+  it(`should decorate an .exc with a new attribute`, () => {
+    const excBufferWithPrefix = `<ns1:ExD xmlns:ns1="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig"></ns1:ExD>`;
+    let result = `<ns1:ExD 
+      xmlns:ns1="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig">
+      <ns1:cloneDate>fakeDate</ns1:cloneDate>
+    </ns1:ExD>`;
+    const excBufferWithoutPrefix = `<ExD 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig" xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig ../ExDConfFile.xsd">
+   </ExD>`;
+
+    let decoratedExpConf = fsStorage.decorateExpConfigurationWithAttribute(
+      'cloneDate',
+      'fakeDate',
+      excBufferWithPrefix
+    );
+    // for the expectation we remove the whitespaces and the newlines as they confuse the comparison
+    expect(result.replace(/\n$/, '').replace(/ /g, '')).to.deep.equal(
+      decoratedExpConf.replace(/\n$/, '').replace(/ /g, '')
+    );
+    decoratedExpConf = fsStorage.decorateExpConfigurationWithAttribute(
+      'cloneDate',
+      'fakeDate',
+      excBufferWithoutPrefix
+    );
+    result = `<ExD 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig" xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig ../ExDConfFile.xsd">
+    <cloneDate>fakeDate</cloneDate>
+    </ExD>`;
+    expect(result.replace(/\n$/, '').replace(/ /g, '')).to.deep.equal(
+      decoratedExpConf.replace(/\n$/, '').replace(/ /g, '')
+    );
   });
 
   it(`should throw when we check a non-existing token`, () => {
