@@ -142,7 +142,7 @@ describe('Storage request handler', () => {
     RewiredFSStorage.__set__('fs.mkdir', fakeMkdir);
     RewiredFSStorage.__set__('rmdir', fakeRmdir);
     RewiredFSStorage.__set__('fs.lstatSync', fakeLstatSync);
-    RewiredFSStorage.__set__('fs.readdirSync', fakeReadDirSync);
+    RewiredFSStorage.__with__('fs.readdirSync', fakeReadDirSync);
     RewiredFSStorage.__set__('fs.unlink', fakeUnlink);
     fsStorage = new RewiredFSStorage.Storage();
     RewiredFSAuthenticator = rewire('../../storage/FS/Authenticator');

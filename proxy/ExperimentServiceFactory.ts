@@ -88,15 +88,21 @@ abstract class BaseExperimentService {
   }
 
   async getConfig() {
-    // eslint-disable-next-line no-unused-vars
-    const [{ ExD }, file, exc] = await this.getExc();
+    /* tslint:disable */
+    let ExD, file, exc;
+    /* tslint:enable */
+    try {
+      [{ ExD }, file, exc] = await this.getExc();
+    } catch (err) {
+      return {}; // empty configuration object, to be interpreted by the caller as a missing exc file
+    }
 
     let bibiConfSrc;
     try {
       const bibi = await this.getBibi();
       bibiConfSrc = bibi[1];
     } catch (err) {
-      bibiConfSrc = undefined;
+      bibiConfSrc = undefined; // to be interpreted by the caller as a missing bibi file
     }
 
     const getExDProp = prop => (prop && prop.__prefix ? prop.__text : prop);

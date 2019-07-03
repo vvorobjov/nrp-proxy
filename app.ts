@@ -262,7 +262,8 @@ app.get('/storage/experiments', async (req, res) => {
               ...configuration
             };
           })
-          .catch(() => null) // null if no config found (eg: missing exc)
+          .catch(_.partial(handleError, res))
+
     );
 
     await Promise.all([...joinableServerPromises, ...configurationPromises]);
@@ -488,6 +489,30 @@ app.get('/models/:modelType/:modelName/config', (req, res, next) => {
     .getModelConfig(req.params.modelType, req.params.modelName)
     .then(config => res.sendFile(config))
     .catch(next);
+});
+
+app.post('/storage/importExperiment', async (req, res) => {
+  const token = getAuthToken(req);
+  storageRequestHandler
+    .registerZippedExperiment(
+      token,
+      req.get('context-id'),
+      req.body, // zip file
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.post('/storage/scanStorage', async (req, res) => {
+  const token = getAuthToken(req);
+  storageRequestHandler
+    .scanStorage(
+      token,
+      req.get('context-id'),
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+
 });
 
 app.get('/storage/:experiment/:filename', (req, res) => {

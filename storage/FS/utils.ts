@@ -23,6 +23,8 @@
  * ---LICENSE-END**/
 'use strict';
 
+const path = require('path');
+
 const STORAGE_PATH_ENV = 'STORAGE_PATH', // STORAGE_PATH variable
   DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
 
@@ -56,8 +58,15 @@ const getCurrentTimeAndDate = () => {
   return dayWithYear + 'T' + time;
 };
 
+// Returns true if the corresponding file is an image, false otherwise
+const isImage = (filepath) => {
+  const IMG_EXT = ['png', 'jpg', 'jpeg', 'gif'];
+  return (IMG_EXT.indexOf(path.extname(filepath)) !== -1);
+};
+
 export default {
   storagePath,
   generateUniqueExperimentId,
-  getCurrentTimeAndDate
+  getCurrentTimeAndDate,
+  isImage
 };

@@ -26,6 +26,7 @@
 import { File } from './BaseStorage';
 import CustomModelService from './CustomModelsService';
 import * as ExperimentCloner from './ExperimentCloner';
+import { ExperimentImporter } from './ExperimentImporter';
 
 // test mocked
 // tslint:disable: prefer-const
@@ -495,5 +496,23 @@ ${ex.stack}`);
       contextId,
       defaultName
     );
+  }
+
+  async registerZippedExperiment(token, contextId, zip) {
+    const userId = await this.authenticator
+    .checkToken(token)
+    .then(() => this.getUserIdentifier(token));
+    return new ExperimentImporter(this.storage, token, userId, contextId).registerZippedExperiment(zip);
+  }
+
+  async scanStorage(token, contextId) {
+    const userId = await this.authenticator
+    .checkToken(token)
+    .then(() => this.getUserIdentifier(token));
+    return new ExperimentImporter(this.storage, token, userId, contextId).scanStorage();
+  }
+
+  getStoragePath() {
+    return this.storage.getStoragePath();
   }
 }

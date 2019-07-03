@@ -97,10 +97,9 @@ describe('Experiment cloner', () => {
   );
   ExperimentCloner.__set__('fs', fsMock);
 
-  const templateCreateUniqueExperimentId = sinon.spy(
-      templateCloner,
-      'createUniqueExperimentId'
-    ),
+  const templateCreateUniqueExperimentId = sinon
+      .stub(templateCloner, 'createUniqueExperimentId')
+      .returns('experiment1_0'),
     templateDownloadFile = sinon.spy(templateCloner, 'downloadFile'),
     createExperiment = sinon.spy(storageMock, 'createExperiment');
 
@@ -149,10 +148,9 @@ describe('Experiment cloner', () => {
         environmentPath,
         'template_new/TemplateNew.exc'
       );
-    var createUniqueExperimentId = sinon.spy(
-      newCloner,
-      'createUniqueExperimentId'
-    );
+    var createUniqueExperimentId = sinon
+      .stub(newCloner, 'createUniqueExperimentId')
+      .returns('template_new_0');
 
     var downloadFile = sinon.spy(newCloner, 'downloadFile');
     const res = await newCloner.cloneExperiment(
@@ -212,10 +210,10 @@ describe('Experiment cloner', () => {
         environmentPath,
         'template_new/TemplateNew.exc'
       );
-    var createUniqueExperimentId = sinon.spy(
-      newCloner,
-      'createUniqueExperimentId'
-    );
+    var createUniqueExperimentId = sinon
+      .stub(newCloner, 'createUniqueExperimentId')
+      .returns('template_new_0');
+
     var downloadFile = sinon.spy(newCloner, 'downloadFile');
     const res = await newCloner.cloneExperiment(
       'faketoken',
@@ -269,10 +267,10 @@ describe('Experiment cloner', () => {
         environmentPath,
         'template_resources/TemplateNew.exc'
       );
-    var createUniqueExperimentId = sinon.spy(
-      newCloner,
-      'createUniqueExperimentId'
-    );
+
+    var createUniqueExperimentId = sinon
+      .stub(newCloner, 'createUniqueExperimentId')
+      .returns('template_resources_0');
 
     var downloadFile = sinon.spy(newCloner, 'downloadFile');
     const res = await newCloner.cloneExperiment(

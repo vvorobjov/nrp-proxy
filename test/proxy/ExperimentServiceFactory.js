@@ -7,6 +7,7 @@ var expect = chai.expect;
 var nock = require('nock');
 var sinon = require('sinon');
 const q = require('q');
+const path = require('path');
 const {
     default: ExperimentServiceFactory
   } = require('../../proxy/ExperimentServiceFactory'),
@@ -164,7 +165,7 @@ var expectedBibiConfObject = {
     }
   }
 };
-var experimentId = '1234',
+var experimentId = 'experiment1',
   contextId = 111 - 222 - 333;
 var rh;
 
@@ -172,10 +173,11 @@ describe('ExperimentServiceFactory', function() {
   beforeEach(function() {
     nock.cleanAll();
     rh = new RequestHandler(configFile);
+    sinon.stub(rh, 'getStoragePath').returns('test/data/experiments');
     mockedExcFile.body = excFilebody;
   });
 
-  it('getExc() should get the .exc configuration file', function() {
+  it('getExc() should get the .exc configuration file (template case)', function() {
     sinon.stub(rh, 'getFile').returns(q.when(mockedExcFile));
     var esf = new ExperimentServiceFactory(rh);
     var es = esf.createExperimentService(experimentId, contextId);
@@ -186,6 +188,18 @@ describe('ExperimentServiceFactory', function() {
         'experiment_configuration.exc',
         excFilebody
       ]);
+  });
+
+  it('getExc() should get the .exc configuration file (cloned experiment case)', function() {
+    sinon.stub(rh, 'getFile').returns(q.when(mockedExcFile));
+    const experimentsPath = path.join(__dirname, '../data/experiments');
+    var esf = new ExperimentServiceFactory(rh, { experimentsPath });
+    var es = esf.createExperimentService('TemplateNew', contextId, true);
+    return es.getExc().then(response => {
+      expect(response).to.have.lengthOf(3);
+      expect(response[0].ExD.thumbnail).to.equal('TemplateNew.png');
+      expect(response[1]).to.equal('TemplateNew.exc');
+    });
   });
 
   it('.getBibi() should get the .bibi configuration file', function() {
@@ -220,6 +234,16 @@ describe('ExperimentServiceFactory', function() {
       expect(res.bibiConfSrc).to.equal('bibi_configuration.bibi');
       expect(res.brainProcesses).to.equal(2);
       expect(res.maturity).to.equal('production');
+    });
+  });
+
+  it('.getConfig() should return an empty object if the .exc is not found', function() {
+    sinon.stub(rh, 'getFile').returns(q.when(mockedExcFile));
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    sinon.stub(es, 'getExc').throws();
+    return es.getConfig().then(response => {
+      expect(response).deep.equal({});
     });
   });
 
@@ -268,8 +292,8 @@ describe('ExperimentServiceFactory', function() {
     const csvFiles = await es.getCSVFiles();
 
     expect(csvFiles).to.eql([
-      { folder: '2', uuid: '1234%2Fcsv_records_2%2Fcsvfile' },
-      { folder: '1', uuid: '1234%2Fcsv_records_1%2Fcsvfile' }
+      { folder: '2', uuid: 'experiment1%2Fcsv_records_2%2Fcsvfile' },
+      { folder: '1', uuid: 'experiment1%2Fcsv_records_1%2Fcsvfile' }
     ]);
     return csvFiles;
   });

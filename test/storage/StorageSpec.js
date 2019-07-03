@@ -10,6 +10,7 @@ const fs = require('fs'),
   assert = chai.assert,
   q = require('q'),
   sinon = require('sinon'),
+  jszip = require('jszip'),
   fakecustomModelAbsPath = path.join(__dirname, 'dbMock', 'USER_DATA');
 
 chai.use(chaiAsPromised);
@@ -41,16 +42,19 @@ describe('FSStorage', () => {
     return stat;
   };
 
+  const mockFsExtra = {
+    copy: () => q.when('test'),
+    ensureDir: () => q.resolve(),
+    writeFile: () => q.resolve(),
+    exists: () => q.resolve(),
+    copySync: () => q.resolve('copiedDirectory')
+  };
+
   beforeEach(() => {
     const mockUtils = {
       storagePath: path.join(__dirname, 'dbMock'),
       generateUniqueExperimentId: realUtils.generateUniqueExperimentId,
       getCurrentTimeAndDate: () => '2019-05-03T12:05:17'
-    };
-    const mockFsExtra = {
-      copy: () => q.when('test'),
-      ensureDir: () => q.resolve(),
-      copySync: () => q.resolve('copiedDirectory')
     };
     RewiredDB = rewire('../../storage/FS/DB');
     RewiredDB.__set__('utils', mockUtils);
@@ -691,6 +695,107 @@ describe('FSStorage', () => {
       )
       .should.eventually.contain('deleted');
   });
+  //createUniqueId
+  it(`should create a unique id for a given experiment folder name`, () => {
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          uuid: fakeExperiment,
+          name: fakeExperiment,
+          experiment: 'husky_0'
+        }
+      ])
+    );
+    const expected = 'husky_1';
+    return fsStorage
+      .createUniqueExperimentId(fakeToken, fakeUserId, 'husky')
+      .should.eventually.contain(expected);
+  });
+
+  //getStoragePath
+  it(`should create a unique id for a given experiment folder name`, () => {
+    const mockUtils = { storagePath: path.join(__dirname, 'dbMock') };
+    RewiredDB.__set__('utils', mockUtils);
+    expect(fsStorage.getStoragePath()).to.contain('dbMock');
+  });
+
+  //insertExperimentInDB
+  it(`should insert an experiment in the database`, () => {
+    collectionMock.prototype.insert = sinon
+      .stub()
+      .returns(Promise.resolve('inserted'));
+    return fsStorage
+      .insertExperimentInDB(fakeUserId, 'p3dx_6')
+      .should.eventually.equal('inserted');
+  });
+
+  //removeExperiments
+  it(`should remove experiments from the database`, () => {
+    const exp1 = {
+      uuid: fakeExperiment,
+      name: fakeExperiment,
+      experiment: 'husky_0'
+    };
+    const exp2 = {
+      uuid: fakeExperiment,
+      name: fakeExperiment,
+      experiment: 'husky_1'
+    };
+    const experimentsToBeRemoved = [exp1, exp2];
+    collectionMock.prototype.remove = sinon
+      .stub()
+      .returns(Promise.resolve('removed'));
+    return fsStorage
+      .removeExperiments(experimentsToBeRemoved)
+      .should.eventually.deep.equal(['removed', 'removed']);
+  });
+
+  //addNonRegisteredExperiments
+  it(`should add non-registered experiments to the database`, () => {
+    const exp1 = {
+      experiment: 'husky_0'
+    };
+    const exp2 = {
+      experiment: 'husky_1'
+    };
+    const experimentsToBeAdded = [exp1, exp2];
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(Promise.resolve(null));
+    return fsStorage
+      .addNonRegisteredExperiments(fakeUserId, experimentsToBeAdded)
+      .should.eventually.deep.equal([
+        { experiment: 'husky_0' },
+        { experiment: 'husky_1' }
+      ]);
+  });
+
+  //scanStorage
+  it(`should scan the user storage, register new experiment folders if needed, or remove database entries corresponding to deleted ones`, () => {
+    sinon
+      .stub(fsStorage, 'addNonRegisteredExperiments')
+      .returns(Promise.resolve(['experiment1', 'experiment2']));
+    sinon
+      .stub(fsStorage, 'removeExperiments')
+      .withArgs(['husky_sbc_1', 'lauron_5']);
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          experiment: 'husky_sbc_1'
+        },
+        {
+          experiment: 'lauron_5'
+        }
+      ])
+    );
+    return fsStorage.scanStorage(fakeUserId).then(r => {
+      expect(fsStorage.removeExperiments.called).to.be.true;
+      expect(r).deep.equal({
+        deletedFolders: ['husky_sbc_1', 'lauron_5'],
+        addedFolders: ['experiment1', 'experiment2']
+      });
+    });
+  });
 });
 
 describe('FS Storage (not mocking the mkdir)', () => {
@@ -714,6 +819,55 @@ describe('FS Storage (not mocking the mkdir)', () => {
       fs.rmdirSync(path.join(__dirname, 'dbMock2/'));
       return res['uuid'].should.contain('-');
     });
+  });
+});
+
+describe('FS Storage: extracting a zip experiment to the storage (no mock of fs)', () => {
+  let RewiredFSStorage, fsStorage;
+  before(function() {
+    const mockUtils = {
+      storagePath: path.join(__dirname, '../data/experiments')
+    };
+    RewiredFSStorage = rewire('../../storage/FS/Storage');
+    RewiredFSStorage.__set__('utils', mockUtils);
+    fsStorage = new RewiredFSStorage.Storage();
+  });
+  //extractZip
+  it(`should extract the zip experiment into the destination folder`, () => {
+    return q
+      .denodeify(fs.readFile)(
+        path.join(__dirname, '../data/experiments/test_experiment_folder.zip')
+      )
+      .catch(err => console.log(err))
+      .then(zipContent => jszip.loadAsync(zipContent))
+      .then(zipContent =>
+        fsStorage
+          .extractZip(zipContent, 'template_husky_5')
+          .then(() => {
+            const folderpath = path.join(
+              fsStorage.getStoragePath(),
+              'template_husky_5'
+            );
+            let files = fs.readdirSync(folderpath);
+            // Removes extracted folder
+            files.forEach(filename =>
+              fs.unlinkSync(path.join(folderpath, filename))
+            );
+            fs.rmdirSync(folderpath);
+            return files;
+          })
+          .should.eventually.include(
+            'brainvisualizer.json',
+            'all_neurons_spike_monitor.py',
+            'ExDTemplateHusky.uis',
+            'ExDTemplateHusky.jpg',
+            'ExDTemplateHusky.ini',
+            'ExDTemplateHusky.exc',
+            'turn_around.py',
+            'grab_image.py',
+            'template_husky.bibi'
+          )
+      );
   });
 });
 

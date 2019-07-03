@@ -31,12 +31,17 @@ import BaseStorage from '../BaseStorage';
 const q = require('q'),
   path = require('path'),
   mime = require('mime-types'),
+  _ = require('lodash'),
+  tmp = require('tmp'),
+  pd = require('pretty-data').pd,
   USER_DATA_FOLDER = 'USER_DATA',
-  pd = require('pretty-data').pd;
+  INTERNALS = ['FS_db', USER_DATA_FOLDER];
 
 // mocked in the tests thus non const
 // tslint:disable: prefer-const
-let DB = require('./DB').default,
+let glob = q.denodeify(require('glob')),
+  jszip = require('jszip'),
+  DB = require('./DB').default,
   utils = require('./utils').default,
   fs = require('fs'),
   rmdir = require('rmdir'),
@@ -91,6 +96,14 @@ export class Storage extends BaseStorage {
           };
         })
       );
+  }
+
+  // finds an unused name for a new experiment in the form 'templatename_0'
+  async createUniqueExperimentId(token, userId, dirname, contextId) {
+    const expList = await this.listExperiments(token, userId, contextId, {
+      all: true
+    });
+    return utils.generateUniqueExperimentId(dirname, 0, expList.map(exp => exp.name));
   }
 
   getFile(filename, experiment, token, userId, byname) {
@@ -542,5 +555,69 @@ export class Storage extends BaseStorage {
       return !dest.includes('/csv_records') && !dest.includes('/recordings');
     };
     return fsExtra.copySync(path.join(utils.storagePath, experiment), path.join(utils.storagePath, destFolder), { filter: filterFunc });
+  }
+
+  // Inserts the (non-registered) experiment folder <foldername> in the experiments database
+  insertExperimentInDB(userId, foldername) {
+    return DB.instance.experiments.insert({ token: userId,  experiment: foldername });
+  }
+
+  // Scans the user storage and
+  // (1) inserts the non-registered experiments in the database,
+  // (2) unregister deleted experiment folders from the database.
+  // Returns the added and the deleted entries.
+  // Note: only for local usage
+  async scanStorage(userId: string): Promise<{addedFolders: string[], deletedFolders: string[]}> {
+    const files = await q.denodeify(fs.readdir)(this.getStoragePath());
+    const experimentFolders = files.filter(fileSystemEntry => this.isDirectory(fileSystemEntry))
+    .filter(folder => INTERNALS.indexOf(folder) === -1);
+    const addedFolders = await this.addNonRegisteredExperiments(userId, experimentFolders);
+    const experiments = await DB.instance.experiments.find({ token: userId });
+    const deletedExperiments = experiments.filter(entry => experimentFolders.indexOf(entry.experiment) === -1);
+    await this.removeExperiments(deletedExperiments);
+    const deletedFolders = deletedExperiments.map(entry => entry.experiment);
+    return { addedFolders, deletedFolders };
+  }
+
+  async addNonRegisteredExperiments(userId: string, folders: string[]): Promise<string[]> {
+    const addedFolders: string[] = [];
+    const folderInsertions = folders.map(async (e: string) => {
+      const found = await DB.instance.experiments.findOne({ experiment: e });
+      if (found === null && INTERNALS.indexOf(e) === -1) {
+        addedFolders.push(e);
+        return DB.instance.experiments.insert({
+          token: userId,
+          experiment: e
+        });
+      }
+    });
+    await q.all(folderInsertions);
+    return addedFolders;
+  }
+
+  async removeExperiments(experimentEntries) {
+    const promises = experimentEntries.map(entry => DB.instance.experiments.remove(entry));
+    return await q.all(promises);
+  }
+
+ // Extracts a zip experiment folder to destFolderName
+  async extractZip(zipContent, destFolderName) {
+    const mapFile = async filepath => {
+      if (path.parse(filepath).dir !== '' && filepath.substr(-1) !== path.sep) {
+        const content = await zipContent.file(filepath).async('nodebuffer');
+        filepath = filepath.substring(filepath.indexOf('/') + 1); // Removes the largest enclosing folder from the filepath
+        const dest = path.join(utils.storagePath, destFolderName, filepath);
+        if (!await fsExtra.exists(path.dirname(dest))) {
+          await fsExtra.ensureDir(path.dirname(dest));
+        }
+        await fsExtra.writeFile(dest, content);
+      }
+    };
+    const files = Object.keys(zipContent.files).map(mapFile);
+    return q.all(files);
+  }
+
+  getStoragePath() {
+    return utils.storagePath;
   }
 }

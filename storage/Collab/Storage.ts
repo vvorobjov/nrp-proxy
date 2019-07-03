@@ -325,4 +325,20 @@ export class Storage extends BaseStorage {
   copyFolderContents(contents, destFolder) {
     throw 'not implemented';
   }
+
+  async extractZip(zip, destFoldername) {
+    throw('Not implemented.');
+  }
+
+  async createUniqueExperimentId(token, userId, expPath, contextId) {
+    throw('Not implemented.');
+  }
+
+  insertExperimentInDB(userId, foldername) {
+    throw('Not implemented.');
+  }
+
+  getStoragePath() {
+    throw('Not implemented.');
+  }
 }

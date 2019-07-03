@@ -78,4 +78,8 @@ export default abstract class BaseStorage {
   abstract getModelFolder(modelType, modelName, userId);
   abstract copyExperiment(experiment, token, userId, contextId);
   abstract listExperiments(token, userId, contextId, options);
+  abstract createUniqueExperimentId(token, userId, expPath, contextId);
+  abstract extractZip(zip, destFoldername);
+  abstract insertExperimentInDB(userId, foldername);
+  abstract getStoragePath();
 }

@@ -67,14 +67,7 @@ abstract class ExperimentCloner {
   async createUniqueExperimentId(token, userId, expPath, contextId) {
     // finds an unused name for a new experiment in the form 'templatename_0'
     const dirname = path.dirname(expPath);
-    const expList = await this.storage.listExperiments(token, userId, contextId, {
-      all: true
-    });
-
-    const expNames = _.keyBy(expList, 'name');
-    let suffix = 0;
-    while (expNames[`${dirname}_${suffix}`]) suffix += 1;
-    return `${dirname}_${suffix}`;
+    return this.storage.createUniqueExperimentId(token, userId, dirname, contextId);
   }
 
   async cloneExperiment(token, userId, expPath, contextId, defaultName) {
