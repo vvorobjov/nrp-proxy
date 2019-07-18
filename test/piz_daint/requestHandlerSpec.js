@@ -253,6 +253,8 @@ describe('requestHandler', function() {
     let getFileStub = sinon.stub();
     getFileStub.returns(promise);
 
+    let removeFiles = sinon.stub();
+    removeFiles.returns(promise);
     promise = new Promise(function(resolve) {
       resolve({ _links: { workingDirectory: { href: 'workingDirLink' } } });
     });
@@ -261,7 +263,8 @@ describe('requestHandler', function() {
 
     revert = requestHandlerRewired.__set__({
       getFile: getFileStub,
-      getJobStatus: getJobStatus
+      getJobStatus: getJobStatus,
+      removeFiles: removeFiles
     });
     await requestHandler.getJobOutcome('fakeToken', 'file_url');
     expect(
@@ -275,6 +278,35 @@ describe('requestHandler', function() {
         'fakeToken',
         'workingDirLink/files/stderr'
       )
+    ).to.equal(true);
+  });
+
+  it('removeFiles should remove the files we uploaded', async function() {
+    let promise = new Promise(function(resolve) {
+      resolve([{ statusCode: 204, body: '' }]);
+    });
+    let requestStub = sinon.stub();
+    requestStub.returns(promise);
+    requestHandlerRewired.__set__('request', requestStub);
+
+    let headerStub = sinon.stub();
+    headerStub.returns({ method: 'DELETE', headers: {} });
+    requestHandlerRewired.__set__('getPizDaintHeaders', headerStub);
+
+    await requestHandlerRewired.__get__('removeFiles')('fakeToken', 'fake_url');
+    expect(
+      requestStub.firstCall.calledWithExactly('fake_url/input.sh', {
+        method: 'DELETE',
+        headers: {},
+        body: {}
+      })
+    ).to.equal(true);
+    expect(
+      requestStub.secondCall.calledWithExactly('fake_url/key-tunneluser', {
+        method: 'DELETE',
+        headers: {},
+        body: {}
+      })
     ).to.equal(true);
   });
 

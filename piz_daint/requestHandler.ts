@@ -81,6 +81,14 @@ function uploadFilesForJob(authToken, uploadUrl) {
   ]);
 }
 
+function removeFiles(authToken, fileBaseUrl) {
+  const headers = getPizDaintHeaders(authToken, 'DELETE');
+  return Promise.all([
+    request(`${fileBaseUrl}/input.sh`, { ...headers, body: {} }),
+    request(`${fileBaseUrl}/key-tunneluser`, { ...headers, body: {} })
+  ]);
+}
+
 async function setUpJob(authToken, server) {
   try {
     console.log('Submiting job..');
@@ -199,6 +207,7 @@ function getFile(authToken, fileUrl) {
 async function getJobOutcome(authToken, jobUrl) {
   const workingDir = (await getJobStatus(authToken, jobUrl))._links
     .workingDirectory.href;
+  await removeFiles(authToken, `${workingDir}/files`);
   return Promise.all([
     getFile(authToken, `${workingDir}/files/stdout`),
     getFile(authToken, `${workingDir}/files/stderr`)
