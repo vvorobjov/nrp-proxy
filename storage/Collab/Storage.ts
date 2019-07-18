@@ -267,23 +267,23 @@ export class Storage extends BaseStorage {
     throw 'not implemented';
   }
 
-  addUsertoSharedUserListinModel(modelType, modelName, userId) {
+  addUsertoSharingUserListinModel(modelType, modelName, userId) {
     throw 'not implemented';
   }
 
-  listSharedUsersbyModel(modelType, modelID) {
+  listSharingUsersbyModel(modelType, modelID) {
     throw 'not implemented';
   }
 
-  updateSharedModelMode(modelType, modelID, sharedValue) {
+  updateSharedModelMode(modelType, modelID, sharingOption) {
     throw 'not implemented';
   }
 
-  getSharedModelMode(modelType, modelID) {
+  getModelSharingMode(modelType, modelID) {
     throw 'not implemented';
   }
 
-  deleteSharedUserFromModel(modelType, modelID, userId) {
+  deleteSharingUserFromModel(modelType, modelID, userId) {
     throw 'not implemented';
   }
 
@@ -298,27 +298,27 @@ export class Storage extends BaseStorage {
     throw 'not implemented';
   }
 
-  getExperimentSharedMode(experimentID) {
+  getExperimentSharingMode(experimentID) {
     throw 'not implemented';
   }
 
-  updateSharedExperimentMode(experimentID, sharedValue) {
+  updateSharedExperimentMode(experimentID, sharingOption) {
     throw 'not implemented';
   }
 
-  listSharedUsersbyExperiment(experimentID) {
+  listSharingUsersbyExperiment(experimentID) {
     throw 'not implemented';
   }
 
-  listExperimentsSharedByUser(userId) {
+  listExperimentsSharedByUsers(userId) {
     throw 'not implemented';
   }
 
-  deleteSharedUserFromExperiment(experimentId, userId) {
+  deleteSharingUserFromExperiment(experimentId, userId) {
     throw 'not implemented';
   }
 
-  addUsertoSharedUserListinExperiment(newExperiment, userId) {
+  addUsertoSharingUserListinExperiment(newExperiment, userId) {
     throw 'not implemented';
   }
 

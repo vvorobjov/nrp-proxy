@@ -179,27 +179,27 @@ describe('Storage request handler', () => {
   });
   /*models*/
 
-  it(`should succesfully get the shared option of the Model`, () => {
+  it(`should succesfully get the sharing option of the Model`, () => {
     collectionMock.prototype.findOne = sinon.stub().returns(
       Promise.resolve({
-        sharedOption: 'Private'
+        sharingOption: 'Private'
       })
     );
     return storageRequestHandler
-      .getSharedModelMode('fakeModelType', 'fakeModelId')
+      .getModelSharingMode('fakeModelType', 'fakeModelId')
       .then(res =>
         expect(res).to.deep.equal({
-          sharedOption: 'Private'
+          sharingOption: 'Private'
         })
       );
   });
 
-  it('should add a user into the shared user list', () => {
+  it('should add a user into the shared users list', () => {
     collectionMock.prototype.insert = sinon
       .stub()
       .returns(Promise.resolve('userId'));
     storageRequestHandler
-      .addUsertoSharedUserListinModel(
+      .addUsertoSharingUserListinModel(
         'fakeModelType',
         'fakeModelType',
         'userId'
@@ -207,21 +207,21 @@ describe('Storage request handler', () => {
       .should.eventually.deep.equal(true);
   });
 
-  it(`should get the list of shared users by Model`, () => {
+  it(`should get the list of shared userss by Model`, () => {
     var expectedResult = ['nrpuser', 'admin'];
     collectionMock.prototype.findOne = sinon.stub().returns(
       Promise.resolve({
-        sharedUsers: ['nrpuser', 'admin']
+        sharingUsers: ['nrpuser', 'admin']
       })
     );
     return storageRequestHandler
-      .listSharedUsersbyModel('modelType', 'modelname', fakeToken)
+      .listSharingUsersbyModel('modelType', 'modelname', fakeToken)
       .then(userList => {
         expect(userList).to.deep.equal(expectedResult);
       });
   });
 
-  it(`should succesfully update the shared option of the model`, () => {
+  it(`should succesfully update the sharing option of the model`, () => {
     var expected = [
       1,
       {
@@ -239,14 +239,14 @@ describe('Storage request handler', () => {
       });
   });
 
-  it(`should succesfully get the shared option of the experiment`, () => {
+  it(`should succesfully get the sharing option of the experiment`, () => {
     collectionMock.prototype.findOne = sinon.stub().returns(
       Promise.resolve({
         data: 'Private'
       })
     );
     return storageRequestHandler
-      .getExperimentSharedMode('fakeModelType', 'fakeModelId')
+      .getExperimentSharingMode('fakeModelType', 'fakeModelId')
       .then(res =>
         expect(res).to.deep.equal({
           data: 'Private'
@@ -254,7 +254,7 @@ describe('Storage request handler', () => {
       );
   });
 
-  it(`should succesfully delete a shared user`, () => {
+  it(`should succesfully delete a shared users`, () => {
     var expected = [
       1,
       {
@@ -266,7 +266,7 @@ describe('Storage request handler', () => {
       .stub()
       .returns(Promise.resolve(expected));
     return storageRequestHandler
-      .deleteSharedUserFromModel('fakeModelType', 'fakeModelId', 'userId')
+      .deleteSharingUserFromModel('fakeModelType', 'fakeModelId', 'userId')
       .then(res => expect(res).to.deep.equal(expected));
   });
 
@@ -446,7 +446,7 @@ describe('Storage request handler', () => {
     );
 
     return storageRequestHandler
-      .addUsertoSharedUserListinExperiment(
+      .addUsertoSharingUserListinExperiment(
         fakeExperiment,
         'admin',
         fakeToken,
@@ -454,14 +454,14 @@ describe('Storage request handler', () => {
       )
       .then(() =>
         storageRequestHandler
-          .listExperimentsSharedByUser(adminToken)
+          .listExperimentsSharedByUsers(adminToken)
           .then(folderContents => {
             expect(folderContents).to.deep.equal(expectedResult);
           })
       );
   });
 
-  it(`should succesfully update the shared option of the experiment`, () => {
+  it(`should succesfully update the sharing option of the experiment`, () => {
     var expected = [
       1,
       {
@@ -479,17 +479,17 @@ describe('Storage request handler', () => {
       });
   });
 
-  it(`should succesfully delete all shared user`, () => {
+  it(`should succesfully delete all sharing users`, () => {
     var expected = [1, { updatedExisting: true, n: 1 }];
     collectionMock.prototype.update = sinon
       .stub()
       .returns(Promise.resolve(expected));
     return storageRequestHandler
-      .deleteSharedUserFromExperiment('fakeExperiment', 'all')
+      .deleteSharingUserFromExperiment('fakeExperiment', 'all')
       .then(res => expect(res).to.deep.equal(expected));
   });
 
-  it(`should succesfully delete a shared user`, () => {
+  it(`should succesfully delete a sharing users`, () => {
     var expected = [
       1,
       {
@@ -501,18 +501,18 @@ describe('Storage request handler', () => {
       .stub()
       .returns(Promise.resolve(expected));
     return storageRequestHandler
-      .deleteSharedUserFromExperiment('fakeExperiment', 'userId')
+      .deleteSharingUserFromExperiment('fakeExperiment', 'userId')
       .then(res => expect(res).to.deep.equal(expected));
   });
 
-  it(`should succesfully get the shared option of the experiment`, () => {
+  it(`should succesfully get the sharing option of the experiment`, () => {
     collectionMock.prototype.findOne = sinon.stub().returns(
       Promise.resolve({
         data: 'Private'
       })
     );
     return storageRequestHandler
-      .getExperimentSharedMode('fakeExperiment', 'userId')
+      .getExperimentSharingMode('fakeExperiment', 'userId')
       .then(res =>
         expect(res).to.deep.equal({
           data: 'Private'
@@ -520,7 +520,7 @@ describe('Storage request handler', () => {
       );
   });
 
-  it(`should succesfully get the list of the shared users by experiment`, () => {
+  it(`should succesfully get the list of the sharing users by experiment`, () => {
     var dbresult = {
       token: 'user0',
       experiment: 'benchmark_p3dx_0',
@@ -532,7 +532,7 @@ describe('Storage request handler', () => {
       .stub()
       .returns(Promise.resolve(dbresult));
     return storageRequestHandler
-      .listSharedUsersbyExperiment('fakeExperiment', 'token')
+      .listSharingUsersbyExperiment('fakeExperiment', 'token')
       .then(res => expect(res).to.deep.equal(dbresult.shared_users));
   });
 

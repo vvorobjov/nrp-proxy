@@ -1,6 +1,6 @@
 class StorageRequestHandler {
   constructor() {}
-  listExperimentsSharedByUser() {
+  listExperimentsSharedByUsers() {
     return Promise.resolve([
       {
         id: 'experiment1',

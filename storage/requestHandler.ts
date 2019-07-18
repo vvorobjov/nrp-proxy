@@ -203,28 +203,28 @@ ${ex.stack}`);
       contextId,
       options
     );
-    const shared = await this.listExperimentsSharedByUser(token);
+    const sharedExp = await this.listExperimentsSharedByUsers(token);
     const exps = [
       ...privateExps.map(exp => ({ ...exp, owned: true })),
-      ...shared.map(exp => ({ ...exp, owned: false }))
+      ...sharedExp.map(exp => ({ ...exp, owned: false }))
     ];
     return options.filter
       ? exps.filter(e => e.name === options.filter)
       : exps.filter(e => !SPECIAL_FOLDERS.has(e.name));
   }
 
-  addUsertoSharedUserListinExperiment(newExperiment, userId, token) {
+  addUsertoSharingUserListinExperiment(newExperiment, userId, token) {
     return this.authenticator
       .checkToken(token)
       .then(() =>
-        this.storage.addUsertoSharedUserListinExperiment(newExperiment, userId)
+        this.storage.addUsertoSharingUserListinExperiment(newExperiment, userId)
       );
   }
-  listExperimentsSharedByUser(token) {
+  listExperimentsSharedByUsers(token) {
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(userId => this.storage.listExperimentsSharedByUser(userId));
+      .then(userId => this.storage.listExperimentsSharedByUsers(userId));
   }
 
   createExperiment(newExperiment, token, contextId) {
@@ -364,48 +364,48 @@ ${ex.stack}`);
     ).cloneExperiment(token, userId, expPath, contextId, undefined);
   }
   /*shared models*/
-  addUsertoSharedUserListinModel(modelType, modelId, userId, token) {
+  addUsertoSharingUserListinModel(modelType, modelId, userId, token) {
     return this.authenticator
       .checkToken(token)
       .then(() =>
-        this.storage.addUsertoSharedUserListinModel(modelType, modelId, userId)
+        this.storage.addUsertoSharingUserListinModel(modelType, modelId, userId)
       );
   }
 
-  listSharedUsersbyModel(modelType, modelID, token) {
+  listSharingUsersbyModel(modelType, modelID, token) {
     return this.authenticator
       .checkToken(token)
-      .then(() => this.storage.listSharedUsersbyModel(modelType, modelID));
+      .then(() => this.storage.listSharingUsersbyModel(modelType, modelID));
   }
 
-  updateSharedModelMode(modelType, modelId, sharedValue, token) {
+  updateSharedModelMode(modelType, modelId, sharingOption, token) {
     return this.authenticator
       .checkToken(token)
       .then(() =>
-        this.storage.updateSharedModelMode(modelType, modelId, sharedValue)
+        this.storage.updateSharedModelMode(modelType, modelId, sharingOption)
       );
   }
 
-  getSharedModelMode(modelType, modelID, token) {
+  getModelSharingMode(modelType, modelID, token) {
     return this.authenticator
       .checkToken(token)
-      .then(() => this.storage.getSharedModelMode(modelType, modelID));
+      .then(() => this.storage.getModelSharingMode(modelType, modelID));
   }
 
-  deleteSharedUserFromModel(modeltType, modelId, userId, token) {
+  deleteSharingUserFromModel(modeltType, modelId, userId, token) {
     return this.authenticator
       .checkToken(token)
       .then(() =>
-        this.storage.deleteSharedUserFromModel(modeltType, modelId, userId)
+        this.storage.deleteSharingUserFromModel(modeltType, modelId, userId)
       )
       .then(res => res);
   }
 
-  deleteSharedUserFromExperiment(experimentId, userId, token) {
+  deleteSharingUserFromExperiment(experimentId, userId, token) {
     return this.authenticator
       .checkToken(token)
       .then(() =>
-        this.storage.deleteSharedUserFromExperiment(experimentId, userId)
+        this.storage.deleteSharingUserFromExperiment(experimentId, userId)
       )
       .then(res => res);
   }
@@ -461,23 +461,23 @@ ${ex.stack}`);
         )
       );
   }
-  updateSharedExperimentMode(experimentId, sharedValue, token) {
+  updateSharedExperimentMode(experimentId, sharingOption, token) {
     return this.authenticator
       .checkToken(token)
       .then(() =>
-        this.storage.updateSharedExperimentMode(experimentId, sharedValue)
+        this.storage.updateSharedExperimentMode(experimentId, sharingOption)
       );
   }
-  getExperimentSharedMode(experimentID, token) {
+  getExperimentSharingMode(experimentID, token) {
     return this.authenticator
       .checkToken(token)
-      .then(() => this.storage.getExperimentSharedMode(experimentID));
+      .then(() => this.storage.getExperimentSharingMode(experimentID));
   }
 
-  listSharedUsersbyExperiment(experimentID, token) {
+  listSharingUsersbyExperiment(experimentID, token) {
     return this.authenticator
       .checkToken(token)
-      .then(() => this.storage.listSharedUsersbyExperiment(experimentID));
+      .then(() => this.storage.listSharingUsersbyExperiment(experimentID));
   }
 
   async cloneNewExperiment(token, contextId, environmentPath, defaultName) {

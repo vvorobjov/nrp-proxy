@@ -289,9 +289,9 @@ app.post('/storage/clone', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/models/:type/:modelId/share/:userId', (req, res) => {
+app.post('/storage/models/:type/:modelId/sharing/:userId', (req, res) => {
   storageRequestHandler
-    .addUsertoSharedUserListinModel(
+    .addUsertoSharingUserListinModel(
       req.params.type, req.params.modelId,
       req.params.userId,
       getAuthToken(req)
@@ -300,34 +300,34 @@ app.post('/storage/models/:type/:modelId/share/:userId', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/models/:type/:modelId/sharedusers', (req, res) => {
+app.get('/storage/models/:type/:modelId/sharingusers', (req, res) => {
   storageRequestHandler
-    .listSharedUsersbyModel(req.params.type, req.params.modelId, getAuthToken(req))
+    .listSharingUsersbyModel(req.params.type, req.params.modelId, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/models/:modelType/:modelId/sharedmode/:sharedMode', (req, res) => {
+app.post('/storage/models/:modelType/:modelId/sharingmode/:sharingMode', (req, res) => {
   storageRequestHandler
     .updateSharedModelMode(
       req.params.modelType, req.params.modelId,
-      req.params.sharedMode,
+      req.params.sharingMode,
       getAuthToken(req)
     )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/models/:modelType/:modelId/sharedmode', (req, res) => {
+app.get('/storage/models/:modelType/:modelId/sharingmode', (req, res) => {
   storageRequestHandler
-    .getSharedModelMode(req.params.modelType, req.params.modelId, getAuthToken(req))
+    .getModelSharingMode(req.params.modelType, req.params.modelId, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.delete('/storage/models/:modelType/:modelId/sharedusers/:userId', (req, res) => {
+app.delete('/storage/models/:modelType/:modelId/sharingusers/:userId', (req, res) => {
   storageRequestHandler
-    .deleteSharedUserFromModel(
+    .deleteSharingUserFromModel(
       req.params.modelType,
       req.params.modelId,
       req.params.userId,
@@ -368,18 +368,18 @@ app.get('/storage/models/:modelType', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/experiments/:experimentId/sharedusers', (req, res) => {
+app.get('/storage/experiments/:experimentId/sharingusers', (req, res) => {
   storageRequestHandler
-    .listSharedUsersbyExperiment(req.params.experimentId, getAuthToken(req))
+    .listSharingUsersbyExperiment(req.params.experimentId, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/experiments/:experimentId/sharedmode/:sharedMode', (req, res) => {
+app.post('/storage/experiments/:experimentId/sharingmode/:sharingMode', (req, res) => {
   storageRequestHandler
     .updateSharedExperimentMode(
       req.params.experimentId,
-      req.params.sharedMode,
+      req.params.sharingMode,
       getAuthToken(req)
     )
     .then(r => res.send(r))
@@ -393,9 +393,9 @@ app.get('/storage/experiments/shared', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.delete('/storage/experiments/:experimentId/sharedusers/:userId', (req, res) => {
+app.delete('/storage/experiments/:experimentId/sharingusers/:userId', (req, res) => {
   storageRequestHandler
-    .deleteSharedUserFromExperiment(
+    .deleteSharingUserFromExperiment(
       req.params.experimentId,
       req.params.userId,
       getAuthToken(req)
@@ -404,9 +404,9 @@ app.delete('/storage/experiments/:experimentId/sharedusers/:userId', (req, res) 
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/experiments/:experimentId/sharedusers/:userId', (req, res) => {
+app.post('/storage/experiments/:experimentId/sharingusers/:userId', (req, res) => {
   storageRequestHandler
-    .addUsertoSharedUserListinExperiment(
+    .addUsertoSharingUserListinExperiment(
       req.params.experimentId,
       req.params.userId,
       getAuthToken(req)
@@ -415,9 +415,9 @@ app.post('/storage/experiments/:experimentId/sharedusers/:userId', (req, res) =>
     .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/experiments/:experimentId/sharedmode', (req, res) => {
+app.get('/storage/experiments/:experimentId/sharingmode', (req, res) => {
   storageRequestHandler
-    .getExperimentSharedMode(req.params.experimentId, getAuthToken(req))
+    .getExperimentSharingMode(req.params.experimentId, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });

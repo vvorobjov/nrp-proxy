@@ -142,11 +142,11 @@ export class Storage extends BaseStorage {
         $or: [{ $and: [{ ownerName: userName }, { type: modelType }] },
         {
           $or: [
-            { $and: [{ sharedOption: 'Public' }, { type: modelType }] },
+            { $and: [{ sharingOption: 'Public' }, { type: modelType }] },
             {
               $and: [
                 { type: modelType },
-                { sharedOption: 'Shared' }
+                { sharingOption: 'Shared' }
               ]
             }
           ]
@@ -159,8 +159,8 @@ export class Storage extends BaseStorage {
             if (element.ownerName === userName)
               return true;
             else {
-              if (typeof element.sharedUsers !== 'undefined' && res) {
-                return element.sharedUsers.find(sharingUser => {
+              if (typeof element.sharingUsers !== 'undefined' && res) {
+                return element.sharingUsers.find(sharingUser => {
                   return sharingUser === userName;
                 }) === userName;
               } else
@@ -177,7 +177,7 @@ export class Storage extends BaseStorage {
             path: f.path,
             ownerName: f.ownerName,
             type: f.type,
-            isShared: ((f.sharedOption === 'Public' || f.sharedOption === 'Shared')
+            isShared: ((f.sharingOption === 'Public' || f.sharingOption === 'Shared')
               && f.ownerName !== userName) ? true : false
           }));
         } else
@@ -186,54 +186,54 @@ export class Storage extends BaseStorage {
       );
   }
 
-  addUsertoSharedUserListinModel(modelType, modelName, userName) {
+  addUsertoSharingUserListinModel(modelType, modelName, userName) {
     return DB.instance.models
       .findOne({ $and: [{ name: modelName }, { type: modelType }] })
       .then(existingModel => {
         if (existingModel)
           return DB.instance.models.update(
             { _id: existingModel._id },
-            { $addToSet: { sharedUsers: userName } }
+            { $addToSet: { sharingUsers: userName } }
           );
         return q.reject(`The model: ${modelName} does not exist in the Models database.`);
       });
   }
 
-  listSharedUsersbyModel(modelType, modelName) {
+  listSharingUsersbyModel(modelType, modelName) {
     return DB.instance.models
       .findOne({ $and: [{ name: modelName }, { type: modelType }] })
       .then(res =>
-        (res.sharedUsers ? res.sharedUsers : []));
+        (res.sharingUsers ? res.sharingUsers : []));
   }
 
-  updateSharedModelMode(modelType, modelName, modelSharedOption) {
+  updateSharedModelMode(modelType, modelName, modelsharingOption) {
     return DB.instance.models.update(
       { $and: [{ name: modelName }, { type: modelType }] },
-      { $set: { sharedOption: modelSharedOption } }
+      { $set: { sharingOption: modelsharingOption } }
     );
   }
 
-  getSharedModelMode(modelType, modelName) {
+  getModelSharingMode(modelType, modelName) {
     return DB.instance.models
       .findOne({ $and: [{ name: modelName }, { type: modelType }] })
       .then(res => (
         {
-          sharedOption: (res.sharedOption ? res.sharedOption : 'Private')
+          sharingOption: (res.sharingOption ? res.sharingOption : 'Private')
         }
       ));
   }
 
-  deleteSharedUserFromModel(modelType, modelName, userName) {
+  deleteSharingUserFromModel(modelType, modelName, userName) {
     if (userName === 'all')
       return DB.instance.models.update(
         { $and: [{ name: modelName }, { type: modelType }] },
-        { $set: { sharedUsers: [] } },
+        { $set: { sharingUsers: [] } },
         { multi: true }
       );
     else
       return DB.instance.models.update(
         { $and: [{ name: modelName }, { type: modelType }] },
-        { $pull: { sharedUsers: { $in: [userName] } } }
+        { $pull: { sharingUsers: { $in: [userName] } } }
       );
   }
 
@@ -242,10 +242,10 @@ export class Storage extends BaseStorage {
       .find({
         $and: [
           {
-            sharedOption: { $ne: 'Private' }, type: modelType,
+            sharingOption: { $ne: 'Private' }, type: modelType,
             $or: [
-              { sharedUsers: { $in: userName } },
-              { $and: [{ ownerName: { $ne: userName }, sharedOption: 'Public' }] }
+              { sharingUsers: { $in: userName } },
+              { $and: [{ ownerName: { $ne: userName }, sharingOption: 'Public' }] }
             ]
           }
         ]
@@ -483,7 +483,7 @@ export class Storage extends BaseStorage {
     };
   }
 
-  getExperimentSharedMode(experimentID) {
+  getExperimentSharingMode(experimentID) {
     return DB.instance.experiments
       .findOne({ experiment: experimentID })
       .then(res => (
@@ -493,36 +493,51 @@ export class Storage extends BaseStorage {
       ));
   }
 
-  updateSharedExperimentMode(experimentID, sharedValue) {
+  updateSharedExperimentMode(experimentID, sharingOption) {
     return DB.instance.experiments.update(
       { experiment: experimentID },
-      { $set: { shared_option: sharedValue } }
+      { $set: { shared_option: sharingOption } }
     );
   }
 
-  listSharedUsersbyExperiment(experimentID) {
+  listSharingUsersbyExperiment(experimentID) {
     return DB.instance.experiments
       .findOne({ experiment: experimentID })
       .then(res => (res.shared_users ? res.shared_users : []));
   }
 
-  listExperimentsSharedByUser(userId) {
+  listExperimentsSharedByUsers(userId) {
     return DB.instance.experiments
       .find({
         $and: [
           {
             shared_option: { $ne: 'Private' },
             $or: [
-              { shared_users: { $in: userId } },
+              { shared_option: 'Shared' },
               { $and: [{ token: { $ne: userId }, shared_option: 'Public' }] }
             ]
           }
         ]
       })
-      .then(res => res.map(f => ({ uuid: f.experiment, name: f.experiment })));
+      .then(res => {
+        if (typeof res !== 'undefined' && res) {
+          return res.filter(element => {
+            if (element.shared_option === 'Shared') {
+              if (element.shared_users)
+                return element.shared_users.find(sharedUser => {
+                  return sharedUser === userId;
+              });
+            } else
+              return true;
+          });
+        }
+      }
+      )
+      .then(res =>
+        res.map(f => ({ uuid: f.experiment, name: f.experiment })));
   }
 
-  deleteSharedUserFromExperiment(experimentId, userId) {
+  deleteSharingUserFromExperiment(experimentId, userId) {
     if (userId === 'all')
       return DB.instance.experiments.update(
         { experiment: experimentId },
@@ -536,7 +551,7 @@ export class Storage extends BaseStorage {
       );
   }
 
-  addUsertoSharedUserListinExperiment(newExperiment, userId) {
+  addUsertoSharingUserListinExperiment(newExperiment, userId) {
     return DB.instance.experiments
       .findOne({ experiment: newExperiment })
       .then(existingExp => {

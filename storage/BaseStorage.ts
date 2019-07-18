@@ -51,26 +51,26 @@ export default abstract class BaseStorage {
   );
 
   abstract listAllModels(modelType, userId);
-  abstract addUsertoSharedUserListinModel(modelType, modelName, userId);
-  abstract listSharedUsersbyModel(modelType, modelID);
+  abstract addUsertoSharingUserListinModel(modelType, modelName, userId);
+  abstract listSharingUsersbyModel(modelType, modelID);
 
-  abstract updateSharedModelMode(modelType, modelID, sharedValue);
-  abstract getSharedModelMode(modelType, modelID);
-  abstract deleteSharedUserFromModel(modelType, modelID, userId);
+  abstract updateSharedModelMode(modelType, modelID, sharingOption);
+  abstract getModelSharingMode(modelType, modelID);
+  abstract deleteSharingUserFromModel(modelType, modelID, userId);
   abstract listSharedModels(modelType, userId);
   abstract listUserModelsbyType(modelType, token, userId);
 
   abstract isDirectory(fileSystemEntry);
 
-  abstract getExperimentSharedMode(experimentID);
+  abstract getExperimentSharingMode(experimentID);
 
-  abstract updateSharedExperimentMode(experimentID, sharedValue);
-  abstract listSharedUsersbyExperiment(experimentID);
+  abstract updateSharedExperimentMode(experimentID, sharingOption);
+  abstract listSharingUsersbyExperiment(experimentID);
 
-  abstract listExperimentsSharedByUser(userId);
+  abstract listExperimentsSharedByUsers(userId);
 
-  abstract deleteSharedUserFromExperiment(experimentId, userId);
-  abstract addUsertoSharedUserListinExperiment(newExperiment, userId);
+  abstract deleteSharingUserFromExperiment(experimentId, userId);
+  abstract addUsertoSharingUserListinExperiment(newExperiment, userId);
   abstract copyFolderContents(contents, destFolder);
 
   abstract createCustomModel(modelType, modelData, userId, modelName, token, contextId);

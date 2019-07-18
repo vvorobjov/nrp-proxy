@@ -71,7 +71,7 @@ export default class ExperimentsService {
   loadSharedExperiments(req) {
     return q.all(
       storageRequestHandler
-        .listExperimentsSharedByUser(req)
+        .listExperimentsSharedByUsers(req)
         .then(exps =>
           exps.map(exp =>
             glob(
@@ -91,7 +91,7 @@ export default class ExperimentsService {
     return path.join(this.experimentsPath, experimentPath, experimentFile);
   }
 
-  async buildExperiment(fileName, expName = '', isExperimentShared = false) {
+  async buildExperiment(fileName, expName = '', isExperimentshared = false) {
     let experimentContent;
     try {
       experimentContent = await readFile(fileName, 'utf8');
@@ -100,11 +100,11 @@ export default class ExperimentsService {
       return;
     }
     console.log(`Parsing experiment file ${fileName}`);
-    const id = isExperimentShared ? expName : path.parse(fileName).name,
-      fileConfigPath = isExperimentShared
+    const id = isExperimentshared ? expName : path.parse(fileName).name,
+      fileConfigPath = isExperimentshared
         ? path.relative(utils.storagePath, fileName)
         : path.relative(this.experimentsPath, fileName),
-      configPath = isExperimentShared
+      configPath = isExperimentshared
         ? utils.storagePath
         : this.experimentsPath,
       expPath = path.dirname(fileConfigPath);
@@ -144,7 +144,7 @@ export default class ExperimentsService {
         return {
           id,
           name: exc.name || id,
-          isShared: isExperimentShared,
+          isShared: isExperimentshared,
           thumbnail: exc.thumbnail,
           robotPaths,
           path: expPath,

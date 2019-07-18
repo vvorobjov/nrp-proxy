@@ -74,13 +74,13 @@ describe('FSStorage', () => {
     fsStorage = new RewiredFSStorage.Storage();
   });
   /* models inicio */
-  it(`should delete a shared user from a model`, () => {
+  it(`should delete a sharing user from a model`, () => {
     var expectedResult = [1, { updatedExisting: true, n: 1 }];
     collectionMock.prototype.update = sinon
       .stub()
       .returns(Promise.resolve(expectedResult));
     return fsStorage
-      .deleteSharedUserFromModel('fakeModelType', 'fakeModelID', 'fakeUserID')
+      .deleteSharingUserFromModel('fakeModelType', 'fakeModelID', 'fakeUserID')
       .then(res => expect(res).to.deep.equal(expectedResult));
   });
 
@@ -90,11 +90,11 @@ describe('FSStorage', () => {
       .stub()
       .returns(Promise.resolve(expectedResult));
     return fsStorage
-      .deleteSharedUserFromModel('fakeModelType', 'fakeModelID', 'all')
+      .deleteSharingUserFromModel('fakeModelType', 'fakeModelID', 'all')
       .then(res => expect(res).to.deep.equal(expectedResult));
   });
 
-  it(`should get list of Shared models`, () => {
+  it(`should get list of shared models`, () => {
     var dBResult = [
       {
         name: 'fakeFileName',
@@ -121,16 +121,16 @@ describe('FSStorage', () => {
       .then(res => expect(res).to.deep.equal(expectedResult));
   });
 
-  it(`should get Shared models Option`, () => {
+  it(`should get sharing models Option`, () => {
     collectionMock.prototype.findOne = sinon
       .stub()
-      .returns(Promise.resolve({ sharedOption: 'Private' }));
+      .returns(Promise.resolve({ sharingOption: 'Private' }));
     return fsStorage
-      .getSharedModelMode('fakeModelType', 'fakeModelID')
-      .then(res => expect(res).to.deep.equal({ sharedOption: 'Private' }));
+      .getModelSharingMode('fakeModelType', 'fakeModelID')
+      .then(res => expect(res).to.deep.equal({ sharingOption: 'Private' }));
   });
 
-  it(`should list shared users by model`, () => {
+  it(`should list shared userss by model`, () => {
     var expectedResult = [1, { updatedExisting: true, n: 1 }];
     collectionMock.prototype.update = sinon
       .stub()
@@ -140,16 +140,16 @@ describe('FSStorage', () => {
       .then(res => expect(res).to.deep.equal(expectedResult));
   });
 
-  it(`should list shared users by Models`, () => {
+  it(`should list shared userss by Models`, () => {
     var dbresult = {
-      sharedUsers: ['user1']
+      sharingUsers: ['user1']
     };
     collectionMock.prototype.findOne = sinon
       .stub()
       .returns(Promise.resolve(dbresult));
     return fsStorage
-      .listSharedUsersbyModel('fakeModelType', 'fakeModelID')
-      .then(res => expect(res).to.deep.equal(dbresult.sharedUsers));
+      .listSharingUsersbyModel('fakeModelType', 'fakeModelID')
+      .then(res => expect(res).to.deep.equal(dbresult.sharingUsers));
   });
 
   it(`should list all customs models`, () => {
@@ -159,7 +159,7 @@ describe('FSStorage', () => {
         ownerName: 'userId',
         path: 'folder/model.zip',
         type: 'robot',
-        sharedOption: 'Private'
+        sharingOption: 'Private'
       }
     ];
     var expectedResult = [
@@ -179,7 +179,7 @@ describe('FSStorage', () => {
       .then(res => expect(res).to.deep.equal(expectedResult));
   });
 
-  it(`should list shared users by model type`, () => {
+  it(`should list sharing users by model type`, () => {
     var expectedResult = [1, { updatedExisting: true, n: 1 }];
 
     collectionMock.prototype.update = sinon
@@ -190,21 +190,21 @@ describe('FSStorage', () => {
       .stub()
       .returns(Promise.resolve({ _id: 'fakeId' }));
     return fsStorage
-      .addUsertoSharedUserListinModel('fakeModelType', 'fakeUserId')
+      .addUsertoSharingUserListinModel('fakeModelType', 'fakeUserId')
       .then(res => expect(res).to.deep.equal(expectedResult));
   });
 
   /* models fin */
-  it(`should get Shared Experiments Option`, () => {
+  it(`should get shared Experiments Option`, () => {
     collectionMock.prototype.findOne = sinon
       .stub()
       .returns(Promise.resolve({ data: 'Private' }));
     return fsStorage
-      .getExperimentSharedMode('expId')
+      .getExperimentSharingMode('expId')
       .then(res => expect(res).to.deep.equal({ data: 'Private' }));
   });
 
-  it(`should list shared users by experiment`, () => {
+  it(`should list sharing users by experiment`, () => {
     var expectedResult = [1, { updatedExisting: true, n: 1 }];
     collectionMock.prototype.update = sinon
       .stub()
@@ -214,7 +214,7 @@ describe('FSStorage', () => {
       .then(res => expect(res).to.deep.equal(expectedResult));
   });
 
-  it(`should list shared users by experiments`, () => {
+  it(`should list shared userss by experiments`, () => {
     var dbresult = {
       token: 'user0',
       experiment: 'benchmark_p3dx_0',
@@ -226,17 +226,23 @@ describe('FSStorage', () => {
       .stub()
       .returns(Promise.resolve(dbresult));
     return fsStorage
-      .listSharedUsersbyExperiment('expId')
+      .listSharingUsersbyExperiment('expId')
       .then(res => expect(res).to.deep.equal(dbresult.shared_users));
   });
 
   it(`should list experiments shared by users`, () => {
     var expectedResult = { uuid: 'exp0', name: 'exp0' };
-    collectionMock.prototype.find = sinon
-      .stub()
-      .returns(Promise.resolve([{ experiment: 'exp0' }]));
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          experiment: 'exp0',
+          shared_option: 'Shared',
+          shared_users: ['userId']
+        }
+      ])
+    );
     return fsStorage
-      .listExperimentsSharedByUser('userId')
+      .listExperimentsSharedByUsers('userId')
       .then(res => expect(res[0]).to.deep.equal(expectedResult));
   });
 
@@ -288,7 +294,7 @@ describe('FSStorage', () => {
       .stub()
       .returns(Promise.resolve(null));
     return assert.isRejected(
-      fsStorage.addUsertoSharedUserListinModel(
+      fsStorage.addUsertoSharingUserListinModel(
         'modelType',
         'modelName',
         'userName'
@@ -301,7 +307,7 @@ describe('FSStorage', () => {
       .stub()
       .returns(Promise.resolve(null));
     return assert.isRejected(
-      fsStorage.addUsertoSharedUserListinExperiment('newExperiment', 'userid')
+      fsStorage.addUsertoSharingUserListinExperiment('newExperiment', 'userid')
     );
   });
 
@@ -319,16 +325,9 @@ describe('FSStorage', () => {
       ownerId: 'userId',
       type: 'robots'
     };
-    collectionMock.prototype.find = sinon.stub().returns(
-      Promise.resolve([
-        {
-          name: 'modelName',
-          path: 'foldername/filename.zip',
-          ownerId: 'userId',
-          type: 'robots'
-        }
-      ])
-    );
+    collectionMock.prototype.find = sinon
+      .stub()
+      .returns(Promise.resolve([expected]));
     return fsStorage
       .listUserModelsbyType('robots', fakeToken, fakeUserId)
       .then(res => {
