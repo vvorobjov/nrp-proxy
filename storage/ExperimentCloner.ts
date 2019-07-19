@@ -309,15 +309,12 @@ abstract class ExperimentCloner {
       bibiConf.bodyModel.forEach(model => {
         if (model) {
           const bodyModelFile = model.__text || model;
-          if (model._assetPath === undefined) {
-            model = {
+          model = {
               __text: bodyModelFile,
-              _assetPath: path.dirname(bodyModelFile),
               _robotId: model._robotId ? model._robotId : 'robot',
-              _customAsset: false,
+              _isCustom: false,
               __prefix: bibiConf.__prefix
             };
-          }
           const robotid = model._robotId ? model._robotId : 'robot';
           const destFile = path.join(robotid, path.basename(bodyModelFile));
           this.downloadFile(model.__text, this.config.modelsPath, destFile);
