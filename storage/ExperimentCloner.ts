@@ -235,7 +235,7 @@ abstract class ExperimentCloner {
 
     this.downloadFile(experiment.thumbnail);
 
-    if (! experiment.environmentModel._customModelPath) {
+    if (! experiment.environmentModel._model) {
       this.downloadFile(
         experiment.environmentModel._src,
         this.config.modelsPath,
@@ -394,6 +394,7 @@ export class NewExperimentCloner extends ExperimentCloner {
   private newExpConfigurationPath;
   private newExpBibiPath;
 
+  // environmentpath is not a path
   constructor(storage, config, protected environmentPath, private templateExc) {
     super(storage, config);
 
@@ -508,9 +509,7 @@ export class NewExperimentCloner extends ExperimentCloner {
         userId
       )).name;
       experimentConf.ExD.environmentModel._src = envRelPath;
-      experimentConf.ExD.environmentModel._customModelPath = path.basename(
-        this.environmentPath.path
-      );
+      experimentConf.ExD.environmentModel._model = this.environmentPath.name;
       return {
         model: {
           name: path
