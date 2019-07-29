@@ -349,36 +349,40 @@ abstract class BaseExperimentService {
     if (transferFunctions && !Array.isArray(transferFunctions))
       transferFunctions = [transferFunctions];
 
-    const tfsResponse = { data: {} };
+    const tfsResponse = { data: {}, active: {} };
 
     return Promise.all(
       transferFunctions.map(tf =>
-        this.getFile(tf._src, FILE_TYPE.TF).then(tfFile => {
+        this.getFile(tf._src, FILE_TYPE.TF)
+        .then(tfFile => {
           let tfId = path.basename(tf._src);
-          tfId = tfId.split('.')[0];
+          tfId = path.parse(tfId).name;
           tfsResponse.data[tfId] = tfFile.toString();
+          tfsResponse.active[tfId] = tf._active || true;
         })
       )
     ).then(() => tfsResponse);
   }
 
-  async saveTransferFunctions(transferFunctions) {
+  async saveTransferFunctions(transferFunctions: [{code: string, active: boolean}]) {
     const [bibiFile, bibiFileName] = await this.getBibi();
     const bibi = bibiFile.bibi;
     if (!bibi['_xmlns:xsi']) {
       bibi['_xmlns:xsi'] = 'http://www.w3.org/2001/XMLSchema-instance';
     }
 
-    const tfs = transferFunctions.map(tfCode => {
+    const tfs = transferFunctions.map(tf => {
+      const tfCode = tf.code;
       const tfRegexp = /def +([^\\( ]*)/gm.exec(tfCode);
       const tfName = tfRegexp ? tfRegexp[1] : '';
-      return [`${tfName}.py`, tfCode];
+      return [`${tfName}.py`, tfCode, tf.active];
     });
 
     if (tfs && tfs.length)
-      bibi.transferFunction = tfs.map(([tfName]) => {
+      bibi.transferFunction = tfs.map(([tfName, _tfCode, active]) => {
         return {
           _src: tfName,
+          _active: active,
           __prefix: bibi.__prefix,
           '_xsi:type':
             (bibi.__prefix ? `${bibi.__prefix}:` : '') +
