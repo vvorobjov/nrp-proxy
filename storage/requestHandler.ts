@@ -26,12 +26,13 @@
 import { File } from './BaseStorage';
 import CustomModelService from './CustomModelsService';
 import * as ExperimentCloner from './ExperimentCloner';
-import { ExperimentImporter } from './ExperimentImporter';
 
 // test mocked
 // tslint:disable: prefer-const
 let { TemplateExperimentCloner, NewExperimentCloner } = ExperimentCloner,
-  GDPR = require('./GDPR').default;
+  GDPR = require('./GDPR').default,
+  experimentImporter = require('./ExperimentImporter'),
+  experimentZipper = require('./ExperimentZipper');
 // tslint:enable: prefer-const
 
 const q = require('q'),
@@ -249,7 +250,7 @@ ${ex.stack}`);
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(userName => this.storage.getModelPath(type, name));
+      .then(() => this.storage.getModelPath(type, name));
   }
 
   getModelFolder(type, name, token) {
@@ -325,7 +326,7 @@ ${ex.stack}`);
   async unzipCustomModel(modelType, modelName, token) {
     const modelPath = path.join(modelType, modelName);
     const decodedPath = decodeURIComponent(modelPath);
-    const parsedModel = {uuid: decodedPath, fileName: decodedPath};
+    const parsedModel = { uuid: decodedPath, fileName: decodedPath };
     const userModel = await this.getModelFolder(modelType, modelName, token);
     await customModelService.extractZip(userModel);
     return q.resolve();
@@ -415,7 +416,7 @@ ${ex.stack}`);
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
       .then(userId =>
-         this.storage.listSharedModels(modelType, userId)
+        this.storage.listSharedModels(modelType, userId)
       )
       .then(sharedModels => {
         return q.all(
@@ -442,20 +443,20 @@ ${ex.stack}`);
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
       .then(ownerId =>
-        this.storage.listAllModels(type, ownerId ))
+        this.storage.listAllModels(type, ownerId))
       .then(allModels =>
-          q.all(
+        q.all(
           allModels.map(model =>
-              q.all([model, this.getModelFolder(model.type, model.name, token)])
+            q.all([model, this.getModelFolder(model.type, model.name, token)])
           )
         )
       )
       .then(models =>
         q.all(
           models.map(([model, data]) =>
-              this.customModelService.getZipModelMetaData(
-                model,
-                data
+            this.customModelService.getZipModelMetaData(
+              model,
+              data
             )
           )
         )
@@ -500,19 +501,69 @@ ${ex.stack}`);
 
   async registerZippedExperiment(token, contextId, zip) {
     const userId = await this.authenticator
-    .checkToken(token)
-    .then(() => this.getUserIdentifier(token));
-    return new ExperimentImporter(this.storage, token, userId, contextId).registerZippedExperiment(zip);
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token));
+    return new experimentImporter.ExperimentImporter(this.storage, token, userId, contextId).registerZippedExperiment(zip);
   }
 
   async scanStorage(token, contextId) {
     const userId = await this.authenticator
-    .checkToken(token)
-    .then(() => this.getUserIdentifier(token));
-    return new ExperimentImporter(this.storage, token, userId, contextId).scanStorage();
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token));
+    return new experimentImporter.ExperimentImporter(this.storage, token, userId, contextId).scanStorage();
   }
 
   getStoragePath() {
     return this.storage.getStoragePath();
+  }
+
+  addRobotZipToExperimentZips(zips, model, customRobots) {
+    if (model._isCustom === 'true') {
+      const customRobot = customRobots.find(robot => robot.name === model._model);
+      if (customRobot)
+        zips.robotZips.push({ path: path.join(this.getStoragePath(), 'USER_DATA', customRobot.path), name: `${model._robotId}.zip` });
+    }
+  }
+
+  async getExperimentZips(experimentId, token, bibi, exc) {
+    /* Returns an object containing the metadata of all the zips related to an experiment.
+    These are all the experiment folder files zipped, the custom environment and custom robots
+    if any. The actual zipping of the experiment is done by the ExperimentZipper */
+    const zips = { experimentZip: {}, envZip: {}, robotZips: [] as any };
+
+    // experiment zip
+    const userId = await this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token));
+
+    try {
+      const experimentZip = await new experimentZipper.ExperimentZipper(this.storage, token, userId).zipExperiment(experimentId);
+      zips.experimentZip = { path: experimentZip, name: '' };
+    } catch (err) {
+      console.error(`Zipping experiment failed. Error : ${err}`);
+      return q.reject(err);
+    }
+
+    // robot zip. The bibi.bodyModel can be either an Object or an Array
+    if (bibi.bodyModel) {
+      const customRobots = await this.storage.listUserModelsbyType('robots', userId);
+      if (bibi.bodyModel instanceof Array) {
+        bibi.bodyModel.forEach(model => {
+          this.addRobotZipToExperimentZips(zips, model, customRobots);
+        });
+      } else if (bibi.bodyModel instanceof Object) {
+        this.addRobotZipToExperimentZips(zips, bibi.bodyModel, customRobots);
+      }
+    }
+
+    // env zip
+    if (exc.environmentModel._model) {
+      const envPath = await this.getModelPath('environments', exc.environmentModel._model, token);
+      zips.envZip = { path: path.join(this.getStoragePath(), 'USER_DATA', envPath), name: path.basename(envPath) };
+    } else {
+      zips.envZip = { path: '', name: '' };
+    }
+
+    return zips;
   }
 }

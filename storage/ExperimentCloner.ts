@@ -235,7 +235,7 @@ abstract class ExperimentCloner {
 
     this.downloadFile(experiment.thumbnail);
 
-    if (! experiment.environmentModel._model) {
+    if (!experiment.environmentModel._model) {
       this.downloadFile(
         experiment.environmentModel._src,
         this.config.modelsPath,
@@ -262,7 +262,7 @@ abstract class ExperimentCloner {
     const bibiConf = experimentConf.ExD.bibiConf._src;
     experiment.bibiConf._src = 'bibi_configuration.bibi';
 
-    const xmlFile = pd.xml(new X2JS({escapeMode: false}).js2xml(experimentConf)); // In particular, we don't escape quotes in ExD.description
+    const xmlFile = pd.xml(new X2JS({ escapeMode: false }).js2xml(experimentConf)); // In particular, we don't escape quotes in ExD.description
     fs.writeFileSync(expFile, xmlFile);
     this.downloadedFiles.push(q.resolve(expFile));
 
@@ -310,11 +310,11 @@ abstract class ExperimentCloner {
         if (model) {
           const bodyModelFile = model.__text || model;
           model = {
-              __text: bodyModelFile,
-              _robotId: model._robotId ? model._robotId : 'robot',
-              _isCustom: false,
-              __prefix: bibiConf.__prefix
-            };
+            __text: bodyModelFile,
+            _robotId: model._robotId ? model._robotId : 'robot',
+            _isCustom: false,
+            __prefix: bibiConf.__prefix
+          };
           const robotid = model._robotId ? model._robotId : 'robot';
           const destFile = path.join(robotid, path.basename(bodyModelFile));
           this.downloadFile(model.__text, this.config.modelsPath, destFile);

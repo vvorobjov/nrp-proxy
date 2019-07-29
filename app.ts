@@ -353,7 +353,7 @@ app.get('/storage/models/all/:modelType', (req, res) => {
     .listAllModels(
       req.params.modelType,
       getAuthToken(req),
-   )
+    )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -530,6 +530,23 @@ app.get('/storage/:experiment/:filename', (req, res) => {
       res.send(r.body);
     })
     .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/experiments/:experimentId/zip', async (req, res) => {
+  const expService = experimentServiceFactory.createExperimentService(req.params.experimentId, getAuthToken(req));
+  const bibi = (await expService.getBibi())[0].bibi;
+  const exc = (await expService.getExc())[0].ExD;
+  storageRequestHandler
+    .getExperimentZips(
+      req.params.experimentId,
+      getAuthToken(req), bibi, exc
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/zip', (req, res) => {
+  res.download(req.query.path, req.query.name);
 });
 
 app.delete('/storage/:experiment/:filename', (req, res) => {

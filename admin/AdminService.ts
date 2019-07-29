@@ -1,5 +1,4 @@
 import { spawn } from 'child_process';
-import fs from 'fs';
 import q from 'q';
 import configurationManager from '../utils/configurationManager';
 

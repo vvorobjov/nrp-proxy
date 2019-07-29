@@ -330,12 +330,12 @@ export class Storage extends BaseStorage {
 
   listUserModelsbyType(modelType, userId) {
     return DB.instance.models
-      .find({ token: userId, type: modelType })
+      .find({ ownerName: userId, type: modelType })
       .then(res =>
         res.map(f => ({
           name: f.name,
           path: f.path,
-          ownerId: f.ownerId,
+          ownerId: f.ownerName,
           type: f.type
         }))
       )
