@@ -95,12 +95,12 @@ export default class CustomModelsService {
           ])
           .then(async ([config, thumbnail]) => ({
             name: config.name.toLowerCase().replace(/ /g, '_'),
+            displayName: config.name,
             ownerId: model.ownerId,
             type: model.type,
             fileName: path.basename(model.path),
             isShared: model.isShared,
             isCustom: true,
-
             description: config.description,
             thumbnail: thumbnail ? thumbnail : defaultThumbnail,
             path: model.path, // escape slashes

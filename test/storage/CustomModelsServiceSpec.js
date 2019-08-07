@@ -78,6 +78,7 @@ describe('CustomModelsService', () => {
 
     var expectedResult = {
       name: 'config',
+      displayName: 'config',
       ownerId: 'userId',
       type: 'type',
       fileName: 'filename',
@@ -88,8 +89,7 @@ describe('CustomModelsService', () => {
       path: 'modelType/filename',
       script: undefined,
       sdf: 'basename/model.sdf',
-      configPath: 'modelID/model.config',
-      description: 'description'
+      configPath: 'modelID/model.config'
     };
 
     return customModelsService
