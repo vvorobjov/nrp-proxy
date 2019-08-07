@@ -611,7 +611,7 @@ export class Storage extends BaseStorage {
   }
 
   async removeExperiments(experimentEntries) {
-    const promises = experimentEntries.map(entry => DB.instance.experiments.remove(entry));
+    const promises = experimentEntries.map(entry => DB.instance.experiments.remove({ token: entry.token, experiment: entry.experiment }));
     return await q.all(promises);
   }
 
