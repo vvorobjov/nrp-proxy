@@ -371,11 +371,18 @@ abstract class BaseExperimentService {
       bibi['_xmlns:xsi'] = 'http://www.w3.org/2001/XMLSchema-instance';
     }
 
-    const tfs = transferFunctions.map(tf => {
-      const tfCode = tf.code;
+    const tfs = transferFunctions.map(newTf => {
+      const tfCode = newTf.code;
       const tfRegexp = /def +([^\\( ]*)/gm.exec(tfCode);
       const tfName = tfRegexp ? tfRegexp[1] : '';
-      return [`${tfName}.py`, tfCode, tf.active];
+
+      const bibiTf = bibi.transferFunction.find(
+        (bibiTf: { _src: string; }) =>
+         path.basename(bibiTf._src, '.py') === tfName);
+      const bibiTfActive =  bibiTf ? (bibiTf._active || true) : true;
+      const tfActive = newTf.active || bibiTfActive;
+
+      return [`${tfName}.py`, tfCode, tfActive];
     });
 
     if (tfs && tfs.length)
