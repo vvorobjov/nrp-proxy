@@ -29,7 +29,6 @@ import bodyParser from 'body-parser';
 import express from 'express';
 import iplocation from 'iplocation';
 import _ from 'lodash';
-import path from 'path';
 import ActivityLogger from './activity_logs/ActivityLogger';
 import AdminService from './admin/AdminService';
 import pizDaintRequestHandler from './piz_daint/requestHandler';
@@ -354,6 +353,14 @@ app.get('/storage/models/all/:modelType', (req, res) => {
       req.params.modelType,
       getAuthToken(req),
     )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.get('/storage/knowledgeGraphBrains/:query', (req, res) => {
+  // it returns all the brains from Knowledge Graph
+  storageRequestHandler
+    .getKnowledgeGraphBrains(req.params.query, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });

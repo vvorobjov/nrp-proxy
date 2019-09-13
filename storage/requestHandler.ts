@@ -26,6 +26,9 @@
 import { File } from './BaseStorage';
 import CustomModelService from './CustomModelsService';
 import * as ExperimentCloner from './ExperimentCloner';
+import { ExperimentImporter } from './ExperimentImporter';
+const request = require('request-promise');
+const _ = require('lodash');
 
 // test mocked
 // tslint:disable: prefer-const
@@ -462,6 +465,45 @@ ${ex.stack}`);
         )
       );
   }
+
+  transformKnowledgeGraphBrains(knowledgeGraphBrains, brainScripts) {
+    return knowledgeGraphBrains.map((knowledgeGraphBrain, index) =>
+      ({
+        name: knowledgeGraphBrain.name,
+        description: knowledgeGraphBrain.description,
+        maturity: 'production',
+        thumbnail: undefined,
+        script: brainScripts[index],
+        urls: { fileLoader: knowledgeGraphBrain.file_loader, fileUrl: knowledgeGraphBrain.file_url }
+      })
+    );
+  }
+
+  async get(extraOptions, url) {
+    const requestOptions = {
+      resolveWithFullResponse: true,
+      timeout: '5000',
+    };
+    _.extend(requestOptions, { url, ...extraOptions });
+    return request(requestOptions);
+  }
+
+  async getKnowledgeGraphBrains(query, token) {
+    // tslint:disable-next-line:max-line-length
+    const kgUrl = `https://kg-int.humanbrainproject.org/query/sp6/core/pointneuronnetwork/v1.0.0/sp10/instances?size=20&databaseScope=INFERRED&vocab=https%3A%2F%2Fschema.hbp.eu%2F${query}%2F`;
+    const knowledgeGraphBrainsResponse = await this.get(
+      {
+        headers: {
+          Authorization: token,
+          accept: 'application/json'
+        }
+      }, kgUrl);
+    const knowledgeGraphBrains = JSON.parse(knowledgeGraphBrainsResponse.body).results;
+    const knowledgeGraphBrainScripts = await q.all(knowledgeGraphBrains.map(knowledgeGraphBrain => this.get({}, knowledgeGraphBrain.file_loader)));
+    const brainScripts = knowledgeGraphBrainScripts.map(brainScriptResponse => brainScriptResponse.body);
+    return this.transformKnowledgeGraphBrains(knowledgeGraphBrains, brainScripts);
+  }
+
   updateSharedExperimentMode(experimentId, sharingOption, token) {
     return this.authenticator
       .checkToken(token)
@@ -503,14 +545,14 @@ ${ex.stack}`);
     const userId = await this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token));
-    return new experimentImporter.ExperimentImporter(this.storage, token, userId, contextId).registerZippedExperiment(zip);
+    return new ExperimentImporter(this.storage, token, userId, contextId).registerZippedExperiment(zip);
   }
 
   async scanStorage(token, contextId) {
     const userId = await this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token));
-    return new experimentImporter.ExperimentImporter(this.storage, token, userId, contextId).scanStorage();
+    return new ExperimentImporter(this.storage, token, userId, contextId).scanStorage();
   }
 
   getStoragePath() {

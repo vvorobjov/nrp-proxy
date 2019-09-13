@@ -31,16 +31,20 @@ const config = `<?xml version='1.0'?>
 `;
 let StorageRequestHandlerRewire = rewire('../../storage/requestHandler'),
   StorageRequestHandler = StorageRequestHandlerRewire.default;
+
 class fakeCloner {
   constructor() {}
+
   cloneExperiment() {}
 }
 
 class ExperimentImporter {
   constructor() {}
+
   registerZippedExperiment() {
     return q.resolve('zippedExperiment');
   }
+
   scanStorage() {
     return q.resolve('scanStorage');
   }
@@ -48,6 +52,7 @@ class ExperimentImporter {
 
 class ExperimentZipper {
   constructor() {}
+
   zipExperiment() {
     return q.resolve('zipExperiment');
   }
@@ -591,6 +596,7 @@ describe('Storage request handler', () => {
         return 'value';
       }
     }
+
     storageRequestHandler.storage = new StorageMock();
     return storageRequestHandler
       .createOrUpdate(
@@ -723,8 +729,8 @@ describe('Storage request handler', () => {
   //listExperiments
   it(`should list all the experiments the current token provides`, () => {
     /*  const mockedLstatsync = () => { };
-     StorageRequestHandler.__set__('fs.lstatSync', mockedLstatsync);
-     var storageRequestHandler2 = new StorageRequestHandler(configFile); */
+         StorageRequestHandler.__set__('fs.lstatSync', mockedLstatsync);
+         var storageRequestHandler2 = new StorageRequestHandler(configFile); */
     const expected = {
       uuid: fakeExperiment,
       name: fakeExperiment,
@@ -1019,10 +1025,12 @@ describe('Storage request handler', () => {
   it(`should fail to get the experiment zips if the experimentZipper throws`, () => {
     class ExperimentZipper {
       constructor() {}
+
       zipExperiment() {
         return q.reject('zipExperimentFail');
       }
     }
+
     StorageRequestHandlerRewire.__set__(
       'experimentZipper.ExperimentZipper',
       ExperimentZipper
@@ -1044,6 +1052,114 @@ describe('Storage request handler', () => {
       ),
       'zipExperimentFail'
     );
+  });
+
+  it('should get the list of KG brains', () => {
+    const kgBrains = {
+      results: [
+        {
+          file_url:
+            'https://raw.githubusercontent.com/HBPNeurorobotics/knowledge-graph/master/Models/brain_model/CDP1_brain_model_700_neurons.h5',
+          point_neuron_models: [
+            {
+              name: 'Adaptive Integrate and Fire model'
+            }
+          ],
+          synpase_scale_factor: '68400',
+          neuron_scale_factor: '717',
+          name: 'whole mouse brain model',
+          description:
+            'This point neuron model has  717 neurons of type AIF and 68400 synapses of type Tsodyks-Markram.\nIt has been re-constructed base on data provided by Allen  Institute for Brain Science. ',
+          '@id':
+            'https://nexus-int.humanbrainproject.org/v0/data/sp6/core/pointneuronnetwork/v1.0.0/66391b53-bf32-4c3d-9c6a-cc8c4f810ae2',
+          version: '0.1',
+          synapse_models: {
+            'https://schema.hbp.eu/relativeUrl':
+              'sp6/core/synapsemodel/v1.0.0/ffb5b67e-e88b-416e-82ce-819edd3c9192',
+            '@id':
+              'https://nexus-int.humanbrainproject.org/v0/data/sp6/core/synapsemodel/v1.0.0/ffb5b67e-e88b-416e-82ce-819edd3c9192'
+          },
+          file_loader:
+            'https://raw.githubusercontent.com/HBPNeurorobotics/knowledge-graph/master/Models/brain_model/CDP1_brain.py',
+          publications: {
+            'https://schema.hbp.eu/relativeUrl':
+              'sp6/core/publication/v1.0.0/20572429-5c82-41ca-8a9a-67e35d9c1c25',
+            '@id':
+              'https://nexus-int.humanbrainproject.org/v0/data/sp6/core/publication/v1.0.0/20572429-5c82-41ca-8a9a-67e35d9c1c25'
+          }
+        },
+        {
+          file_url:
+            'https://raw.githubusercontent.com/HBPNeurorobotics/knowledge-graph/master/Models/brain_model/CDP1_brain_model_700_neurons.h5',
+          point_neuron_models: [
+            {
+              name: 'Adaptive Integrate and Fire model 2'
+            }
+          ],
+          synpase_scale_factor: '68400',
+          neuron_scale_factor: '717',
+          name: 'whole mouse brain model',
+          description:
+            'This point neuron model has  717 neurons of type AIF and 68400 synapses of type Tsodyks-Markram.\nIt has been re-constructed base on data provided by Allen  Institute for Brain Science. ',
+          '@id':
+            'https://nexus-int.humanbrainproject.org/v0/data/sp6/core/pointneuronnetwork/v1.0.0/66391b53-bf32-4c3d-9c6a-cc8c4f810ae2b',
+          version: '0.1',
+          synapse_models: {
+            'https://schema.hbp.eu/relativeUrl':
+              'sp6/core/synapsemodel/v1.0.0/ffb5b67e-e88b-416e-82ce-819edd3c9192',
+            '@id':
+              'https://nexus-int.humanbrainproject.org/v0/data/sp6/core/synapsemodel/v1.0.0/ffb5b67e-e88b-416e-82ce-819edd3c9192'
+          },
+          file_loader:
+            'https://raw.githubusercontent.com/HBPNeurorobotics/knowledge-graph/master/Models/brain_model/CDP1_brain.py',
+          publications: {
+            'https://schema.hbp.eu/relativeUrl':
+              'sp6/core/publication/v1.0.0/20572429-5c82-41ca-8a9a-67e35d9c1c25b',
+            '@id':
+              'https://nexus-int.humanbrainproject.org/v0/data/sp6/core/publication/v1.0.0/20572429-5c82-41ca-8a9a-67e35d9c1c25b'
+          }
+        }
+      ],
+      total: 2,
+      size: 2,
+      start: 0
+    };
+    const result = [
+      {
+        name: kgBrains.results[0].name,
+        description: kgBrains.results[0].description,
+        maturity: 'production',
+        thumbnail: undefined,
+        script: 'script1',
+        urls: {
+          fileLoader: kgBrains.results[0].file_loader,
+          fileUrl: kgBrains.results[0].file_url
+        }
+      },
+      {
+        name: kgBrains.results[1].name,
+        description: kgBrains.results[1].description,
+        maturity: 'production',
+        thumbnail: undefined,
+        script: 'script2',
+        urls: {
+          fileLoader: kgBrains.results[1].file_loader,
+          fileUrl: kgBrains.results[1].file_url
+        }
+      }
+    ];
+    sinon
+      .stub(storageRequestHandler, 'get')
+      .onFirstCall()
+      .returns({ body: JSON.stringify(kgBrains) })
+      .onSecondCall()
+      .returns({ body: 'script1' })
+      .onThirdCall()
+      .returns({ body: 'script2' });
+
+    return storageRequestHandler
+      .getKnowledgeGraphBrains('query', 'token')
+      .should.eventually.deep.equal(result);
   });
 });
 
