@@ -375,7 +375,8 @@ abstract class BaseExperimentService {
       const tfCode = newTf.code;
       const tfRegexp = /def +([^\\( ]*)/gm.exec(tfCode);
       const tfName = tfRegexp ? tfRegexp[1] : '';
-      const bibiTransferFunctions = bibi.transferFunction || [];
+      let bibiTransferFunctions = bibi.transferFunction || [];
+      bibiTransferFunctions = Array.isArray(bibiTransferFunctions) ? bibiTransferFunctions : [bibiTransferFunctions];
 
       const bibiTf = bibiTransferFunctions.find(
         (bibiTf: { _src: string; }) =>
