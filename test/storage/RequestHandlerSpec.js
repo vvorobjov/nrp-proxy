@@ -1134,7 +1134,8 @@ describe('Storage request handler', () => {
         urls: {
           fileLoader: kgBrains.results[0].file_loader,
           fileUrl: kgBrains.results[0].file_url
-        }
+        },
+        id: kgBrains.results[0].file_loader.split('/').pop()
       },
       {
         name: kgBrains.results[1].name,
@@ -1145,7 +1146,8 @@ describe('Storage request handler', () => {
         urls: {
           fileLoader: kgBrains.results[1].file_loader,
           fileUrl: kgBrains.results[1].file_url
-        }
+        },
+        id: kgBrains.results[1].file_loader.split('/').pop()
       }
     ];
     sinon
