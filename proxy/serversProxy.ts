@@ -21,6 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  * ---LICENSE-END**/
+
 'use strict';
 
 const request = require('request');
@@ -60,6 +61,11 @@ const RUNNING_SIMULATION_STATES = [
   SIMULATION_STATES.STARTED,
   SIMULATION_STATES.INITIALIZED,
   SIMULATION_STATES.HALTED
+];
+
+const STOPPED_SIMULATION_STATES = [
+  SIMULATION_STATES.FAILED,
+  SIMULATION_STATES.STOPPED
 ];
 
 let authToken;
@@ -133,6 +139,19 @@ async function getExperimentsAndSimulations(configuration) {
 
   // set runningSimulation per simulation server
   _.forOwn(simulations, serverSimulations => {
+    // Set stoppedSimulations to true only if a reply from the server states that the last running simulation is stopped
+    if (serverSimulations.length === 0) {
+      serverSimulations.stoppedSimulation = true;
+    } else {
+      let simRunning = false;
+      serverSimulations.forEach(value => {
+        if (RUNNING_SIMULATION_STATES.includes(value.state)) {
+          simRunning = true;
+        }
+      });
+      serverSimulations.stoppedSimulation = !simRunning;
+    }
+
     serverSimulations.runningSimulation = _.find(serverSimulations, sim =>
       RUNNING_SIMULATION_STATES.includes(sim.state)
     );
@@ -142,7 +161,7 @@ async function getExperimentsAndSimulations(configuration) {
   const availableServers = _(configuration.servers)
     .filter(
       (config, serverId) =>
-        simulations[serverId] && !simulations[serverId].runningSimulation
+        simulations[serverId] && simulations[serverId].stoppedSimulation
     )
     .shuffle()
     .sortBy(
