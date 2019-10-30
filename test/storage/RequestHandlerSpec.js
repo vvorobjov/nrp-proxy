@@ -1054,6 +1054,23 @@ describe('Storage request handler', () => {
     );
   });
 
+  it('should return an empty list of KG brains when using the local storage', () => {
+    sinon
+      .stub(storageRequestHandler, 'get')
+      .onFirstCall()
+      .returns({ body: JSON.stringify({}) })
+      .onSecondCall()
+      .returns({ body: 'script1' })
+      .onThirdCall()
+      .returns({ body: 'script2' });
+
+    storageRequestHandler.config.authentication = 'FS';
+
+    return storageRequestHandler
+      .getKnowledgeGraphBrains('query', 'token')
+      .should.eventually.deep.equal([]);
+  });
+
   it('should get the list of KG brains', () => {
     const kgBrains = {
       results: [
@@ -1158,6 +1175,8 @@ describe('Storage request handler', () => {
       .returns({ body: 'script1' })
       .onThirdCall()
       .returns({ body: 'script2' });
+
+    storageRequestHandler.config.authentication = 'Collab';
 
     return storageRequestHandler
       .getKnowledgeGraphBrains('query', 'token')

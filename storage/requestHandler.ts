@@ -490,6 +490,9 @@ ${ex.stack}`);
   }
 
   async getKnowledgeGraphBrains(query, token) {
+    if (this.config.authentication === 'FS') {
+      return [];
+    }
     // tslint:disable-next-line:max-line-length
     const kgUrl = `https://kg-int.humanbrainproject.eu/query/sp6/core/pointneuronnetwork/v1.0.0/sp10/instances?size=20&databaseScope=INFERRED&vocab=https%3A%2F%2Fschema.hbp.eu%2F${query}%2F`;
     const knowledgeGraphBrainsResponse = await this.get(
