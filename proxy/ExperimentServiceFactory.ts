@@ -364,7 +364,7 @@ abstract class BaseExperimentService {
     ).then(() => tfsResponse);
   }
 
-  async saveTransferFunctions(transferFunctions: [{code: string, active: boolean}]) {
+  async saveTransferFunctions(transferFunctions: [{ code: string, active: boolean }]) {
     const [bibiFile, bibiFileName] = await this.getBibi();
     const bibi = bibiFile.bibi;
     if (!bibi['_xmlns:xsi']) {
@@ -379,10 +379,14 @@ abstract class BaseExperimentService {
       bibiTransferFunctions = Array.isArray(bibiTransferFunctions) ? bibiTransferFunctions : [bibiTransferFunctions];
 
       const bibiTf = bibiTransferFunctions.find(
-        (bibiTf: { _src: string; }) =>
-         path.basename(bibiTf._src, '.py') === tfName);
-      const bibiTfActive =  bibiTf ? (bibiTf._active || true) : true;
-      const tfActive = newTf.active || bibiTfActive;
+          (bibiTf: { _src: string; }) =>
+              path.basename(bibiTf._src, '.py') === tfName);
+
+      let bibiTfActive = true;
+      if (bibiTf !== undefined && bibiTf._active !== undefined)
+        bibiTfActive = bibiTf._active;
+
+      const tfActive = newTf.active !== undefined ? newTf.active : bibiTfActive;
 
       return [`${tfName}.py`, tfCode, tfActive];
     });
