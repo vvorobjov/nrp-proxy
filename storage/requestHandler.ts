@@ -475,7 +475,8 @@ ${ex.stack}`);
         thumbnail: undefined,
         script: brainScripts[index],
         urls: { fileLoader: knowledgeGraphBrain.file_loader, fileUrl: knowledgeGraphBrain.file_url },
-        id: knowledgeGraphBrain.file_loader ? knowledgeGraphBrain.file_loader.split('/').pop() : undefined
+        id: knowledgeGraphBrain.file_loader ? knowledgeGraphBrain.file_loader.split('/').pop() : undefined,
+        '@id': knowledgeGraphBrain['@id']
       })
     );
   }
