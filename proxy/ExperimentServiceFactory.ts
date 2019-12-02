@@ -387,15 +387,17 @@ abstract class BaseExperimentService {
         bibiTfActive = bibiTf._active;
 
       const tfActive = newTf.active !== undefined ? newTf.active : bibiTfActive;
+      const tfPriority = bibiTf._priority || 0;
 
-      return [`${tfName}.py`, tfCode, tfActive];
+      return [`${tfName}.py`, tfCode, tfActive, tfPriority];
     });
 
     if (tfs && tfs.length)
-      bibi.transferFunction = tfs.map(([tfName, _tfCode, active]) => {
+      bibi.transferFunction = tfs.map(([tfName, _tfCode, active, priority]) => {
         return {
           _src: tfName,
           _active: active,
+          _priority: priority,
           __prefix: bibi.__prefix,
           '_xsi:type':
             (bibi.__prefix ? `${bibi.__prefix}:` : '') +
