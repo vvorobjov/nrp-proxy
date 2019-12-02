@@ -1152,7 +1152,8 @@ describe('Storage request handler', () => {
           fileLoader: kgBrains.results[0].file_loader,
           fileUrl: kgBrains.results[0].file_url
         },
-        id: kgBrains.results[0].file_loader.split('/').pop()
+        id: kgBrains.results[0].file_loader.split('/').pop(),
+        '@id': kgBrains.results[0]['@id']
       },
       {
         name: kgBrains.results[1].name,
@@ -1164,7 +1165,8 @@ describe('Storage request handler', () => {
           fileLoader: kgBrains.results[1].file_loader,
           fileUrl: kgBrains.results[1].file_url
         },
-        id: kgBrains.results[1].file_loader.split('/').pop()
+        id: kgBrains.results[1].file_loader.split('/').pop(),
+        '@id': kgBrains.results[1]['@id']
       }
     ];
     sinon
