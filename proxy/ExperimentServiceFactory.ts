@@ -387,7 +387,7 @@ abstract class BaseExperimentService {
         bibiTfActive = bibiTf._active;
 
       const tfActive = newTf.active !== undefined ? newTf.active : bibiTfActive;
-      const tfPriority = bibiTf._priority || 0;
+      const tfPriority = bibiTf !== undefined && bibiTf._priority !== undefined ? bibiTf._priority : 0;
 
       return [`${tfName}.py`, tfCode, tfActive, tfPriority];
     });
