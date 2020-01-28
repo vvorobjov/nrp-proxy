@@ -1184,6 +1184,20 @@ describe('Storage request handler', () => {
       .getKnowledgeGraphBrains('query', 'token')
       .should.eventually.deep.equal(result);
   });
+
+  it('should create a KG artifact attachment', () => {
+    sinon.stub(fs, 'writeFile').returns(undefined);
+
+    return storageRequestHandler
+      .createOrUpdateKgAttachment('file.csv', 'content')
+      .should.eventually.equal(undefined);
+  });
+
+  it('should get a KG artifact attachment', () => {
+    const res = storageRequestHandler.getKgAttachment('file.csv');
+
+    expect(res).to.match(/\/KG_DATA_FOLDER\/file\.csv/);
+  });
 });
 
 describe('Request handler (not mocking the mkdir)', () => {

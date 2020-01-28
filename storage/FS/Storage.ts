@@ -35,6 +35,7 @@ const q = require('q'),
   tmp = require('tmp'),
   pd = require('pretty-data').pd,
   USER_DATA_FOLDER = 'USER_DATA',
+  KG_DATA_FOLDER = 'KG_DATA_FOLDER',
   INTERNALS = ['FS_db', USER_DATA_FOLDER];
 
 // mocked in the tests thus non const
@@ -43,10 +44,11 @@ let glob = q.denodeify(require('glob')),
   jszip = require('jszip'),
   DB = require('./DB').default,
   utils = require('./utils').default,
-  fs = require('fs'),
+  fs = require('fs-extra'),
   rmdir = require('rmdir'),
   fsExtra = require('fs-extra'),
-  customModelAbsPath = path.join(utils.storagePath, USER_DATA_FOLDER);
+  customModelAbsPath = path.join(utils.storagePath, USER_DATA_FOLDER),
+  knowledgeGraphDataPath = path.join(utils.storagePath, KG_DATA_FOLDER);
 // tslint:enable: prefer-const
 
 export class Storage extends BaseStorage {
@@ -634,5 +636,15 @@ export class Storage extends BaseStorage {
 
   getStoragePath() {
     return utils.storagePath;
+  }
+
+  async createOrUpdateKgAttachment(filename, content) {
+    const filePath = path.join(knowledgeGraphDataPath, filename);
+    await fs.ensureDir(knowledgeGraphDataPath);
+    return q.denodeify(fs.writeFile)(filePath, content);
+  }
+
+  getKgAttachment(filename) {
+    return path.join(knowledgeGraphDataPath, filename);
   }
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-const fs = require('fs'),
+const fs = require('fs-extra'),
   chai = require('chai'),
   chaiAsPromised = require('chai-as-promised'),
   chaiSubset = require('chai-subset'),

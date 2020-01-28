@@ -504,7 +504,8 @@ ${ex.stack}`);
         }
       }, kgUrl);
     const knowledgeGraphBrains = JSON.parse(knowledgeGraphBrainsResponse.body).results;
-    const knowledgeGraphBrainScripts = await q.all(knowledgeGraphBrains.map(knowledgeGraphBrain => this.get({}, knowledgeGraphBrain.file_loader)));
+    const knowledgeGraphBrainScripts = await q.all(knowledgeGraphBrains.map(knowledgeGraphBrain =>
+        this.get({}, knowledgeGraphBrain.file_loader || '')));
     const brainScripts = knowledgeGraphBrainScripts.map(brainScriptResponse => brainScriptResponse.body);
     return this.transformKnowledgeGraphBrains(knowledgeGraphBrains, brainScripts);
   }
@@ -612,5 +613,13 @@ ${ex.stack}`);
     }
 
     return zips;
+  }
+
+  createOrUpdateKgAttachment(filename, content) {
+    return this.storage.createOrUpdateKgAttachment(filename, content);
+  }
+
+  getKgAttachment(filename) {
+    return this.storage.getKgAttachment(filename);
   }
 }

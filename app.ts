@@ -633,6 +633,23 @@ app.put('/storage/:experiment', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.get('/storage/knowledgeGraph/data/:filename', (req, res) => {
+  storageRequestHandler
+    .getKgAttachment(req.params.filename)
+    .then(r => res.sendFile(r))
+    .catch(_.partial(handleError, res));
+});
+
+app.put('/storage/knowledgeGraph/data/:filename', (req, res) => {
+  storageRequestHandler
+    .createOrUpdateKgAttachment(
+      req.params.filename,
+      req.body
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
 app.get('/experiment/:experimentId/config', async (req, res) => {
   experimentServiceFactory
     .createExperimentService(req.params.experimentId, getAuthToken(req))

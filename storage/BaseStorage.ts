@@ -82,4 +82,6 @@ export default abstract class BaseStorage {
   abstract extractZip(zip, destFoldername);
   abstract insertExperimentInDB(userId, foldername);
   abstract getStoragePath();
+  abstract createOrUpdateKgAttachment(filename, content);
+  abstract getKgAttachment(filename);
 }

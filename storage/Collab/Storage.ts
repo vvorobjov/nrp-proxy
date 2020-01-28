@@ -341,4 +341,12 @@ export class Storage extends BaseStorage {
   getStoragePath() {
     throw('Not implemented.');
   }
+
+  createOrUpdateKgAttachment(filename, content) {
+    throw('Not implemented.');
+  }
+
+  getKgAttachment(filename) {
+    throw ('Not implemented.');
+  }
 }
