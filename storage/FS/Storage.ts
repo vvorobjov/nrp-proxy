@@ -36,7 +36,7 @@ const q = require('q'),
   pd = require('pretty-data').pd,
   USER_DATA_FOLDER = 'USER_DATA',
   KG_DATA_FOLDER = 'KG_DATA_FOLDER',
-  INTERNALS = ['FS_db', USER_DATA_FOLDER];
+  INTERNALS = ['FS_db', USER_DATA_FOLDER, KG_DATA_FOLDER];
 
 // mocked in the tests thus non const
 // tslint:disable: prefer-const
@@ -644,7 +644,7 @@ export class Storage extends BaseStorage {
     return q.denodeify(fs.writeFile)(filePath, content);
   }
 
-  getKgAttachment(filename) {
+  async getKgAttachment(filename) {
     return path.join(knowledgeGraphDataPath, filename);
   }
 }
