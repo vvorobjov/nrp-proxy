@@ -1194,9 +1194,9 @@ describe('Storage request handler', () => {
   });
 
   it('should get a KG artifact attachment', () => {
-    const res = storageRequestHandler.getKgAttachment('file.csv');
-
-    expect(res).to.match(/\/KG_DATA_FOLDER\/file\.csv/);
+    storageRequestHandler
+      .getKgAttachment('file.csv')
+      .should.eventually.match(/\/KG_DATA_FOLDER\/file\.csv/);
   });
 });
 
