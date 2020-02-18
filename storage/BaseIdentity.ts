@@ -29,7 +29,7 @@ export default abstract class BaseIdentity {
 
   abstract  getUserInfo(userId, token);
 
-  abstract getUsersList();
+  abstract getUsersList(token);
 
   abstract getUserGroups(token, userId);
 }

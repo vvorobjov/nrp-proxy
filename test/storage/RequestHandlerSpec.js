@@ -443,7 +443,18 @@ describe('Storage request handler', () => {
   });
 
   it(`should get the list of the users`, () => {
-    var expectedResult = ['nrpuser', 'admin'];
+    var expectedResult = [
+      {
+        displayName: 'nrpuser',
+        id: 'nrpuser',
+        username: 'nrpuser'
+      },
+      {
+        displayName: 'admin',
+        id: 'admin',
+        username: 'admin'
+      }
+    ];
     collectionMock.prototype.find = sinon.stub().returns(
       Promise.resolve([
         {

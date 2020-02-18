@@ -20,8 +20,19 @@ describe('FSidentity', () => {
     identity = new IdentityRewire.Identity();
   });
 
-  it(`should return self user info`, () => {
-    var expectedResult = ['nrpuser', 'admin'];
+  it(`should return users list`, () => {
+    var expectedResult = [
+      {
+        displayName: 'nrpuser',
+        id: 'nrpuser',
+        username: 'nrpuser'
+      },
+      {
+        displayName: 'admin',
+        id: 'admin',
+        username: 'admin'
+      }
+    ];
 
     return identity.getUsersList().should.eventually.deep.equal(expectedResult);
   });
@@ -117,5 +128,57 @@ describe('Collabidentity', () => {
       .reply(200, response);
 
     return identity.getUserGroups().should.eventually.deep.equal(groups);
+  });
+
+  it(`should return users list`, () => {
+    var expectedResult = [
+      {
+        displayName: 'nrpuser',
+        id: 'nrpuser',
+        username: 'nrpuser'
+      },
+      {
+        displayName: 'admin',
+        id: 'admin',
+        username: 'admin'
+      }
+    ];
+
+    nock('https://services.humanbrainproject.eu')
+      .get(/\/idm\/v1\/api\/user/)
+      .reply(200, {
+        _embedded: {
+          users: [
+            {
+              displayName: 'nrpuser',
+              id: 'nrpuser',
+              username: 'nrpuser'
+            }
+          ]
+        },
+        page: {
+          number: 0,
+          totalPages: 2
+        }
+      });
+    nock('https://services.humanbrainproject.eu')
+      .get(/\/idm\/v1\/api\/user/)
+      .reply(200, {
+        _embedded: {
+          users: [
+            {
+              displayName: 'admin',
+              id: 'admin',
+              username: 'admin'
+            }
+          ]
+        },
+        page: {
+          number: 1,
+          totalPages: 2
+        }
+      });
+
+    return identity.getUsersList().should.eventually.deep.equal(expectedResult);
   });
 });

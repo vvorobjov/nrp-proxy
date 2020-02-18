@@ -27,12 +27,14 @@ import BaseIdentity from '../BaseIdentity';
 import CollabConnector from './CollabConnector';
 
 export class Identity extends BaseIdentity {
+  usersList: any[] = [];
+
   static get IDENTITY_API_URL() {
     return 'https://services.humanbrainproject.eu/idm/v1/api';
   }
 
   getUniqueIdentifier(token) {
-    return this.getUserInfo('me', token).then(({ id }) => id);
+    return this.getUserInfo('me', token).then(({id}) => id);
   }
 
   getUserInfo(userId, token) {
@@ -50,8 +52,45 @@ export class Identity extends BaseIdentity {
       .then(res => JSON.parse(res)._embedded.groups);
   }
 
-  getUsersList() {
-    throw 'not implemented';
+  async getUsersList(token) {
+    if (this.usersList.length === 0) {
+      const res = await this.getUserListPage(token, 0);
+      const totalPages = res.page.totalPages;
+      this.usersList = this.usersList.concat(res._embedded.users.map(u => {
+        return {
+          displayName: u.displayName,
+          id: u.id,
+          username: u.username
+        };
+      }));
+
+      const jobs: any[] = [];
+      for (let i = 1; i < totalPages; i++) {
+        jobs.push(this.getUserListPage(token, i));
+      }
+
+      const results = await Promise.all(jobs);
+      for (const result of results) {
+        this.usersList = this.usersList.concat(result._embedded.users.map(u => {
+          return {
+            displayName: u.displayName,
+            id: u.id,
+            username: u.username
+          };
+        }));
+      }
+    }
+
+    return this.usersList;
+  }
+
+  getUserListPage(token, pageNumber) {
+    return CollabConnector.instance
+      .get(
+        `${Identity.IDENTITY_API_URL}/user?page=${pageNumber}&pageSize=500`,
+        token
+      )
+      .then(res => JSON.parse(res));
   }
 
 }

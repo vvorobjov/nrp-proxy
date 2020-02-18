@@ -47,7 +47,7 @@ export class Identity extends BaseIdentity {
       .then(res => res.user);
   }
 
-  getUsersList() {
+  getUsersList(token) {
     return DB.instance.users
       .find({})
       .then(
@@ -57,7 +57,11 @@ export class Identity extends BaseIdentity {
       )
       .then(users =>
         users.map(f => {
-          return f.user;
+          return {
+            displayName: f.user,
+            id: f.user,
+            username: f.user
+          };
         })
       );
   }
