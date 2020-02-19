@@ -72,7 +72,7 @@
     "test": "nyc mocha -r ts-node/register test/*/* --exit",
     "pretest": "lint-staged && npm run lint",
     "precommit": "lint-staged",
-    "install": "/bin/bash -c 'virtualenv proxy_virtualenv && source proxy_virtualenv/bin/activate && pip install mock_import six'"
+    "install": "/bin/bash -c '${VENV_CMD:-virtualenv} proxy_virtualenv && source proxy_virtualenv/bin/activate && ${PIP_CMD:-pip} install mock_import six'"
   },
   "nyc": {
     "check-coverage": true,
