@@ -795,6 +795,30 @@ describe('FSStorage', () => {
       });
     });
   });
+
+  it('should unzip file under experiment after having checked user permissions', () => {
+    collectionMock.prototype.findOne = sinon
+      .stub()
+      .returns(
+        Promise.resolve({ token: fakeUserId, experiment: fakeExperiment })
+      );
+    sinon.stub(jszip, 'loadAsync').returns('zipFileContent');
+    sinon
+      .stub(fsStorage, 'extractZip')
+      .returns(q.resolve(['undefined', 'undefined', 'undefined']));
+    return expect(
+      fsStorage.unzip(
+        'filename.zip',
+        'binary content',
+        fakeExperiment,
+        fakeUserId
+      )
+    ).to.eventually.deep.equal(['undefined', 'undefined', 'undefined']);
+  });
+
+  after(() => {
+    jszip.loadAsync.restore();
+  });
 });
 
 describe('FS Storage (not mocking the mkdir)', () => {
@@ -802,6 +826,7 @@ describe('FS Storage (not mocking the mkdir)', () => {
   let RewiredDB, RewiredFSStorage, fsStorage;
   //in this test we create a temporary experiments table and then remove
   //it on the fly, because we cannot delete entries from the database
+
   it(`should successfully create an experiment given a correct token `, () => {
     let newPath = path.join(__dirname, 'dbMock2');
     const mockUtils = { storagePath: path.join(__dirname, 'dbMock2') };

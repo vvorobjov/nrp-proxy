@@ -1209,6 +1209,15 @@ describe('Storage request handler', () => {
       .getKgAttachment('file.csv')
       .should.eventually.match(/\/KG_DATA_FOLDER\/file\.csv/);
   });
+
+  it('should unzip a .zip file under experiment folder', () => {
+    sinon
+      .stub(fsStorage, 'unzip')
+      .returns(q.resolve([undefined, undefined, undefined]));
+    return storageRequestHandler
+      .unzip('file.zip', 'binary content', fakeExperiment, fakeUserId)
+      .should.eventually.deep.equal([undefined, undefined, undefined]);
+  });
 });
 
 describe('Request handler (not mocking the mkdir)', () => {

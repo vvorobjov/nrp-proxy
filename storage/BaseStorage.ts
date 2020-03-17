@@ -36,11 +36,17 @@ export type File = {
 export default abstract class BaseStorage {
 
   abstract listFiles(experiment, token, userId): File[];
+
   abstract getFile(filename, experiment, token, userId, byname);
+
   abstract deleteFile(filename, experiment, token, userId, byname);
+
   abstract deleteFolder(foldername, experiment, token, userId, byname);
+
   abstract createFolder(foldername, experiment, token, userId);
+
   abstract deleteExperiment(experimentName, parentDir, token, userId);
+
   abstract createOrUpdate(
     filename,
     fileContent,
@@ -51,13 +57,19 @@ export default abstract class BaseStorage {
   );
 
   abstract listAllModels(modelType, userId);
+
   abstract addUsertoSharingUserListinModel(modelType, modelName, userId);
+
   abstract listSharingUsersbyModel(modelType, modelID);
 
   abstract updateSharedModelMode(modelType, modelID, sharingOption);
+
   abstract getModelSharingMode(modelType, modelID);
+
   abstract deleteSharingUserFromModel(modelType, modelID, userId);
+
   abstract listSharedModels(modelType, userId);
+
   abstract listUserModelsbyType(modelType, token, userId);
 
   abstract isDirectory(fileSystemEntry);
@@ -65,23 +77,38 @@ export default abstract class BaseStorage {
   abstract getExperimentSharingMode(experimentID);
 
   abstract updateSharedExperimentMode(experimentID, sharingOption);
+
   abstract listSharingUsersbyExperiment(experimentID);
 
   abstract listExperimentsSharedByUsers(userId);
 
   abstract deleteSharingUserFromExperiment(experimentId, userId);
+
   abstract addUsertoSharingUserListinExperiment(newExperiment, userId);
+
   abstract copyFolderContents(contents, destFolder);
 
   abstract createCustomModel(modelType, modelData, userId, modelName, token, contextId);
+
   abstract createExperiment(newExperiment, token, userId, contextId);
+
   abstract getModelFolder(modelType, modelName, userId);
+
   abstract copyExperiment(experiment, token, userId, contextId);
+
   abstract listExperiments(token, userId, contextId, options);
+
   abstract createUniqueExperimentId(token, userId, expPath, contextId);
+
   abstract extractZip(zip, destFoldername);
+
   abstract insertExperimentInDB(userId, foldername);
+
   abstract getStoragePath();
+
   abstract createOrUpdateKgAttachment(filename, content);
+
   abstract getKgAttachment(filename);
+
+  abstract unzip(filename, fileContent, experiment, userId);
 }

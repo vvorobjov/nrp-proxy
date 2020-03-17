@@ -595,24 +595,34 @@ app.post('/storage/clone/:experiment', (req, res) => {
 
 app.post('/storage/:experiment/*', (req, res) => {
   if (!req.params['0']) return handleError(res, 'File name is required');
+  let promise: Promise<unknown>;
 
-  (req.query.type === 'folder'
-    ? storageRequestHandler.createFolder(
+  if (req.query.type === 'folder') {
+    promise = storageRequestHandler.createFolder(
       req.params['0'],
       req.params.experiment,
       getAuthToken(req)
-    )
-    : storageRequestHandler.createOrUpdate(
+    );
+  } else if (req.query.type === 'zip') {
+    promise = storageRequestHandler.unzip(
+      req.params['0'],
+      req.body,
+      req.params.experiment,
+      getAuthToken(req)
+    );
+  } else {
+    promise = storageRequestHandler.createOrUpdate(
       req.params['0'],
       req.body,
       req.get('content-type'),
       req.params.experiment,
       getAuthToken(req),
       req.query.append
-    )
-  )
-    .then(r => res.send(r || ''))
-    .catch(_.partial(handleError, res));
+    );
+  }
+
+  promise.then(r => res.send(r || ''))
+      .catch(_.partial(handleError, res));
 });
 
 app.get('/storage/:experiment', (req, res) => {

@@ -349,4 +349,8 @@ export class Storage extends BaseStorage {
   getKgAttachment(filename) {
     throw ('Not implemented.');
   }
+
+  unzip(filename, fileContent, experiment, userId) {
+    throw ('Not implemented.');
+  }
 }

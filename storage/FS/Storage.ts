@@ -618,11 +618,13 @@ export class Storage extends BaseStorage {
   }
 
  // Extracts a zip experiment folder to destFolderName
-  async extractZip(zipContent, destFolderName) {
+  async extractZip(zipContent, destFolderName, removeEnclosingFolder= true) {
     const mapFile = async filepath => {
       if (path.parse(filepath).dir !== '' && filepath.substr(-1) !== path.sep) {
         const content = await zipContent.file(filepath).async('nodebuffer');
-        filepath = filepath.substring(filepath.indexOf('/') + 1); // Removes the largest enclosing folder from the filepath
+        if (removeEnclosingFolder) {
+          filepath = filepath.substring(filepath.indexOf('/') + 1); // Removes the largest enclosing folder from the filepath
+        }
         const dest = path.join(utils.storagePath, destFolderName, filepath);
         if (!await fsExtra.exists(path.dirname(dest))) {
           await fsExtra.ensureDir(path.dirname(dest));
@@ -646,5 +648,12 @@ export class Storage extends BaseStorage {
 
   async getKgAttachment(filename) {
     return path.join(knowledgeGraphDataPath, filename);
+  }
+
+  unzip(filename, fileContent, experiment, userId) {
+    const relativePath = path.join(experiment, filename);
+    return this.userIdHasAccessToPath(userId, relativePath)
+      .then(() => jszip.loadAsync(fileContent))
+      .then(content => this.extractZip(content, experiment, false));
   }
 }

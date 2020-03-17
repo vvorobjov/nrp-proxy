@@ -622,4 +622,15 @@ ${ex.stack}`);
   getKgAttachment(filename) {
     return this.storage.getKgAttachment(filename);
   }
+
+  unzip(filename, fileContent, parentDir, token) {
+    return this.authenticator.checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId => this.storage.unzip(
+      filename,
+      fileContent,
+      parentDir,
+      userId
+    ));
+  }
 }
