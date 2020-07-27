@@ -139,7 +139,7 @@ function updateExperimentList() {
 async function getServersStatus() {
   return _.map(configuration.servers, (server: any) => ({
     server: server.id,
-    api: server.gzweb['nrp-services'],
+    api: (server.internalIp || server.gzweb['nrp-services']),
     health: healthStatus[server.id],
     runningSimulation:
       simulationList[server.id] && simulationList[server.id].runningSimulation

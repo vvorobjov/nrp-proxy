@@ -51,7 +51,7 @@ async function getIPAndPort(server?) {
   } else {
     serverConfig = await proxyRequestHandler.getServer(server);
   }
-  const url = URL.parse(serverConfig.gzweb['nrp-services']);
+  const url = URL.parse((serverConfig.internalIp || serverConfig.gzweb['nrp-services']));
   return [url.hostname, url.port];
 }
 

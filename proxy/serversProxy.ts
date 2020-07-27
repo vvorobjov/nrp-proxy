@@ -110,8 +110,9 @@ const executeServerRequest = (url: string): Promise<any> => {
 const executeRequestForAllServers = (configuration, urlPostFix) => {
   const serversResponses: any[] = [];
   _.forOwn(configuration.servers, (serverConfig, serverId) => {
+    const serverUrl = serverConfig.internalIp || serverConfig.gzweb['nrp-services'];
     serversResponses.push(
-      executeServerRequest(serverConfig.gzweb['nrp-services'] + urlPostFix)
+      executeServerRequest(serverUrl + urlPostFix)
         .then(serverResponse => {
           return [serverId, serverResponse];
         })

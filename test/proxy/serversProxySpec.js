@@ -38,6 +38,22 @@ describe('serversProxy', function() {
     });
   });
 
+  it("should return the correct list of experiments using backend's internal IP", function() {
+    testConf.mockResponsesInternalIp();
+    var experiments = serversProxy.getExperimentsAndSimulations(
+      testConf.configInternalIp
+    );
+    return experiments.then(function(x) {
+      expect(
+        x[0].experimentConf1[0].runningSimulation.experimentConfiguration
+      ).to.equal(
+        testConf.experimentList.experiment1.configuration
+          .experimentConfiguration
+      );
+      expect(_.isEqual(x[1], testConf.serveserverSimulations)).to.equal(false);
+    });
+  });
+
   it('should NOT fail to return experiments due a non-JSON response', function() {
     testConf.mockNonJsonResponses();
     var exp = serversProxy.getExperimentsAndSimulations(testConf.config);

@@ -36,7 +36,8 @@ var SIMULATION_STATES = {
 
 var CTX_ID = 'ctxId',
   EXPERIMENT_ID = 'experimentId',
-  BASE_URL = 'http://localhost';
+  BASE_URL = 'http://localhost',
+  BASE_INTERNAL_URL = 'http://10.1.1.96';
 
 var SERVERS = [
   'geneva1',
@@ -66,6 +67,28 @@ var config = {
   'daint-cscs': {
     job_url: 'job_url',
     job_file_location: 'job_file_location'
+  }
+};
+
+var configInternalIp = {
+  refreshInterval: 5000,
+  auth: {
+    renewInternal: 0,
+    clientId: CLIENT_ID,
+    clientSecret: CLIENT_SECRET,
+    url: URL,
+    deactivate: false
+  },
+  modelsPath: 'modelsPath',
+  experimentsPath: 'test',
+  servers: {
+    genevaInternalIp: {
+      internalIp: BASE_INTERNAL_URL + '/' + 'genevaInternalIp',
+      gzweb: {
+        assets: BASE_URL + '/' + 'genevaInternalIp',
+        'nrp-services': BASE_URL + '/' + 'genevaInternalIp'
+      }
+    }
   }
 };
 
@@ -99,7 +122,12 @@ var serverExperiments = {
     experiment1: experimentsConf.experiment1,
     experiment2: experimentsConf.experiment2,
     experiment3: experimentsConf.experiment3
-  }
+  },
+  genevaInternalIp: { experiment1: experimentsConf.experiment1 }
+};
+
+var serverExperimentsInternalIp = {
+  genevaInternalIp: { experiment1: experimentsConf.experiment1 }
 };
 
 var serveserverSimulations = {
@@ -133,10 +161,20 @@ var serveserverSimulations = {
   ]
 };
 
+var serveserverSimulationsInternalIp = {
+  genevaInternalIp: [
+    _.merge({ state: SIMULATION_STATES.STARTED }, experimentsConf.experiment1)
+  ]
+};
+
 var serversStatus = {
   geneva1: 'OK',
   geneva2: 'OK',
   geneva3: 'OK'
+};
+
+var serversStatusInternalIp = {
+  genevaInternalIp: 'OK'
 };
 
 var experimentList = {
@@ -185,6 +223,13 @@ var experimentList = {
           state: 'started'
         },
         server: 'geneva3'
+      },
+      {
+        gzweb: {
+          assets: 'http://10.1.1.96/genevaInternalIp',
+          'nrp-services': 'http://localhost/genevaInternalIp'
+        },
+        id: 'genevaInternalIp'
       }
     ]
   },
@@ -293,6 +338,22 @@ var mockResponses = function() {
   });
 };
 
+var mockResponsesInternalIp = function() {
+  _.forOwn(serverExperimentsInternalIp, function(exp, server) {
+    nock(BASE_INTERNAL_URL + '/' + server)
+      .get('/experiment')
+      .reply(200, { data: serverExperimentsInternalIp[server] });
+
+    nock(BASE_INTERNAL_URL + '/' + server)
+      .get('/health/errors')
+      .reply(200, { state: serversStatusInternalIp[server] });
+
+    nock(BASE_INTERNAL_URL + '/' + server)
+      .get('/simulation')
+      .reply(200, serveserverSimulationsInternalIp[server]);
+  });
+};
+
 var mockNonJsonResponses = function() {
   _.forOwn(serverExperiments, function(exp, server) {
     nock(BASE_URL + '/' + server)
@@ -371,6 +432,7 @@ var mockNonJsonOidcResponse = function() {
 
 module.exports = {
   config: config,
+  configInternalIp: configInternalIp,
   EXPERIMENT_ID: EXPERIMENT_ID,
   SERVERS: SERVERS,
   experimentsConf: experimentsConf,
@@ -385,5 +447,6 @@ module.exports = {
   mockFailedImageResponse: mockFailedImageResponse,
   mockNonJsonResponses: mockNonJsonResponses,
   mockFailedResponses: mockFailedResponses,
-  mockResponses: mockResponses
+  mockResponses: mockResponses,
+  mockResponsesInternalIp: mockResponsesInternalIp
 };
