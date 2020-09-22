@@ -93,21 +93,26 @@ export default class CustomModelsService {
             this.logConfig(zip, basename),
             this.logThumbnail(zip, basename)
           ])
-          .then(async ([config, thumbnail]) => ({
-            name: config.name.toLowerCase().replace(/ /g, '_'),
-            displayName: config.name,
-            ownerId: model.ownerId,
-            type: model.type,
-            fileName: path.basename(model.path),
-            isShared: model.isShared,
-            isCustom: true,
-            description: config.description,
-            thumbnail: thumbnail ? thumbnail : defaultThumbnail,
-            path: model.path, // escape slashes
-            script: config.brain ? await zip.file(path.join(basename, config.brain)).async('text').then(data => data) : undefined,
-            sdf: !config.brain ? path.join(basename, config.sdf) : undefined,
-            configPath: config.configPath
-          }))
+          .then(async ([config, thumbnail]) => {
+            if (config.name === undefined || config.name === '') {
+              throw 'name is missing';
+            }
+            return {
+              name: config.name.toLowerCase().replace(/ /g, '_'),
+              displayName: config.name,
+              ownerId: model.ownerId,
+              type: model.type,
+              fileName: path.basename(model.path),
+              isShared: model.isShared,
+              isCustom: true,
+              description: config.description,
+              thumbnail: thumbnail ? thumbnail : defaultThumbnail,
+              path: model.path, // escape slashes
+              script: config.brain ? await zip.file(path.join(basename, config.brain)).async('text').then(data => data) : undefined,
+              sdf: !config.brain ? path.join(basename, config.sdf) : undefined,
+              configPath: config.configPath
+            };
+          })
           .catch(err =>
             q.reject(`Failed to load model '${model.location}'.\nErr: ${err}`)
           );

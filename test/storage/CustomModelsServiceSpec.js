@@ -1,8 +1,11 @@
 'use strict';
 const chai = require('chai'),
+  expect = chai.expect,
   rewire = require('rewire'),
   assert = chai.assert,
   q = require('q');
+chai.use(require('chai-as-promised'));
+
 let CustomModelsService, customModelsService;
 let fakeJSZip = {
   loadAsync: () =>
@@ -95,6 +98,50 @@ describe('CustomModelsService', () => {
     return customModelsService
       .getZipModelMetaData(fakeModel, 'fileContent')
       .should.eventually.deep.equal(expectedResult);
+  });
+
+  it('should not extract metadata from Zip if name is undefined', () => {
+    customModelsService.logConfig = function() {
+      return q.when({
+        name: undefined,
+        description: 'description',
+        brain: undefined,
+        sdf: 'model.sdf',
+        configPath: 'modelID/model.config'
+      });
+    };
+    customModelsService.logThumbnail = function() {
+      return q.when('thumbnail');
+    };
+    customModelsService.getZipBasename = function() {
+      return 'basename';
+    };
+
+    return expect(
+      customModelsService.getZipModelMetaData(fakeModel, 'fileContent')
+    ).to.be.rejectedWith();
+  });
+
+  it('should not extract metadata from Zip if name is an empty string', () => {
+    customModelsService.logConfig = function() {
+      return q.when({
+        name: '',
+        description: 'description',
+        brain: undefined,
+        sdf: 'model.sdf',
+        configPath: 'modelID/model.config'
+      });
+    };
+    customModelsService.logThumbnail = function() {
+      return q.when('thumbnail');
+    };
+    customModelsService.getZipBasename = function() {
+      return 'basename';
+    };
+
+    return expect(
+      customModelsService.getZipModelMetaData(fakeModel, 'fileContent')
+    ).to.be.rejectedWith();
   });
 
   it('should extract file from Zip', () => {
