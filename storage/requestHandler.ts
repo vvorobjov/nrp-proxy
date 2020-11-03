@@ -365,7 +365,7 @@ ${ex.stack}`);
     return new TemplateExperimentCloner(
       this.storage,
       this.config
-    ).cloneExperiment(token, userId, expPath, contextId, undefined);
+    ).cloneExperiment(token, userId, expPath, contextId, undefined, undefined);
   }
   /*shared models*/
   addUsertoSharingUserListinModel(modelType, modelId, userId, token) {
@@ -529,7 +529,7 @@ ${ex.stack}`);
       .then(() => this.storage.listSharingUsersbyExperiment(experimentID));
   }
 
-  async cloneNewExperiment(token, contextId, environmentPath, defaultName) {
+  async cloneNewExperiment(token, contextId, environmentPath, defaultName, defaultMode) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
 
@@ -543,7 +543,8 @@ ${ex.stack}`);
       userId,
       this.newExperimentPath,
       contextId,
-      defaultName
+      defaultName,
+      defaultMode
     );
   }
 

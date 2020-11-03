@@ -70,7 +70,7 @@ abstract class ExperimentCloner {
     return this.storage.createUniqueExperimentId(token, userId, dirname, contextId);
   }
 
-  async cloneExperiment(token, userId, expPath, contextId, defaultName) {
+  async cloneExperiment(token, userId, expPath, contextId, defaultName, defaultMode) {
     // clones the experiment
 
     let expName;
@@ -101,7 +101,7 @@ abstract class ExperimentCloner {
         defaultName
       );
 
-      await this.flattenBibiConf(bibiConf, expUUID, token, userId);
+      await this.flattenBibiConf(bibiConf, expUUID, token, userId, defaultMode);
 
       const files = await this.readDownloadedFiles();
 
@@ -283,7 +283,7 @@ abstract class ExperimentCloner {
     }
   }
 
-  async flattenBibiConf(bibiConfFile, expUUID, token, userId) {
+  async flattenBibiConf(bibiConfFile, expUUID, token, userId, defaultMode) {
     // copies the bibi files into a a temporary flatten structure
     const bibiFullPath = await this.getBibiFullPath(
       bibiConfFile,
@@ -354,6 +354,8 @@ abstract class ExperimentCloner {
 
       await this.copyH5File(brainFile);
     }
+
+    if (defaultMode) bibiConf.mode = {__text: defaultMode, __prefix: bibiConf.__prefix};
 
     if (ensureArrayProp(bibiConf, 'transferFunction'))
       for (const tf of bibiConf.transferFunction)

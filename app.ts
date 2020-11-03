@@ -435,7 +435,8 @@ app.post('/storage/clonenew', (req, res) => {
       getAuthToken(req),
       req.get('context-id'),
       req.body.environmentPath,
-      req.body.experimentName
+      req.body.experimentName,
+      req.body.experimentMode
     )
     .then(r => res.send({ newExperiment: r }))
     .catch(_.partial(handleError, res));
