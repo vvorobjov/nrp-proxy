@@ -1,3 +1,4 @@
+
 /**---LICENSE-BEGIN - DO NOT CHANGE OR MOVE THIS HEADER
  * This file is part of the Neurorobotics Platform software
  * Copyright (C) 2014,2015,2016,2017 Human Brain Project
@@ -144,7 +145,7 @@ abstract class XmlConfigModelLoader extends ModelLoader {
       ).then(b64 => {
         model.thumbnail = 'data:image;base64,' + b64;
         return model;
-      });
+      }).catch(err => q.reject('thumbnail not loaded'));
     };
 
     return q.denodeify(fs.readFile)(file, 'utf8')
