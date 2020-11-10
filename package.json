@@ -11,7 +11,6 @@
     "@types/rewire": "^2.5.28",
     "body-parser": "^1.17.2",
     "csv-stringify": "^2.0.4",
-    "cxml": "^0.1.1",
     "dateformat": "2.0.0",
     "express": "4.14.1",
     "file-base64": "1.0.0",
@@ -40,6 +39,7 @@
     "walk": "^2.3.14",
     "x2js": "^3.2.3",
     "xml2js": "0.4.17",
+    "xml4js": "^0.1.3",
     "zip-a-folder": "0.0.8"
   },
   "devDependencies": {
@@ -72,10 +72,7 @@
     "test": "nyc mocha -r ts-node/register test/*/* --exit",
     "pretest": "lint-staged && npm run lint",
     "precommit": "lint-staged",
-    "generate_experiments_xsd": "rm -rf xmlns cache; node_modules/http-serve/bin/http-serve $HBP/Experiments -p 8998 -s -c-1 & SERVER_PID=$!;sleep 1; node_modules/cxsd/cxsd-cli.js http://127.0.0.1:8998/ExDConfFile.xsd ; kill $SERVER_PID",
-    "generate_config_xsd": "rm -rf {xmlns,cache}; node_modules/http-serve/bin/http-serve $HBP/Models -p 8998 -s -c-1 & SERVER_PID=$!;sleep 1; node_modules/cxsd/cxsd-cli.js http://127.0.0.1:8998/model_configuration.xsd ; kill $SERVER_PID",
-    "install": "/bin/bash -c 'virtualenv proxy_virtualenv && source proxy_virtualenv/bin/activate && pip install mock_import six'",
-    "postinstall": "rm -rf node_modules/cxml/node_modules/@types/"
+    "install": "/bin/bash -c 'virtualenv proxy_virtualenv && source proxy_virtualenv/bin/activate && pip install mock_import six'"
   },
   "nyc": {
     "check-coverage": true,

@@ -39,11 +39,6 @@ const fs = require('fs'),
 
 configurationManager.initialize();
 let storageRequestHandler;
-const cxml = require('cxml');
-const parser = new cxml.Parser();
-
-const EXD_CONFIG = require('../xmlns/schemas.humanbrainproject.eu/SP10/2014/ExDConfig.js');
-
 // not a constant, because mocked on unit test
 // tslint:disable-next-line: prefer-const
 let glob = q.denodeify(require('glob'));
@@ -108,13 +103,14 @@ export default class ExperimentsService {
         ? utils.storagePath
         : this.experimentsPath,
       expPath = path.dirname(fileConfigPath);
-    return parser
-      .parse(experimentContent, EXD_CONFIG.document)
-      .then(({ ExD: exc }) =>
+    // TODO: Parse the exc and bibi with the proper nodeJS xsd parser
+    const exc: any = new X2JS().xml2js(experimentContent);
+    return q.when(exc.ExD)
+      .then(exc =>
         q.all([
           exc,
           readFile(
-            path.join(configPath, expPath, exc.bibiConf.src),
+            path.join(configPath, expPath, exc.bibiConf._src),
             'utf8'
           ).then(data => new X2JS().xml2js(data))
         ])
@@ -149,35 +145,31 @@ export default class ExperimentsService {
           robotPaths,
           path: expPath,
           physicsEngine:
-            exc.physicsEngine._exists === false ? 'ode' : exc.physicsEngine,
-          tags: exc.tags._exists === false ? [] : exc.tags,
+            exc.physicsEngine ? exc.physicsEngine : 'ode',
+          tags: exc.tags ? exc.tags : [],
           description:
             exc.description || 'No description available for this experiment.',
           experimentConfiguration: fileConfigPath,
           maturity:
             exc.maturity === 'production' ? 'production' : 'development',
-          timeout: exc.timeout.content || 600,
+          timeout: exc.timeout ? parseInt(exc.timeout, 10) : 600,
           brainProcesses:
-            exc.bibiConf.processes._exists === false
-              ? 1
-              : exc.bibiConf.processes,
+            exc.bibiConf.processes ? exc.bibiConf.processes : 1,
           cameraPose: exc.cameraPose && [
-            ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraPosition[p]),
-            ...['x', 'y', 'z'].map(p => exc.cameraPose.cameraLookAt[p])
+            ...['_x', '_y', '_z'].map(p => parseFloat(exc.cameraPose.cameraPosition[p])),
+            ...['_x', '_y', '_z'].map(p => parseFloat(exc.cameraPose.cameraLookAt[p]))
           ],
           visualModel:
-            exc.visualModel._exists === false ? undefined : exc.visualModel.src,
+            exc.visualModel ? exc.visualModel : undefined,
           visualModelParams:
-            exc.visualModel._exists === false
-              ? undefined
-              : [
-                ...['x', 'y', 'z', 'ux', 'uy', 'uz'].map(
-                  p => exc.visualModel.visualPose[p]
-                ),
-                exc.visualModel.scale._exists === false
-                  ? 1
-                  : exc.visualModel.scale
-              ]
+            exc.visualModel ? [
+              ...['_x', '_y', '_z', '_ux', '_uy', '_uz'].map(
+                p => exc.visualModel.visualPose[p]
+              ),
+              exc.visualModel.scale ?
+                exc.visualModel.scale
+                : 1
+            ] : undefined
         };
       });
   }
