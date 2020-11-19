@@ -86,6 +86,10 @@ export default class ExperimentsService {
     return path.join(this.experimentsPath, experimentPath, experimentFile);
   }
 
+  getTags(strTags) {
+    return strTags ? strTags.split(/\s/) : [];
+  }
+
   async buildExperiment(fileName, expName = '', isExperimentshared = false) {
     let experimentContent;
     try {
@@ -146,7 +150,7 @@ export default class ExperimentsService {
           path: expPath,
           physicsEngine:
             exc.physicsEngine ? exc.physicsEngine : 'ode',
-          tags: exc.tags ? exc.tags : [],
+          tags: exc.tags ? this.getTags(exc.tags) : [],
           description:
             exc.description || 'No description available for this experiment.',
           experimentConfiguration: fileConfigPath,
