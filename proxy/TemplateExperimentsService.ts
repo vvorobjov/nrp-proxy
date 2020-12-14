@@ -86,8 +86,17 @@ export default class ExperimentsService {
     return path.join(this.experimentsPath, experimentPath, experimentFile);
   }
 
+  getExcProperty(prop, defaultValue?: string) {
+    const exists: boolean = Boolean(prop);
+    const isNamespaced: boolean = exists && Boolean(prop.__text);
+    if (isNamespaced)
+      prop = prop.__text;
+    return exists ? prop : defaultValue ? defaultValue : undefined;
+  }
+
   getTags(strTags) {
-    return strTags ? strTags.split(/\s/) : [];
+    const tags = this.getExcProperty(strTags);
+    return tags ? tags.split(/\s/) : [];
   }
 
   async buildExperiment(fileName, expName = '', isExperimentshared = false) {
@@ -143,28 +152,28 @@ export default class ExperimentsService {
 
         return {
           id,
-          name: exc.name || id,
+          name: this.getExcProperty(exc.name) || id,
           isShared: isExperimentshared,
-          thumbnail: exc.thumbnail,
+          thumbnail: this.getExcProperty(exc.thumbnail),
           robotPaths,
           path: expPath,
           physicsEngine:
-            exc.physicsEngine ? exc.physicsEngine : 'ode',
+            this.getExcProperty(exc.physicsEngine, 'ode'),
           tags: exc.tags ? this.getTags(exc.tags) : [],
           description:
-            exc.description || 'No description available for this experiment.',
+            this.getExcProperty(exc.description, 'No description available for this experiment.'),
           experimentConfiguration: fileConfigPath,
           maturity:
-            exc.maturity === 'production' ? 'production' : 'development',
-          timeout: exc.timeout ? parseInt(exc.timeout, 10) : 600,
+            this.getExcProperty(exc.maturity) === 'production' ? 'production' : 'development',
+          timeout: exc.timeout ? parseInt(this.getExcProperty(exc.timeout), 10) : 600,
           brainProcesses:
-            exc.bibiConf.processes ? exc.bibiConf.processes : 1,
+            this.getExcProperty(exc.bibiConf).processes ? this.getExcProperty(exc.bibiConf).processes : 1,
           cameraPose: exc.cameraPose && [
             ...['_x', '_y', '_z'].map(p => parseFloat(exc.cameraPose.cameraPosition[p])),
             ...['_x', '_y', '_z'].map(p => parseFloat(exc.cameraPose.cameraLookAt[p]))
           ],
           visualModel:
-            exc.visualModel ? exc.visualModel : undefined,
+            exc.visualModel ? this.getExcProperty(exc.visualModel) : undefined,
           visualModelParams:
             exc.visualModel ? [
               ...['_x', '_y', '_z', '_ux', '_uy', '_uz'].map(

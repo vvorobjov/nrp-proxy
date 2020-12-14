@@ -116,6 +116,33 @@ describe('TemplateExperimentsService', () => {
     });
   });
 
+  it('should test that the getExcProperty function parses .exc without namespaces', () => {
+    const propertyWithoutNamespace = 'testProperty';
+    let result = experimentsService.getExcProperty(propertyWithoutNamespace);
+    return expect(result).to.equal(propertyWithoutNamespace);
+  });
+
+  it('should test that the getExcProperty function parses .exc with namespaces', () => {
+    const propertyWithNamespace = { __text: 'testProperty' };
+    let result = experimentsService.getExcProperty(propertyWithNamespace);
+    return expect(result).to.equal(propertyWithNamespace.__text);
+  });
+
+  it('should test that the getExcProperty function returns undefined when an empty prop is passed', () => {
+    const emptyProperty = undefined;
+    let result = experimentsService.getExcProperty(emptyProperty);
+    return expect(result).to.equal(undefined);
+  });
+
+  it('should test that the getExcProperty function returns the default value when an empty prop with default value is passed', () => {
+    const emptyProperty = undefined;
+    let result = experimentsService.getExcProperty(
+      emptyProperty,
+      'testDefaultValue'
+    );
+    return expect(result).to.equal('testDefaultValue');
+  });
+
   it('should construct an experiments Service instance with the correct path', () => {
     return expect(experimentsService.experimentsPath).to.contain(
       experimentsPaths
