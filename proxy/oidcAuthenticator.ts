@@ -25,6 +25,8 @@
 
 const request = require('request');
 const q = require('q');
+// workaround for https://github.com/nodejs/help/issues/1730
+require('tls').DEFAULT_ECDH_CURVE = 'auto';
 
 const CREATE_TOKEN_URL = '/token';
 let authConfig;
@@ -39,8 +41,8 @@ const getToken = () => {
   if (authConfig.deactivate) return q(false);
 
   if (
-    lastRetrievedToken &&
-    Date.now() - lastRenewalTime < authConfig.renewInternal
+      lastRetrievedToken &&
+      Date.now() - lastRenewalTime < authConfig.renewInternal
   ) {
     // the token is still valid (= under renewal interval)
     return q(lastRetrievedToken);
