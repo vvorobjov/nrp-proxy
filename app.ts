@@ -207,9 +207,9 @@ app.get('/models/:modelType', (req, res, next) => {
 });
 
 // storage API
-app.use(bodyParser.json({ limit: '200mb' }));
-app.use(bodyParser.raw({ limit: '200mb' }));
-app.use(bodyParser.text({ type: () => true, limit: '200mb' }));
+app.use(bodyParser.json({ limit: '2000mb' }));
+app.use(bodyParser.raw({ limit: '2000mb' }));
+app.use(bodyParser.text({ type: () => true, limit: '2000mb' }));
 
 app.post('/authentication/authenticate', (req, res) => {
   storageRequestHandler
