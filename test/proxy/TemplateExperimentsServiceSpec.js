@@ -3,9 +3,12 @@
 const chai = require('chai'),
   rewire = require('rewire'),
   path = require('path'),
+  sinon = require('sinon'),
   expect = chai.expect;
 
+let consoleMock = { warn: sinon.spy(), log: sinon.spy() };
 const experimentsPaths = 'test/data/experiments';
+const experimentWithMalformedEXC = 'test/data/experiments/malformedExc';
 
 const expectedExp1 = {
   id: 'ExDTemplateHusky',
@@ -41,6 +44,26 @@ const expectedExp2 = {
   timeout: 840,
   physicsEngine: 'ode',
   robotPaths: { test: 'husky_model/model.sdf' },
+  brainProcesses: 1,
+  cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
+  visualModel: undefined,
+  visualModelParams: undefined
+};
+
+const expectedExpMalformed = {
+  id: 'ExDMalformed',
+  name: 'Template Husky in empty environment',
+  isShared: false,
+  thumbnail: 'test.png',
+  path: 'experiment1',
+  tags: [],
+  description:
+    'This experiment loads the Husky robot in an empty world, with an idle brain and basic transfer functions. You are free to edit it.',
+  experimentConfiguration: 'experiment1/ExDMalformed.exc',
+  maturity: 'production',
+  timeout: 840,
+  physicsEngine: 'ode',
+  robotPaths: { test: 'robots/husky_model/model.config' },
   brainProcesses: 1,
   cameraPose: [4.5, 0, 1.8, 0, 0, 0.6],
   visualModel: undefined,
@@ -90,6 +113,12 @@ describe('TemplateExperimentsService', () => {
     visualModel: undefined,
     visualModelParams: undefined
   };
+
+  beforeEach(() => {
+    ExperimentsService.__set__('console', consoleMock);
+    consoleMock.warn.reset();
+    consoleMock.log.reset();
+  });
 
   it('should get the shared experiment path properly', () => {
     var expectedResult =
@@ -158,6 +187,21 @@ describe('TemplateExperimentsService', () => {
   it('should load experiment 2 properly', () => {
     return experimentsService.loadExperiments().then(experiments => {
       return expect(experiments[1]).to.deep.equal(expectedExp2);
+    });
+  });
+
+  it('should test that the xsd validation throws a warning if the .exc is not valid', () => {
+    experimentsService = new ExperimentsService.default(
+      confMock,
+      experimentWithMalformedEXC
+    );
+
+    return experimentsService.loadExperiments().then(experiments => {
+      sinon.assert.calledWithMatch(
+        consoleMock.warn,
+        'XSD or XML are likely malformed.'
+      );
+      return expect(experiments[0]).to.deep.equal(expectedExpMalformed);
     });
   });
 });

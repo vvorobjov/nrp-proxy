@@ -12,6 +12,16 @@ if [ -f .ci/env ]; then
     source '.ci/env'
 fi
 
+# Obtain schemas
+mkdir -p xsds && cd xsds
+REPOSITORY=experiments
+[ -z "$(git ls-remote --heads  https://bitbucket.org/hbpneurorobotics/${REPOSITORY}.git ${TOPIC_BRANCH})" ] \
+        && CO_BRANCH="${DEFAULT_BRANCH}" \
+        || CO_BRANCH="${TOPIC_BRANCH}"
+bash ../.ci/bitbucket_api_get.bash "${REPOSITORY}" ExDConfFile.xsd "${CO_BRANCH}"
+cat ExDConfFile.xsd
+cd ..
+
 . $HOME/.bashrc
 source $HOME/.nvm/nvm.sh && nvm alias default 8 && nvm use default
 

@@ -33,6 +33,7 @@ pipeline {
     stages {
         stage('Code checkout') {
             steps {
+                sh 'rm -rf *'
                 // Notify BitBucket on the start of the job
                 // The Bitbucket Build Status Notifier is used
                 // REF: https://plugins.jenkins.io/bitbucket-build-status-notifier/
@@ -65,9 +66,9 @@ pipeline {
     }
 
     post {
-        always {
-            cleanWs()
-        }
+        // always {
+        //     cleanWs()
+        // }
         aborted {
             bitbucketStatusNotify(buildState: 'FAILED', buildDescription: 'Build aborted!')
         }
