@@ -35,8 +35,7 @@ let utils = require('../storage/FS/utils').default,
 const fs = require('fs'),
   q = require('q'),
   path = require('path'),
-  readFile = q.denodeify(fs.readFile),
-  xsd = require('libxmljs2-xsd');
+  readFile = q.denodeify(fs.readFile);
 
 configurationManager.initialize();
 let storageRequestHandler;
@@ -117,19 +116,7 @@ export default class ExperimentsService {
         ? utils.storagePath
         : this.experimentsPath,
       expPath = path.dirname(fileConfigPath);
-
-    // XSD validation and parsing if possible
-    let xsdSchemaLocation;
-    try {
-      xsdSchemaLocation = `${__dirname}/../xsds/ExDConfFile.xsd`;
-      const schema = xsd.parseFile(xsdSchemaLocation);
-      const validationErrors = schema.validate(experimentContent);
-      if (validationErrors)
-        console.warn(`Warning, xml validation of file ${fileName} against the xsd schema ${xsdSchemaLocation} failed due to Error: ${validationErrors}. XSD or XML are likely malformed. Falling back to parsing the xml without xsd validation.`);
-    } catch (err) {
-      console.warn(`Could not parse xsd with location ${xsdSchemaLocation}. Error that was thrown: ${err}`);
-    }
-
+    // TODO: Parse the exc and bibi with the proper nodeJS xsd parser
     const exc: any = new X2JS().xml2js(experimentContent);
     return q.when(exc.ExD)
       .then(exc =>
