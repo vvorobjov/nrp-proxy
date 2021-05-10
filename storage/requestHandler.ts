@@ -311,8 +311,8 @@ ${ex.stack}`);
     const userModels = await this.storage.listUserModelsbyType(modelType, userId);
     const models = await q.all(
       userModels.map(userModel =>
-        q.all([userModel, this.getModelFolder(userModel.modelType,
-          userModel.fileName,
+        q.all([userModel, this.getModelFolder(userModel.type,
+          userModel.name,
           token)])
       )
     );

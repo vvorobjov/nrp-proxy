@@ -10,4 +10,5 @@ usersLogged.log
 proxy_virtualenv
 dist
 .vscode
+out
 
