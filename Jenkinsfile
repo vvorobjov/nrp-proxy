@@ -4,6 +4,21 @@
 // https://www.jenkins.io/doc/book/pipeline/shared-libraries/
 @Library('nrp-shared-libs@master') _
 
+// Before starting pipeline, we try to get the proper image tag
+def DEFAULT_BRANCH = 'development'
+// selectTopicBranch function is used to choose the correct branch name as topic
+// the function is defined in shared libs
+// 
+// In case there is a PR for a branch, then Jenkins runs a pipeline for this pull request, not for the branch, 
+// even if there are new commits to the branch (until PR is not closed). The BRANCH_NAME variable in this case is something like PR-###
+// The name of the branch which is merged is stored in CHANGE_BRANCH variable. Thus, we should choose CHANGE_BRANCH as topic
+//
+// If there is a branch without PR, then Jenkins creates build for it normally for every push and the branch name is stored in BRANCH_NAME variable.
+// CHANGE_BRANCH is empty in this case. Thus, we choose BRANCH_NAME as topic for branches without PR.
+def TOPIC_BRANCH = selectTopicBranch(env.BRANCH_NAME, env.CHANGE_BRANCH)
+// We try to pull the image with the topic name, or use default tag otherwise
+def IMG_TAG = checkImageTag("${TOPIC_BRANCH}", "${DEFAULT_BRANCH}", "nrp_frontend")
+
 pipeline {
     environment {
         USER_SCRIPTS_DIR = "user-scripts"
@@ -12,16 +27,19 @@ pipeline {
         // GIT_CHECKOUT_DIR is a dir of the main project (that was pushed)
         GIT_CHECKOUT_DIR = "${env.NRP_BACKEND_PROXY_DIR}"
 
-        // define topic branch name
-        TOPIC_BRANCH = selectTopicBranch(env.BRANCH_NAME, env.CHANGE_BRANCH)
-        DEFAULT_BRANCH = 'development'
+        // That is needed to pass the variables into environment with the same name from 
+        // Jenkins global scope (def ..=..)
+        TOPIC_BRANCH = "${TOPIC_BRANCH}"
+        DEFAULT_BRANCH = "${DEFAULT_BRANCH}"
 
         HBP = "/home/bbpnrsoa/nrp/src"
     }
     agent {
         docker {
+            label 'ci_label'
+
             // NEXUS_REGISTRY_IP and NEXUS_REGISTRY_PORT are Jenkins global variables
-            image "${env.NEXUS_REGISTRY_IP}:${env.NEXUS_REGISTRY_PORT}/nrp_frontend:development"
+            image "${env.NEXUS_REGISTRY_IP}:${env.NEXUS_REGISTRY_PORT}/nrp_frontend:${IMG_TAG}"
             args '--entrypoint="" -u root --privileged'
         }
     }
