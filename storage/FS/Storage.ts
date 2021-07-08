@@ -34,6 +34,7 @@ const q = require('q'),
   _ = require('lodash'),
   tmp = require('tmp'),
   pd = require('pretty-data').pd,
+  schedule = require('node-schedule'),
   USER_DATA_FOLDER = 'USER_DATA',
   KG_DATA_FOLDER = 'KG_DATA_FOLDER',
   TEMPLATE_MODELS_FOLDER = 'TEMPLATE_MODELS',
@@ -52,6 +53,23 @@ let glob = q.denodeify(require('glob')),
   customModelAbsPath = path.join(utils.storagePath, USER_DATA_FOLDER),
   knowledgeGraphDataPath = path.join(utils.storagePath, KG_DATA_FOLDER);
 // tslint:enable: prefer-const
+
+// Routine task to unregister deleted experiment folders from the database
+const scanExperiments = async () => {
+  const storageContents: string[] = await fs.readdir(utils.storagePath);
+  const fsExperiments = storageContents.map(file => ({ uuid: file, name: file }));
+  const dbExperiments = (await DB.instance.experiments.find()).map(e => ({ uuid: e.experiment, name: e.experiment }));
+
+  const deletedExperiments = _.differenceWith(
+    dbExperiments,
+    fsExperiments,
+    (exp1, exp2) => exp1.uuid === exp2.uuid);
+
+  deletedExperiments.forEach(e => DB.instance.experiments.remove({experiment: e.uuid}) );
+  return deletedExperiments.map(entry => entry.name);
+};
+// cron-like format: every midnight
+schedule.scheduleJob('0 0 * * *', scanExperiments);
 
 export class Storage extends BaseStorage {
 
@@ -703,4 +721,9 @@ export class Storage extends BaseStorage {
     const modelAbsPath = (model.isCustom) ? customModelAbsPath : templateModelAbsPath;
     return path.join(modelAbsPath, model.type, model.path, 'model.config');
   }
+
+  async scanExperiments() {
+    return scanExperiments();
+  }
+
 }

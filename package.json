@@ -23,6 +23,7 @@
     "log-prefix": "0.0.0",
     "mime-types": "^2.1.17",
     "minimist": "^1.2.0",
+    "node-schedule": "^2.0.0",
     "nodemon": "^1.18.4",
     "nyc": "^13.1.0",
     "pretty-data": "^0.40.0",

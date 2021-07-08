@@ -826,6 +826,22 @@ describe('FSStorage', () => {
     });
   });
 
+  it('should run scanExperiments', () => {
+    collectionMock.prototype.find = sinon.stub().returns(
+      Promise.resolve([
+        {
+          experiment: 'husky_sbc_1'
+        },
+        {
+          experiment: 'lauron_5'
+        }
+      ])
+    );
+    return fsStorage.scanExperiments().then(r => {
+      expect(r).deep.equal(['husky_sbc_1', 'lauron_5']);
+    });
+  });
+
   it('should unzip file under experiment after having checked user permissions', () => {
     collectionMock.prototype.findOne = sinon
       .stub()
