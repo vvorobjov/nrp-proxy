@@ -33,7 +33,7 @@ const xml2js = require('xml2js').parseString,
 // tslint:disable-next-line: prefer-const
 let jszip = require('jszip');
 
-export default class CustomModelsService {
+export default class ModelsService {
   logConfig(zip, basename) {
     const exception = q.reject(
       `The model zip file is expected to have a 'model.config' file inside the root folder which contains the meta-data of the model.`
@@ -49,22 +49,8 @@ export default class CustomModelsService {
         name: xml.name && xml.name[0].trim(),
         description: xml.description && xml.description[0].trim(),
         sdf: xml.sdf ? xml.sdf[0]._ : undefined,
-        brain: xml.brain ? xml.brain[0] : undefined,
-        configPath: configFileRelPath.name
+        brain: xml.brain ? xml.brain[0] : undefined
       }));
-  }
-
-  validateZip(zip) {
-    const reject = ['name', 'description']
-      .map(item => {
-        if (!zip[item])
-          return q.reject(
-            `${item} missing from the model zip file. Please add it to the model.config of the model zip file inside the root directory`
-          );
-      })
-      .filter(item => item);
-    if (reject.length) return reject[0];
-    else return q.when();
   }
 
   logThumbnail(zip, basename) {
@@ -97,20 +83,21 @@ export default class CustomModelsService {
             if (config.name === undefined || config.name === '') {
               throw 'name is missing';
             }
+            const modelName = config.name.toLowerCase().replace(/ /g, '_');
             return {
-              name: config.name.toLowerCase().replace(/ /g, '_'),
+              name: modelName,
               displayName: config.name,
               ownerId: model.ownerId,
               type: model.type,
-              fileName: path.basename(model.path),
               isShared: model.isShared,
-              isCustom: true,
+              isCustom: model.isCustom,
               description: config.description,
               thumbnail: thumbnail ? thumbnail : defaultThumbnail,
-              path: model.path, // escape slashes
+              path: basename,
               script: config.brain ? await zip.file(path.join(basename, config.brain)).async('text').then(data => data) : undefined,
-              sdf: !config.brain ? path.join(basename, config.sdf) : undefined,
-              configPath: config.configPath
+              scriptPath: config.brain ? config.brain : undefined,
+              sdf: !config.brain ? config.sdf : undefined,
+              configPath: path.join(basename, 'model.config')
             };
           })
           .catch(err =>
@@ -123,78 +110,12 @@ export default class CustomModelsService {
     );
   }
 
-  extractFileFromZip(fileContent, fileName) {
-    return jszip.loadAsync(fileContent).then(async zip => {
-      const basename = this.getZipBasename(zip);
-      const modelData = zip.file(path.join(basename, fileName));
-      if (!modelData)
-        return q.reject(
-          `The model zip file should have a file called ${fileName} inside the root folder`
-        );
-      return await modelData.async('string');
-    });
-  }
-
-  async extractZip(fileContent) {
-    const contents = await jszip.loadAsync(fileContent);
-    const mapFile = async filename => {
-      if (path.parse(filename).dir !== '' && filename.substr(-1) !== path.sep) {
-        const content = await contents.file(filename).async('nodebuffer');
-        const dest = path.join('/tmp/nrp-simulation-dir/assets', filename);
-        if (!await fs.exists(path.dirname(dest))) {
-          await fs.ensureDir(path.dirname(dest));
-        }
-        await fs.writeFile(dest, content);
-      }
-    };
-    const files = Object.keys(contents.files).map(mapFile);
-    return q.all(files);
-  }
-
   getZipBasename(zip) {
+    console.log(zip
+      .filter((relativePath, file) => file.name.includes('model.config'))[0]
+      .name.split(path.sep)[0]);
     return zip
       .filter((relativePath, file) => file.name.includes('model.config'))[0]
       .name.split(path.sep)[0];
-  }
-
-  getFilesWithExt(zipRawData, ext) {
-    return jszip.loadAsync(zipRawData).then(async zip =>
-      zip.filter((relativePath, file) => file.name.toLowerCase().endsWith(ext))
-    );
-  }
-
-  extractModelMetadataFromZip(fileContent, type?) {
-    return jszip.loadAsync(fileContent).then(async zip => {
-      const exception = q.reject(
-        `Error: Zip structure is wrong. Could not find model.config.`
-      );
-
-      const basename = this.getZipBasename(zip);
-      if (!basename || basename === 'model.config') return exception;
-
-      const modelConfig = await this.logConfig(zip, basename);
-      let modelData;
-      if (type === 'brainPath') {
-        modelData = zip.file(path.join(basename, modelConfig.brain));
-      } else {
-        modelData = zip.file(path.join(basename, modelConfig.sdf));
-      }
-      if (!modelData)
-        return q.reject(
-          `There is a problem with the ${modelConfig.name} zip file. Make sure that the file (py or sdf) the model.config points to is in the zip.`
-        );
-
-      return {
-        data: await modelData.async('string'),
-        name: type === 'robotPath'
-          ? modelData.name
-          : modelData.name.split(path.sep)[1],
-        relPath: modelData.name,
-        modelConfig: await zip
-          .file(path.join(basename, 'model.config'))
-          .async('string')
-          .then(q.denodeify(xml2js))
-      };
-    });
   }
 }

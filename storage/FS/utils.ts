@@ -23,7 +23,9 @@
  * ---LICENSE-END**/
 'use strict';
 
-const path = require('path');
+const path = require('path'),
+jszip = require('jszip'),
+fs = require('fs-extra');
 
 const STORAGE_PATH_ENV = 'STORAGE_PATH', // STORAGE_PATH variable
   DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
@@ -64,9 +66,60 @@ const isImage = (filepath) => {
   return (IMG_EXT.indexOf(path.extname(filepath)) !== -1);
 };
 
+// returns a flat array of absolute paths of all files recursively contained in the dir
+const getFilePathsRecursively = (dir) => {
+  let results: string[] = [];
+  const list = fs.readdirSync(dir);
+
+  let pending = list.length;
+  if (!pending) return results;
+
+  for (let file of list) {
+    file = path.resolve(dir, file);
+
+    const stat = fs.lstatSync(file);
+
+    if (stat && stat.isDirectory()) {
+      results = results.concat(getFilePathsRecursively(file));
+    } else {
+      results.push(file);
+    }
+
+    if (!--pending) return results;
+  }
+
+  return results;
+};
+
+// returns a JSZip instance filled with contents of dir.
+const getZipOfFolder = (dir) => {
+  const allPaths = getFilePathsRecursively(dir);
+
+  const zip = new jszip();
+  for (const filePath of allPaths) {
+    const addPath = path.relative(path.join(dir, '..'), filePath);
+    const data = fs.readFileSync(filePath);
+    const stat = fs.lstatSync(filePath);
+
+    if (stat.isSymbolicLink()) {
+      zip.file(addPath, fs.readlinkSync(filePath), {
+        dir: stat.isDirectory()
+      });
+    } else {
+      zip.file(addPath, data, {
+        dir: stat.isDirectory()
+      });
+    }
+  }
+
+  return zip;
+};
+
 export default {
   storagePath,
   generateUniqueExperimentId,
   getCurrentTimeAndDate,
-  isImage
+  isImage,
+  getFilePathsRecursively,
+  getZipOfFolder
 };

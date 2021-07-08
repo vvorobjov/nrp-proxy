@@ -24,8 +24,8 @@
 'use strict';
 
 import X2JS from 'x2js';
-import CustomModelsService from './CustomModelsService';
 import utils from './FS/utils';
+import ModelsService from './ModelsService';
 
 const path = require('path'),
   q = require('q'),
@@ -101,13 +101,21 @@ abstract class ExperimentCloner {
         defaultName
       );
 
-      await this.flattenBibiConf(bibiConf, expUUID, token, userId, defaultMode);
+      await this.flattenBibiConf(expPath, bibiConf, expUUID, token, userId, defaultMode);
 
       const files = await this.readDownloadedFiles();
 
       await this.uploadDownloadedFiles(files, expUUID, token, userId);
 
       await this.copyResourcesFolder(
+        this.experimentFolder,
+        expName,
+        expUUID,
+        token,
+        userId
+      );
+
+      await this.copyAssetsFolder(
         this.experimentFolder,
         expName,
         expUUID,
@@ -164,6 +172,42 @@ abstract class ExperimentCloner {
       }
     };
     walk.walkSync(resExpPath, options);
+    return files;
+  }
+
+  async copyAssetsFolder(experimentFolder, expName, expUUID, token, userId) {
+    const assetsExpPath = path.join(this.experimentFolder, 'assets');
+    const assetsPath = path.join(expUUID, 'assets');
+    if (fs.existsSync(path.join(experimentFolder, 'assets'))) {
+      const files = await this.downloadAssetsfiles(assetsExpPath);
+      await this.storage.createFolder('assets', expName, token, userId);
+      await this.uploadDownloadedFiles(files, assetsPath, token, userId);
+    } else {
+      await this.storage.createFolder('assets', expName, token, userId);
+    }
+  }
+
+  async downloadAssetsfiles(assetsExpPath) {
+    const files = [] as any[];
+    const options = {
+      listeners: {
+        file(root, fileStats, next) {
+          const name = root.substring(
+            root.indexOf('assets') + 7,
+            root.length
+          );
+          files.push({
+            name: name + '/' + fileStats.name,
+            content: fs.readFileSync(root + '/' + fileStats.name)
+          });
+          next();
+        },
+        errors(root, nodeStatsArray, next) {
+          next();
+        }
+      }
+    };
+    walk.walkSync(assetsExpPath, options);
     return files;
   }
 
@@ -235,17 +279,36 @@ abstract class ExperimentCloner {
 
     this.downloadFile(experiment.thumbnail);
 
-    if (!experiment.environmentModel._model) {
+    let dstFile = experiment.environmentModel._src;
+    let srcDir = this.experimentFolder;
+    if (experiment.environmentModel._model) {
+      dstFile = path.join(
+        experiment.environmentModel._model,
+        experiment.environmentModel._src
+      );
+      srcDir = await this.storage.getModelFullPath(
+        'environments',
+        experiment.environmentModel._model
+        );
+    }
+    this.downloadFile(
+      experiment.environmentModel._src,
+      srcDir,
+      dstFile
+      );
+
+    const launchFiles = fs.readdirSync(srcDir).filter(f => {
+      return path.extname(f).toLowerCase() === '.launch';
+    });
+
+    for (const launchFile of launchFiles) {
+      const model = experiment.environmentModel._model || '';
       this.downloadFile(
-        experiment.environmentModel._src,
-        this.config.modelsPath,
-        path.basename(experiment.environmentModel._src)
+        launchFile,
+        srcDir,
+        path.join(model, launchFile)
       );
     }
-
-    experiment.environmentModel._src = path.basename(
-      experiment.environmentModel._src
-    );
 
     if (ensureArrayProp(experiment, 'configuration'))
       for (const conf of experiment.configuration) this.downloadFile(conf._src);
@@ -283,7 +346,7 @@ abstract class ExperimentCloner {
     }
   }
 
-  async flattenBibiConf(bibiConfFile, expUUID, token, userId, defaultMode) {
+  async flattenBibiConf(expPath, bibiConfFile, expUUID, token, userId, defaultMode) {
     // copies the bibi files into a a temporary flatten structure
     const bibiFullPath = await this.getBibiFullPath(
       bibiConfFile,
@@ -306,18 +369,22 @@ abstract class ExperimentCloner {
       if (!Array.isArray(bibiConf.bodyModel))
         bibiConf.bodyModel = [bibiConf.bodyModel];
 
-      bibiConf.bodyModel.forEach(model => {
+      for (let model of bibiConf.bodyModel) {
         if (model) {
           const bodyModelFile = model.__text || model;
           model = {
             __text: bodyModelFile,
             _robotId: model._robotId ? model._robotId : 'robot',
-            _isCustom: false,
-            __prefix: bibiConf.__prefix
+            __prefix: bibiConf.__prefix,
+            _model: model._model
           };
           const robotid = model._robotId ? model._robotId : 'robot';
-          const destFile = path.join(robotid, path.basename(bodyModelFile));
-          this.downloadFile(model.__text, this.config.modelsPath, destFile);
+          const dstFile = path.join(robotid, bodyModelFile);
+          let srcDir = path.join(this.experimentFolder, model._robotId);
+          if (model._model) {
+            srcDir = await this.storage.getModelFullPath('robots', model._model);
+          }
+          this.downloadFile(model.__text, srcDir, dstFile);
 
           // find and upload roslaunch file into experiments directory
           const sdfFolder = path.dirname(
@@ -334,21 +401,23 @@ abstract class ExperimentCloner {
             );
           }
         }
-      });
+      }
     }
 
     if (bibiConf.brainModel) {
       const brainFile =
         bibiConf.brainModel.file.__text || bibiConf.brainModel.file;
 
-      this.downloadFile(
-        brainFile,
-        this.config.modelsPath,
-        path.basename(brainFile)
-      );
+      let srcDir = path.join(this.experimentFolder, path.dirname(brainFile));
+      let dstFile = brainFile;
+      if (bibiConf.brainModel._model) {
+        srcDir = await this.storage.getModelFullPath('brains', bibiConf.brainModel._model);
+        dstFile = path.join(bibiConf.brainModel._model, brainFile);
+      }
+      this.downloadFile(brainFile, srcDir, dstFile);
 
       bibiConf.brainModel.file = {
-        __text: path.basename(brainFile),
+        __text: brainFile,
         __prefix: bibiConf.__prefix
       };
 
@@ -412,51 +481,6 @@ export class NewExperimentCloner extends ExperimentCloner {
     );
   }
 
-  async handleZippedEnvironment(token, expUUID, userId) {
-    const customModelsService = new CustomModelsService();
-
-    const zipedModelContents = await this.storage.getModelFolder(
-      'environments',
-      this.environmentPath.name
-    );
-    const zipMetaData = await customModelsService
-      .extractModelMetadataFromZip(zipedModelContents, 'environments')
-      .catch(
-        err =>
-          this.storage.deleteExperiment(expUUID, expUUID, token, userId) &&
-          q.reject(err)
-      );
-
-    await this.storage.createOrUpdate(
-      zipMetaData.name,
-      zipMetaData.data,
-      'application/text',
-      expUUID,
-      token,
-      userId
-    );
-
-    // Copy available launch file
-    const launchfile = await customModelsService.getFilesWithExt(
-      zipedModelContents,
-      '.launch'
-    );
-    if (launchfile.length) {
-      const name = launchfile[0].name;
-      const data = await launchfile[0].async('string');
-      await this.storage.createOrUpdate(
-        name,
-        data,
-        'application/text',
-        expUUID,
-        token,
-        userId
-      );
-    }
-
-    return zipMetaData;
-  }
-
   async getBibiFullPath() {
     const bibi = await readFile(this.newExpBibiPath, 'utf8').then(bibiContent =>
       new X2JS().xml2js(bibiContent)
@@ -482,13 +506,6 @@ export class NewExperimentCloner extends ExperimentCloner {
       'utf8'
     ).then(expContent => new X2JS().xml2js(expContent));
 
-    await this.handleEnvironmentFiles(
-      experimentConf,
-      expUUID,
-      token,
-      userId
-    );
-
     if (defaultName) experimentConf.ExD.name = defaultName;
     else {
       experimentConf.ExD.name = 'New experiment';
@@ -500,48 +517,5 @@ export class NewExperimentCloner extends ExperimentCloner {
     fs.writeFileSync(expFilePath, new X2JS().js2xml(experimentConf));
 
     return expFilePath;
-  }
-
-  async handleEnvironmentFiles(experimentConf, expUUID, token, userId) {
-    // handle zipped models
-    if (this.environmentPath.custom) {
-      const envRelPath = (await this.handleZippedEnvironment(
-        token,
-        expUUID,
-        userId
-      )).name;
-      experimentConf.ExD.environmentModel._src = envRelPath;
-      experimentConf.ExD.environmentModel._model = this.environmentPath.name;
-      return {
-        model: {
-          name: path
-            .basename(envRelPath, '.sdf')
-            .split('_')
-            .join(' ')
-        }
-      };
-    } else {
-      const envRelPath = _.takeRight(
-        this.environmentPath.path.split(path.sep),
-        2
-      );
-
-      const envConfigPath = path.join(
-        this.config.modelsPath,
-        envRelPath[0],
-        envRelPath[1]
-      );
-
-      const envModelConfig = await readFile(
-        envConfigPath,
-        'utf8'
-      ).then(envContent => new X2JS().xml2js(envContent));
-
-      experimentConf.ExD.environmentModel._src = path.join(
-        envRelPath[0],
-        envModelConfig.model.sdf.__text
-      );
-      return envModelConfig;
-    }
   }
 }

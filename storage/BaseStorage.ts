@@ -92,7 +92,7 @@ export default abstract class BaseStorage {
 
   abstract createExperiment(newExperiment, token, userId, contextId);
 
-  abstract getModelFolder(modelType, modelName, userId);
+  abstract getModelZip(modelType, modelName, userId);
 
   abstract copyExperiment(experiment, token, userId, contextId);
 

@@ -103,7 +103,7 @@ export class Storage extends BaseStorage {
     );
   }
 
-  getModelFolder(modelPath, token, userId) {
+  getModelZip(modelPath, token, userId) {
     return this.getFile(modelPath.uuid, null, token, userId).then(
       res => res.body
     );

@@ -9,7 +9,10 @@ const fs = require('fs'),
   assert = chai.assert,
   q = require('q'),
   sinon = require('sinon'),
-  chaiSubset = require('chai-subset');
+  chaiSubset = require('chai-subset'),
+  fse = require('fs-extra'),
+  tmp = require('tmp'),
+  zip = require('zip-a-folder');
 chai.use(chaiAsPromised);
 chai.use(chaiSubset);
 const config = `<?xml version='1.0'?>
@@ -305,18 +308,47 @@ describe('Storage request handler', () => {
     storageRequestHandler.storage.getModelPath = function() {
       return q.when([
         {
-          path: 'robots/husky_model.zip'
+          path: 'foldername'
         }
       ]);
     };
 
     return storageRequestHandler
       .getModelPath('robots', 'name', 'userid')
-      .should.eventually.deep.include({ path: 'robots/husky_model.zip' });
+      .should.eventually.deep.include({ path: 'foldername' });
+  });
+
+  it(`should get the config full-path of a specific model`, () => {
+    storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
+    storageRequestHandler.storage.getModelConfigFullPath = function() {
+      return '/home/user/.opt/nrpStorage/USER_DATA/robots/husky/model.config';
+    };
+    storageRequestHandler.storage.listAllModels = function() {
+      return q.when([
+        {
+          name: 'husky',
+          path: '/path',
+          type: 'robots',
+          isCustom: true
+        },
+        {
+          name: 'p3dx',
+          path: '/path2',
+          type: 'robots',
+          isCustom: true
+        }
+      ]);
+    };
+
+    return storageRequestHandler
+      .getModelConfigFullPath('robots', 'husky', 'userid')
+      .should.eventually.equal(
+        '/home/user/.opt/nrpStorage/USER_DATA/robots/husky/model.config'
+      );
   });
 
   it(`should correctly return the shared models`, () => {
-    storageRequestHandler.customModelService.getZipModelMetaData = function() {
+    storageRequestHandler.modelsService.getZipModelMetaData = function() {
       return q.when(config);
     };
     storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
@@ -325,15 +357,16 @@ describe('Storage request handler', () => {
     storageRequestHandler.storage.listSharedModels = function() {
       return q.when([
         {
-          uuid: 'robots/husky_model.zip',
-          fileName: 'robots/husky_model.zip'
+          name: 'hbp_clearpath_robotics_husky_a200',
+          type: 'robots',
+          path: 'husky_model'
         }
       ]);
     };
-    storageRequestHandler.storage.getModelFolder = function() {
+    storageRequestHandler.storage.getModelZip = function() {
       return q.when([
         {
-          path: 'robots/husky_model.zip',
+          path: 'foldername',
           data: []
         }
       ]);
@@ -344,8 +377,8 @@ describe('Storage request handler', () => {
       .should.eventually.deep.include(config);
   });
 
-  it(`should correctly return the shared models`, () => {
-    storageRequestHandler.customModelService.getZipModelMetaData = function() {
+  it(`should correctly return all models`, () => {
+    storageRequestHandler.modelsService.getZipModelMetaData = function() {
       return q.when(config);
     };
     storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
@@ -354,15 +387,16 @@ describe('Storage request handler', () => {
     storageRequestHandler.storage.listAllModels = function() {
       return q.when([
         {
-          uuid: 'robots/husky_model.zip',
-          fileName: 'robots/husky_model.zip'
+          name: 'hbp_clearpath_robotics_husky_a200',
+          type: 'robots',
+          path: 'husky_model'
         }
       ]);
     };
-    storageRequestHandler.storage.getModelFolder = function() {
+    storageRequestHandler.storage.getModelZip = function() {
       return q.when([
         {
-          path: 'robots/husky_model.zip',
+          path: 'husky_model',
           data: []
         }
       ]);
@@ -582,8 +616,7 @@ describe('Storage request handler', () => {
       name: 'modelname',
       path: 'folder/filename',
       ownerName: 'userId',
-      type: 'robots',
-      fileName: 'filename'
+      type: 'robots'
     };
     collectionMock.prototype.find = sinon.stub().returns(
       Promise.resolve([
@@ -793,7 +826,7 @@ describe('Storage request handler', () => {
   });
 
   it(`should correctly return the user custom files`, () => {
-    storageRequestHandler.customModelService.getZipModelMetaData = function() {
+    storageRequestHandler.modelsService.getZipModelMetaData = function() {
       return q.when(config);
     };
     storageRequestHandler.getUserIdentifier = () => q.resolve('test 0');
@@ -807,7 +840,7 @@ describe('Storage request handler', () => {
         }
       ]);
     };
-    storageRequestHandler.storage.getModelFolder = function() {
+    storageRequestHandler.storage.getModelZip = function() {
       return q.when([
         {
           data: []
@@ -887,7 +920,7 @@ describe('Storage request handler', () => {
         return q.when(config);
       }
     };
-    StorageRequestHandlerRewire.__set__('customModelService', fakeCustomModels);
+    StorageRequestHandlerRewire.__set__('modelsService', fakeCustomModels);
     var storageRequestHandler2 = new StorageRequestHandler(configFile);
     storageRequestHandler2.createCustomModel = function() {
       return 'success';
@@ -897,60 +930,36 @@ describe('Storage request handler', () => {
       .should.eventually.equal('success');
   });
 
-  it('should get the get ModelConfig service object correctly', async () => {
-    var storageRequestHandler2 = new StorageRequestHandler(configFile);
-    storageRequestHandler2.getModelFolder = function() {
-      return q.when([
-        {
-          path: 'robots/husky_model.zip',
-          data: []
-        }
-      ]);
-    };
-
-    return storageRequestHandler2
-      .getModelConfigFile(
-        {
-          uuid: 'robots/husky_model.zip'
-        },
-        fakeToken
-      )
-      .should.eventually.deep.include(config);
-  });
-
-  // addRobotZipToExperimentZips
-  it(`should add a robot zip to experiment zips`, () => {
+  it(`should create a temporary zip of a given custom model`, () => {
     sinon.stub(storageRequestHandler, 'getStoragePath').returns('storagePath');
+    sinon.stub(fse, 'copySync');
+    sinon.stub(tmp, 'dirSync').returns({ name: 'tmp-folder' });
+    sinon.stub(tmp, 'fileSync').returns({ name: 'tmp-folder' });
+    sinon.stub(zip, 'zip');
+
     const zips = {
       envZip: { path: 'envPath', name: 'envName' },
       robotZips: []
     };
-    const zipsWithRobot = {
-      envZip: { path: 'envPath', name: 'envName' },
-      robotZips: [
-        {
-          path: 'storagePath/USER_DATA/robots/husky_model15.zip',
-          name: 'hbp_clearpath_robotics_husky_a200_0.zip'
-        }
-      ]
+    const robotZip = {
+      path: 'tmp-folder',
+      name: 'hbp_clearpath_robotics_husky_a200.zip'
     };
     const customRobots = [
       {
         name: 'hbp_clearpath_robotics_husky_a200',
-        path: 'robots/husky_model15.zip'
+        path: 'husky_model15',
+        type: 'robots',
+        isCustom: true
       }
     ];
     const model = {
-      _isCustom: 'true',
       _model: 'hbp_clearpath_robotics_husky_a200',
       _robotId: 'hbp_clearpath_robotics_husky_a200_0'
     };
-    storageRequestHandler.addRobotZipToExperimentZips(
-      zips,
-      model,
-      customRobots
-    );
-    expect(zips).to.deep.equal(zipsWithRobot);
+    return storageRequestHandler
+      .createTmpModelZip(zips, model, customRobots)
+      .then(d => expect(d).to.deep.equal(robotZip));
   });
 
   // getStoragePath
@@ -980,17 +989,49 @@ describe('Storage request handler', () => {
   // getExperimentZips
   it(`should get the experiment zips (experiment, environment, robots) if present in bibi,exc and bibi has multiple robots`, () => {
     sinon.stub(fsStorage, 'getStoragePath').returns('storagePath');
-    sinon.stub(fsStorage, 'getModelPath').returns('modelPath/modelName.zip');
+    const usersModelsStub = sinon.stub(fsStorage, 'listUserModelsbyType');
+    usersModelsStub.onCall(0).returns([
+      {
+        name: 'robot_model',
+        path: 'robot_path',
+        type: 'robots',
+        isCustom: false
+      }
+    ]);
+    usersModelsStub.onCall(1).returns([
+      {
+        name: 'virtual_room',
+        path: 'virtual_room_hbp',
+        type: 'environments',
+        isCustom: true
+      },
+      {
+        name: 'empty_world',
+        path: 'empty_world',
+        type: 'environments',
+        isCustom: false
+      }
+    ]);
+    const createTmpStub = sinon.stub(
+      storageRequestHandler,
+      'createTmpModelZip'
+    );
+    createTmpStub.onCall(0).returns(null);
+    createTmpStub.onCall(1).returns({
+      path: 'tmp-folder',
+      name: 'virtual_room.zip'
+    });
+
     const result = {
       experimentZip: { path: 'zipExperiment', name: '' },
       envZip: {
-        path: 'storagePath/USER_DATA/modelPath/modelName.zip',
-        name: 'modelName.zip'
+        path: 'tmp-folder',
+        name: 'virtual_room.zip'
       },
       robotZips: []
     };
     const bibi = { bodyModel: [{ model: 'model' }] };
-    const exc = { environmentModel: { _model: 'text.zip' } };
+    const exc = { environmentModel: { _model: 'virtual_room' } };
     return storageRequestHandler
       .getExperimentZips('experimentId', 'token', bibi, exc)
       .should.eventually.deep.equal(result);
@@ -999,34 +1040,61 @@ describe('Storage request handler', () => {
   // getExperimentZips
   it(`should get the experiment zips (experiment, environment, robots) if present in bibi,exc and bibi has one robot`, () => {
     sinon.stub(fsStorage, 'getStoragePath').returns('storagePath');
-    sinon.stub(fsStorage, 'listUserModelsbyType').returns([
+    const usersModelsStub = sinon.stub(fsStorage, 'listUserModelsbyType');
+    usersModelsStub.onCall(0).returns([
       {
         name: 'hbp_clearpath_robotics_husky_a200',
-        path: 'robots/husky_model15.zip'
+        path: 'husky_path',
+        type: 'robots',
+        isCustom: true
       }
     ]);
-    sinon.stub(fsStorage, 'getModelPath').returns('modelPath/modelName.zip');
+    usersModelsStub.onCall(1).returns([
+      {
+        name: 'virtual_room',
+        path: 'virtual_room_hbp',
+        type: 'environments',
+        isCustom: true
+      },
+      {
+        name: 'empty_world',
+        path: 'empty_world',
+        type: 'environments',
+        isCustom: false
+      }
+    ]);
+    const createTmpStub = sinon.stub(
+      storageRequestHandler,
+      'createTmpModelZip'
+    );
+    createTmpStub.onCall(0).returns({
+      name: 'hbp_clearpath_robotics_husky_a200.zip',
+      path: 'tmp-folder'
+    });
+    createTmpStub.onCall(1).returns({
+      path: 'tmp-folder',
+      name: 'virtual_room.zip'
+    });
     const result = {
       experimentZip: { path: 'zipExperiment', name: '' },
       envZip: {
-        path: 'storagePath/USER_DATA/modelPath/modelName.zip',
-        name: 'modelName.zip'
+        path: 'tmp-folder',
+        name: 'virtual_room.zip'
       },
       robotZips: [
         {
-          name: 'husky.zip',
-          path: 'storagePath/USER_DATA/robots/husky_model15.zip'
+          name: 'hbp_clearpath_robotics_husky_a200.zip',
+          path: 'tmp-folder'
         }
       ]
     };
     const bibi = {
       bodyModel: {
         _model: 'hbp_clearpath_robotics_husky_a200',
-        _isCustom: 'true',
         _robotId: 'husky'
       }
     };
-    const exc = { environmentModel: { _model: 'text.zip' } };
+    const exc = { environmentModel: { _model: 'virtual_room' } };
     return storageRequestHandler
       .getExperimentZips('experimentId', 'token', bibi, exc)
       .should.eventually.deep.equal(result);

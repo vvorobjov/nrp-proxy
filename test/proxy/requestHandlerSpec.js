@@ -184,36 +184,4 @@ describe('requestHandler', function() {
       e.should.equal('No experiment id: falseExperiment');
     }
   });
-
-  it('should get the getModelConfig service object correctly', async () => {
-    revert = requestHandlerRewired.__set__({
-      modelsService: {
-        getModelConfig: () => Promise.resolve('robotConfig')
-      }
-    });
-    const robotConfig = await requestHandler.getModelConfig('robots');
-    robotConfig.should.equal('robotConfig');
-  });
-
-  it('should get the models service object correctly', function() {
-    var errorSpy = sinon.spy();
-    var logSpy = sinon.spy();
-    revert = requestHandlerRewired.__set__({
-      console: {
-        error: errorSpy,
-        log: logSpy
-      },
-      configuration: undefined,
-      experimentList: testConf.experimentList,
-      modelsService: {
-        getModels: () =>
-          new Promise(function(resolve) {
-            resolve('robot1');
-          })
-      }
-    });
-    return requestHandler
-      .getModels('robots')
-      .then(res => res.should.equal('robot1'));
-  });
 });

@@ -216,7 +216,10 @@ abstract class BaseExperimentService {
   async getBrain() {
     const bibi = (await this.getBibi())[0].bibi;
     if (!bibi.brainModel) return null;
-    const brainModelFile = bibi.brainModel.file.toString();
+    let brainModelFile = bibi.brainModel.file.toString();
+    if (bibi.brainModel._model) {
+      brainModelFile = path.join(bibi.brainModel._model, brainModelFile);
+    }
     const brain = (await this.getFile(
       brainModelFile.toString(),
       FILE_TYPE.BRAIN
@@ -312,12 +315,18 @@ abstract class BaseExperimentService {
       if (newBrain) {
         bibiFile.bibi.brainModel = {
           __prefix: bibi.__prefix,
+          _model: newBrain.name,
           file: {
             __prefix: bibi.__prefix,
-            __text: newBrain
+            __text: newBrain.scriptPath,
           }
         };
-        brainModelFile = newBrain;
+      }
+
+      if (bibiFile.bibi.brainModel._model) {
+        brainModelFile = path.join(bibiFile.bibi.brainModel._model, bibiFile.bibi.brainModel.file.__text);
+      } else {
+        brainModelFile = bibiFile.bibi.brainModel.file.__text;
       }
     } else {
       bibiFile.bibi.brainModel = {
@@ -328,8 +337,14 @@ abstract class BaseExperimentService {
         }
       };
       if (newBrain) {
-        brainModelFile = newBrain;
-        bibiFile.bibi.brainModel.file.__text = newBrain;
+        if (newBrain.isKnowledgeGraphBrain) {
+          bibiFile.bibi.brainModel.file.__text = path.join(newBrain.name, newBrain.scriptPath);
+          brainModelFile = path.join(newBrain.name, newBrain.scriptPath);
+        } else {
+          bibiFile.bibi.brainModel.file.__text = newBrain.scriptPath;
+          bibiFile.bibi.brainModel._model = newBrain.name;
+          brainModelFile = path.join(newBrain.name, newBrain.scriptPath);
+        }
       } else {
         brainModelFile = 'brain_script.py';
         bibiFile.bibi.brainModel.file.__text = brainModelFile;

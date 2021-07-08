@@ -25,7 +25,6 @@
 
 import _ from 'lodash';
 import q from 'q';
-import ModelsService from './modelsService';
 
 // test mocked dependencies
 // tslint:disable: prefer-const variable-name
@@ -44,7 +43,7 @@ let availableServers = [];
 let downServers = [];
 let healthStatus = {};
 
-let configuration, modelsService, templateExperimentsService;
+let configuration, templateExperimentsService;
 
 function initialize(config) {
   reloadConfiguration(config)
@@ -72,8 +71,6 @@ function reloadConfiguration(config) {
 
   _.forEach(configuration.servers, (conf, id) => (conf.id = id));
 
-  modelsService = new ModelsService(configuration.modelsPath);
-  modelsService.loadModels();
   templateExperimentsService = new TemplateExperimentsService(
     config,
     configuration.experimentsPath
@@ -206,14 +203,6 @@ function getExperimentImageFile(experimentId) {
   } else throw `No experiment id: ${experimentId}`;
 }
 
-function getModels(modelType) {
-  return modelsService && modelsService.getModels(modelType);
-}
-
-const getModelConfig = (modelType, modelId) => {
-  return modelsService && modelsService.getModelConfig(modelType, modelId);
-};
-
 function getSharedExperiments(req) {
   return templateExperimentsService
     .loadSharedExperiments(req)
@@ -246,7 +235,5 @@ export default {
   getServersStatus,
   getJoinableServers,
   filterJoinableExperimentByContext,
-  getModels,
-  getModelConfig,
   getServersWithNoBackend
 };

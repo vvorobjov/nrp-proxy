@@ -11,6 +11,7 @@ const fs = require('fs-extra'),
   q = require('q'),
   sinon = require('sinon'),
   jszip = require('jszip'),
+  faketemplateModelAbsPath = path.join(__dirname, 'dbMock', 'TEMPLATE_MODELS'),
   fakecustomModelAbsPath = path.join(__dirname, 'dbMock', 'USER_DATA');
 
 chai.use(chaiAsPromised);
@@ -62,6 +63,7 @@ describe('FSStorage', () => {
     RewiredFSStorage = rewire('../../storage/FS/Storage');
     RewiredFSStorage.__set__('DB', RewiredDB.default);
     RewiredFSStorage.__set__('customModelAbsPath', fakecustomModelAbsPath);
+    RewiredFSStorage.__set__('templateModelAbsPath', faketemplateModelAbsPath);
     RewiredFSStorage.__set__('utils', mockUtils);
     RewiredFSStorage.__set__('fsExtra', mockFsExtra);
     RewiredFSStorage.__set__('fs.statSync', fakeStatSync);
@@ -159,7 +161,8 @@ describe('FSStorage', () => {
         ownerName: 'userId',
         path: 'folder/model.zip',
         type: 'robot',
-        sharingOption: 'Private'
+        sharingOption: 'Private',
+        isCustom: true
       }
     ];
     var expectedResult = [
@@ -168,7 +171,8 @@ describe('FSStorage', () => {
         ownerName: 'userId',
         path: 'folder/model.zip',
         type: 'robot',
-        isShared: false
+        isShared: false,
+        isCustom: true
       }
     ];
     collectionMock.prototype.find = sinon
@@ -249,18 +253,38 @@ describe('FSStorage', () => {
   it(`should get the model Path of an specific model`, () => {
     collectionMock.prototype.findOne = sinon
       .stub()
-      .returns(Promise.resolve({ path: 'robots/husky_model.zip' }));
+      .returns(Promise.resolve({ path: 'husky_model', type: 'robots' }));
     return fsStorage
-      .getModelPath('robots', 'husky_model')
-      .then(res => res.should.equal('robots/husky_model.zip'));
+      .getModelPath('robots', 'hbp_clearpath_robotics_husky_a200')
+      .then(res => res.should.equal('husky_model'));
+  });
+
+  it(`should get the full Path of a specific model`, () => {
+    collectionMock.prototype.findOne = sinon.stub().returns(
+      Promise.resolve({
+        path: 'husky_model',
+        type: 'robots',
+        isCustom: false
+      })
+    );
+    return fsStorage
+      .getModelFullPath('robots', 'hbp_clearpath_robotics_husky_a200')
+      .then(res =>
+        res.should.equal(
+          path.join(faketemplateModelAbsPath, 'robots/husky_model')
+        )
+      );
   });
 
   it(`should get a custom model`, () => {
+    const mockUtils = { getZipOfFolder: () => new jszip() };
+    RewiredFSStorage.__set__('utils', mockUtils);
+    sinon.stub(jszip.prototype, 'generateAsync').returns(q.when('zip'));
     collectionMock.prototype.findOne = sinon
       .stub()
-      .returns(Promise.resolve({ path: 'robots/husky_model.zip' }));
+      .returns(Promise.resolve({ type: 'robots', path: 'husky_model' }));
     return fsStorage
-      .getModelFolder('robots', 'husky_model', 'admin')
+      .getModelZip('robots', 'hbp_clearpath_robotics_husky_a200', 'admin')
       .then(res => expect(res).should.not.be.empty);
   });
 
@@ -269,10 +293,9 @@ describe('FSStorage', () => {
       Promise.resolve([
         {
           name: 'name',
-          path: 'model/filename.zip',
+          path: 'foldername',
           ownerName: 'userId',
-          type: 'robot',
-          fileName: 'file0'
+          type: 'robot'
         }
       ])
     );
@@ -281,10 +304,9 @@ describe('FSStorage', () => {
       res.should.deep.equal([
         {
           name: 'name',
-          path: 'model/filename.zip',
+          path: 'foldername',
           ownerName: 'userId',
-          type: 'robot',
-          fileName: 'filename.zip'
+          type: 'robot'
         }
       ])
     );
@@ -321,7 +343,7 @@ describe('FSStorage', () => {
   it(`should get a list custom model by user`, () => {
     const expected = {
       name: 'modelName',
-      path: 'foldername/filename.zip',
+      path: 'foldername',
       ownerId: 'userId',
       type: 'robots'
     };
@@ -340,9 +362,9 @@ describe('FSStorage', () => {
       .stub()
       .returns(Promise.resolve(null));
     return fsStorage
-      .getModelFolder('robots', 'husky_model.zip', 'admin')
+      .getModelZip('robots', 'hbp_clearpath_robotics_husky_a200', 'admin')
       .should.be.eventually.rejectedWith(
-        'The model: husky_model.zip does not exist in the Models database.'
+        'The model: hbp_clearpath_robotics_husky_a200 does not exist in the Models database.'
       );
   });
 
@@ -364,15 +386,23 @@ describe('FSStorage', () => {
       type: 'type',
       path: 'path'
     };
+    const fakeZipContent = {
+      files: {
+        'dir1/': 'content',
+        'dir1/script.py': 'content'
+      },
+      file: function() {
+        return { async: () => q.when('content') };
+      }
+    };
+    sinon.stub(jszip, 'loadAsync').returns(q.resolve(fakeZipContent));
     collectionMock.prototype.findOne = sinon
       .stub()
       .returns(Promise.resolve(null));
+
     return fsStorage
       .createCustomModel(fakeModel, 'zip')
-      .then(res => expect(res).should.not.be.empty)
-      .then(() => {
-        fs.unlinkSync(path.join(fakecustomModelAbsPath, fakeModel.path));
-      });
+      .then(res => expect(res).should.be.resolved);
   });
 
   it(`should return an entry when we check an existing token`, () => {
@@ -802,6 +832,7 @@ describe('FSStorage', () => {
       .returns(
         Promise.resolve({ token: fakeUserId, experiment: fakeExperiment })
       );
+    jszip.loadAsync.restore();
     sinon.stub(jszip, 'loadAsync').returns('zipFileContent');
     sinon
       .stub(fsStorage, 'extractZip')
@@ -856,6 +887,7 @@ describe('FS Storage: extracting a zip experiment to the storage (no mock of fs)
     RewiredFSStorage.__set__('utils', mockUtils);
     fsStorage = new RewiredFSStorage.Storage();
   });
+
   //extractZip
   it(`should extract the zip experiment into the destination folder`, () => {
     return q
@@ -1267,7 +1299,7 @@ describe('Collab Storage', () => {
       .get('/storage/v1/api/file/modelPath/content/')
       .reply(200, { msg: 'Success!' });
     return collabStorage
-      .getModelFolder({ uuid: 'modelPath' }, fakeToken, fakeUserId)
+      .getModelZip({ uuid: 'modelPath' }, fakeToken, fakeUserId)
       .then(res => JSON.parse(res).should.deep.equal({ msg: 'Success!' }));
   });
 
@@ -1336,5 +1368,39 @@ describe('Utils', () => {
     return expect(
       utils.generateUniqueExperimentId('test', 0, ['test_0', 'test_1'])
     ).to.equal('test_2');
+  });
+
+  it('should return a JSZip instance filled with contents of dir', () => {
+    const allPaths = [
+      path.join(
+        __dirname,
+        '../data/experiments/experiment1/ExDTemplateHusky.3ds'
+      ),
+      path.join(
+        __dirname,
+        '../data/experiments/experiment1/ExDTemplateHusky.exc'
+      ),
+      path.join(
+        __dirname,
+        '../data/experiments/experiment1/braitenberg_husky_linear_twist.py'
+      ),
+      path.join(
+        __dirname,
+        '../data/experiments/experiment1/template_husky.bibi'
+      ),
+      path.join(__dirname, '../data/experiments/experiment1/test.png')
+    ];
+
+    // force lstat. Don't know why isDirectory doesn't work properly during tests
+    sinon.stub(fs, 'lstatSync').returns({
+      isDirectory: () => false,
+      isSymbolicLink: () => false
+    });
+
+    return expect(
+      utils.getZipOfFolder(
+        path.join(__dirname, '../data/experiments/experiment1')
+      )
+    ).to.not.be.empty;
   });
 });

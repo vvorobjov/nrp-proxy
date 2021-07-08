@@ -151,13 +151,13 @@ describe('TemplateExperimentsService', () => {
 
   it('should load experiment 1 properly', () => {
     return experimentsService.loadExperiments().then(experiments => {
-      return expect(experiments[0]).to.deep.equal(expectedExp1);
+      return expect(experiments[1]).to.deep.equal(expectedExp1);
     });
   });
 
   it('should load experiment 2 properly', () => {
     return experimentsService.loadExperiments().then(experiments => {
-      return expect(experiments[1]).to.deep.equal(expectedExp2);
+      return expect(experiments[2]).to.deep.equal(expectedExp2);
     });
   });
 });

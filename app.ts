@@ -199,13 +199,6 @@ app.get('/serversWithNoBackend', (_req, res, next) => {
     .catch(next);
 });
 
-app.get('/models/:modelType', (req, res, next) => {
-  proxyRequestHandler
-    .getModels(req.params.modelType)
-    .then(r => res.send(r))
-    .catch(next);
-});
-
 // storage API
 app.use(bodyParser.json({ limit: '2000mb' }));
 app.use(bodyParser.raw({ limit: '2000mb' }));
@@ -465,22 +458,16 @@ app.post('/storage/models/:modelType/:modelName', (req, res) => {
       getAuthToken(req),
       req.params.modelType,
       req.params.modelName,
-      req.body
+      req.body,
+      req.query.override
     )
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
-});
-
-app.put('/storage/models/:modelType/:modelName', (req, res) => {
-  storageRequestHandler
-    .unzipCustomModel(req.params.modelType, req.params.modelName, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
 app.get('/storage/models/:modelType/:modelName', (req, res) => {
   storageRequestHandler
-    .getModelFolder(req.params.modelType, req.params.modelName, getAuthToken(req))
+    .getModelZip(req.params.modelType, req.params.modelName, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -492,9 +479,9 @@ app.get('/storage/models/path/:modelType/:modelName', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/models/:modelType/:modelName/config', (req, res, next) => {
-  proxyRequestHandler
-    .getModelConfig(req.params.modelType, req.params.modelName)
+app.get('/storage/models/:modelType/:modelName/config', (req, res, next) => {
+  storageRequestHandler
+    .getModelConfigFullPath(req.params.modelType, req.params.modelName, getAuthToken(req))
     .then(config => res.sendFile(config))
     .catch(next);
 });

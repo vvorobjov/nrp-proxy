@@ -42,7 +42,7 @@ class StorageMock {
     return {};
   }
 
-  async getModelFolder() {
+  async getModelZip() {
     return robotZip;
   }
   async deleteExperiment() {
@@ -52,6 +52,8 @@ class StorageMock {
   async createFolder() {
     return {};
   }
+
+  async getModelFullPath() {}
 }
 
 const fsMock = {
@@ -120,6 +122,42 @@ describe('Experiment cloner', () => {
     expect(fsMock.writeFileSync.callCount).to.equal(2);
     //should read everything
     expect(fsMock.readFileSync.callCount).to.equal(9);
+
+    expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
+    expect(
+      await templateCreateUniqueExperimentId.firstCall.returnValue
+    ).to.equal('experiment1_0');
+    expect(res).to.equal((await storageMock.createExperiment()).uuid);
+  });
+
+  it(`should correctly clone experiment with models registered in the DB`, async () => {
+    //reset mocks
+    templateCreateUniqueExperimentId.reset();
+    createExperiment.reset();
+    templateDownloadFile.reset();
+    fsMock.copy.reset();
+    fsMock.writeFileSync.reset();
+    fsMock.readFileSync.reset();
+
+    sinon
+      .stub(storageMock, 'getModelFullPath')
+      .returns('data/models/environments/biologylab_world');
+    const res = await templateCloner.cloneExperiment(
+      'faketoken',
+      'fakeusrid',
+      'experiment_model/ExDTemplateHusky.exc'
+    );
+
+    expect(templateCreateUniqueExperimentId.callCount).to.equal(1);
+    expect(createExperiment.callCount).to.equal(1);
+    // we download the robot model, the env model, the brain
+    // plus the .png and the .3ds files plus any tfs if they exist
+    expect(templateDownloadFile.callCount).to.equal(7);
+    expect(fsMock.copy.callCount).to.equal(7);
+    // we write the exc and bibi
+    expect(fsMock.writeFileSync.callCount).to.equal(2);
+    //should read everything
+    expect(fsMock.readFileSync.callCount).to.equal(18);
 
     expect(createExperiment.firstCall.args[0]).to.equal('experiment1_0');
     expect(
@@ -239,7 +277,7 @@ describe('Experiment cloner', () => {
     revert();
   });
 
-  it(`should correctly clone a new experiment with resources folder`, async () => {
+  it(`should correctly clone a new experiment with resources and assets folders`, async () => {
     // sinon.stub(newCloner, 'getExperimentFileFullPath').returns('test/data/experiments/template_new/TemplateNew.exc');
     // sinon.stub(newCloner, 'getBibiFullPath').returns('test/data/experiments/template_new/TemplateNew.bibi');
 
@@ -290,7 +328,7 @@ describe('Experiment cloner', () => {
     expect(fsMock.writeFileSync.callCount).to.equal(4);
     // we read everything in the tmp dir so we can move it to the storage
     // so everything we downloaded plus the .exc and .bibi plus anything in resources
-    expect(fsMock.readFileSync.callCount).to.equal(11);
+    expect(fsMock.readFileSync.callCount).to.equal(15);
 
     expect(createExperiment.firstCall.args[0]).to.equal('template_resources_0');
     expect(await createUniqueExperimentId.firstCall.returnValue).to.equal(

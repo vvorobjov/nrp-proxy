@@ -72,7 +72,9 @@
     "test": "nyc mocha -r ts-node/register test/*/* --exit",
     "pretest": "lint-staged && npm run lint",
     "precommit": "lint-staged",
-    "install": "/bin/bash -c '${VENV_CMD:-virtualenv} proxy_virtualenv && source proxy_virtualenv/bin/activate && ${PIP_CMD:-pip} install mock_import six'"
+    "install": "/bin/bash -c '${VENV_CMD:-virtualenv} proxy_virtualenv && source proxy_virtualenv/bin/activate && ${PIP_CMD:-pip} install mock_import six'",
+    "update_template_models": "NODE_ENV=production node_modules/ts-node/dist/bin.js utils/updateFSTemplateModels.ts",
+    "refactor_storage": "NODE_ENV=production node_modules/ts-node/dist/bin.js refactorStorage.ts"
   },
   "nyc": {
     "check-coverage": true,

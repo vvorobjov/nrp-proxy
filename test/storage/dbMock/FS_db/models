@@ -1,3 +1,6 @@
 {"k":"0000000078","o":"0000000093","v":"001"}
 {"_id":2,"_uid":2,"_dt":1532508584941,"_s":"02dce200d20e1e20bb27c945f77292ff"}
-{"token":"nrpuser","fileName":"robots/test.zip","type":"robots","_id":{"$wrap":"$oid","v":2}}
+{"ownerName":"nrpuser","name":"pioneer_3dx","type":"robots","path":"p3dx","isCustom":true,"_id":{"$wrap":"$oid","v":2}}
+{"k":"0000000080","o":"0000000128","v":"001"}
+{"_id":19,"_uid":19,"_dt":1606908693155,"_s":"ef623c21c60ff7508159163e7aea0660"}
+{"name":"hbp_clearpath_robotics_husky_a200","type":"robots","path":"husky_model","isCustom":false,"_id":{"$wrap":"$oid","v":3}}

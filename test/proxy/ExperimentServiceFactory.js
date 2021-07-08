@@ -41,6 +41,9 @@ var excFilebody = `
     <environmentModel src="virtual_room_lausanne/virtual_room.sdf">
         <robotPose x="0" y="0" z="0.5" roll="0" pitch="0" yaw="3.1"/>
     </environmentModel>
+    <visualModel src="mesh.dae" scale="0.01">
+        <visualPose x="-0.895" y="-1.9975" z="1.115" roll="0.0" pitch="-0.0" yaw="1.5708"/>
+    </visualModel>
     <bibiConf src="bibi_configuration.bibi" processes="2"/>
     <cameraPose>
         <cameraPosition x="2" y="1" z="3"/>
@@ -106,7 +109,44 @@ var expectedExcConfObject = {
     name: 'The Experiment',
     tags: 'robotics braitenberg',
     thumbnail: 'thumbnail.jpg',
-    timeout: '80'
+    timeout: '80',
+    visualModel: {
+      _scale: '0.01',
+      _src: 'mesh.dae',
+      visualPose: {
+        _pitch: '-0.0',
+        _roll: '0.0',
+        _x: '-0.895',
+        _y: '-1.9975',
+        _yaw: '1.5708',
+        _z: '1.115'
+      }
+    }
+  }
+};
+const mockedBibiJS = {
+  bibi: {
+    brainModel: {
+      _model: 'braitenberg',
+      file: 'braitenberg.py',
+      populations: [
+        {
+          _population: 'sensors',
+          _from: 0,
+          _to: 5
+        },
+        {
+          _population: 'actors',
+          _from: 5,
+          _to: 8
+        }
+      ]
+    },
+    bodyModel: {
+      _model: 'husky',
+      _robotId: 'robot',
+      __text: 'model.sdf'
+    }
   }
 };
 var mockedBibiBody = `
@@ -114,8 +154,8 @@ var mockedBibiBody = `
 <bibi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xmlns="http://schemas.humanbrainproject.eu/SP10/2014/BIBI"
 xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_configuration.xsd">
-  <brainModel>
-    <file>brain_model/braitenberg.py</file>
+  <brainModel model='braitenberg'>
+    <file>braitenberg.py</file>
     <populations population="sensors" xsi:type="Range" from="0" to="5"/>
     <populations population="actors" xsi:type="Range" from="5" to="8"/>
   </brainModel>
@@ -135,6 +175,14 @@ xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_c
   <bodyModel>husky_model/model.sdf</bodyModel>
   <transferFunction xsi:type="PythonTransferFunction" src="csv_robot_position.py"/>
 </bibi>`;
+var mockedBibiBody3 = `
+<?xml version="1.0" encoding="UTF-8"?>
+<bibi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns="http://schemas.humanbrainproject.eu/SP10/2014/BIBI"
+xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_configuration.xsd">
+  <bodyModel>husky_model/model.sdf</bodyModel>
+  <transferFunction xsi:type="PythonTransferFunction" src="csv_robot_position.py"/>
+</bibi>`;
 var expectedBibiConfObject = {
   bibi: {
     _xmlns: 'http://schemas.humanbrainproject.eu/SP10/2014/BIBI',
@@ -143,7 +191,8 @@ var expectedBibiConfObject = {
       'http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_configuration.xsd',
     bodyModel: 'husky_model/model.sdf',
     brainModel: {
-      file: 'brain_model/braitenberg.py',
+      _model: 'braitenberg',
+      file: 'braitenberg.py',
       populations: [
         {
           _from: '0',
@@ -298,6 +347,75 @@ describe('ExperimentServiceFactory', function() {
     return csvFiles;
   });
 
+  it('should return return null if bibi has no brainModel', async () => {
+    const mockedBrainFileContent = 'brain_file_content';
+    let mockedBibiJSWithoutBrain = JSON.parse(JSON.stringify(mockedBibiJS));
+    delete mockedBibiJSWithoutBrain.bibi.brainModel;
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    sinon
+      .stub(es, 'getBibi')
+      .returns(Promise.resolve([mockedBibiJSWithoutBrain]));
+    sinon.stub(es, 'getFile').returns(Promise.resolve(mockedBrainFileContent));
+    return es.getBrain().should.eventually.be.null;
+  });
+
+  it('should return the brain from the bibi', async () => {
+    const mockedBrainFileContent = 'brain_file_content';
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    sinon.stub(es, 'getBibi').returns(Promise.resolve([mockedBibiJS]));
+    sinon.stub(es, 'getFile').returns(Promise.resolve(mockedBrainFileContent));
+    return es.getBrain().should.eventually.deep.equal({
+      brain: mockedBrainFileContent,
+      brainType: 'py',
+      populations: {
+        sensors: { from: 0, to: 5, step: NaN },
+        actors: { from: 5, to: 8, step: NaN }
+      },
+      robots: ['robot']
+    });
+  });
+
+  it('should return a brain with no populations from the bibi', async () => {
+    const mockedBrainFileContent = 'brain_file_content';
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    let mockedBibiJSWithoutPops = JSON.parse(JSON.stringify(mockedBibiJS));
+    delete mockedBibiJSWithoutPops.bibi.brainModel.populations;
+    sinon
+      .stub(es, 'getBibi')
+      .returns(Promise.resolve([mockedBibiJSWithoutPops]));
+    sinon.stub(es, 'getFile').returns(Promise.resolve(mockedBrainFileContent));
+    return es.getBrain().should.eventually.deep.equal({
+      brain: mockedBrainFileContent,
+      brainType: 'py',
+      populations: {},
+      robots: ['robot']
+    });
+  });
+
+  it('should return a brain with no robot from the bibi', async () => {
+    const mockedBrainFileContent = 'brain_file_content';
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    let mockedBibiJSWithoutRobot = JSON.parse(JSON.stringify(mockedBibiJS));
+    delete mockedBibiJSWithoutRobot.bibi.bodyModel;
+    sinon
+      .stub(es, 'getBibi')
+      .returns(Promise.resolve([mockedBibiJSWithoutRobot]));
+    sinon.stub(es, 'getFile').returns(Promise.resolve(mockedBrainFileContent));
+    return es.getBrain().should.eventually.deep.equal({
+      brain: mockedBrainFileContent,
+      brainType: 'py',
+      populations: {
+        sensors: { from: 0, to: 5, step: NaN },
+        actors: { from: 5, to: 8, step: NaN }
+      },
+      robots: []
+    });
+  });
+
   it('.setBrain() with an existing should set brain in the storage', async () => {
     sinon
       .stub(rh, 'getFile')
@@ -311,7 +429,27 @@ describe('ExperimentServiceFactory', function() {
       );
     sinon.stub(es, 'saveFile').returns(Promise.resolve());
     return es
-      .setBrain('testBrain', [{ list: ['test'] }], true, 'newBrain')
+      .setBrain('testBrain', [{ list: ['test'] }], true, {
+        name: 'newBrain',
+        scriptPath: 'scriptPath'
+      })
+      .should.eventually.deep.equal({});
+  });
+
+  it('.setBrain() should set an empty brain in the storage', async () => {
+    sinon
+      .stub(rh, 'getFile')
+      .returns(Promise.resolve({ body: mockedBibiBody3 }));
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    sinon
+      .stub(es, 'getExc')
+      .returns(
+        Promise.resolve([expectedExcConfObject, 'experiment_configuration.exc'])
+      );
+    sinon.stub(es, 'saveFile').returns(Promise.resolve());
+    return es
+      .setBrain('testBrain', [{ list: ['test'] }], true)
       .should.eventually.deep.equal({});
   });
 
@@ -333,7 +471,36 @@ xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_c
       );
     sinon.stub(es, 'saveFile').returns(Promise.resolve());
     return es
-      .setBrain('testBrain', [{ list: ['test'] }], true, 'newBrain')
+      .setBrain('testBrain', [{ list: ['test'] }], true, {
+        name: 'newBrain',
+        scriptPath: 'scriptPath'
+      })
+      .should.eventually.deep.equal({});
+  });
+
+  it('.setBrain() should set a Knowledge Graph brain in the storage', async () => {
+    var mockedBibiWithoutBrain = `
+<?xml version="1.0" encoding="UTF-8"?>
+<bibi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns="http://schemas.humanbrainproject.eu/SP10/2014/BIBI"
+xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_configuration.xsd"/>`;
+    sinon
+      .stub(rh, 'getFile')
+      .returns(Promise.resolve({ body: mockedBibiWithoutBrain }));
+    var esf = new ExperimentServiceFactory(rh);
+    var es = esf.createExperimentService(experimentId, contextId);
+    sinon
+      .stub(es, 'getExc')
+      .returns(
+        Promise.resolve([expectedExcConfObject, 'experiment_configuration.exc'])
+      );
+    sinon.stub(es, 'saveFile').returns(Promise.resolve());
+    return es
+      .setBrain('testBrain', [{ list: ['test'] }], true, {
+        name: 'newBrain',
+        scriptPath: 'scriptPath',
+        isKnowledgeGraphBrain: true
+      })
       .should.eventually.deep.equal({});
   });
 });

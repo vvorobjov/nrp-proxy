@@ -23,7 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
-import { unionWith } from 'lodash';
+import { template, unionWith } from 'lodash';
 import X2JS from 'x2js';
 import Authenticator from '../BaseAuthenticator';
 import BaseStorage from '../BaseStorage';
@@ -36,7 +36,8 @@ const q = require('q'),
   pd = require('pretty-data').pd,
   USER_DATA_FOLDER = 'USER_DATA',
   KG_DATA_FOLDER = 'KG_DATA_FOLDER',
-  INTERNALS = ['FS_db', USER_DATA_FOLDER, KG_DATA_FOLDER];
+  TEMPLATE_MODELS_FOLDER = 'TEMPLATE_MODELS',
+  INTERNALS = ['FS_db', USER_DATA_FOLDER, KG_DATA_FOLDER, TEMPLATE_MODELS_FOLDER];
 
 // mocked in the tests thus non const
 // tslint:disable: prefer-const
@@ -47,6 +48,7 @@ let glob = q.denodeify(require('glob')),
   fs = require('fs-extra'),
   rmdir = require('rmdir'),
   fsExtra = require('fs-extra'),
+  templateModelAbsPath = path.join(utils.storagePath, TEMPLATE_MODELS_FOLDER),
   customModelAbsPath = path.join(utils.storagePath, USER_DATA_FOLDER),
   knowledgeGraphDataPath = path.join(utils.storagePath, KG_DATA_FOLDER);
 // tslint:enable: prefer-const
@@ -141,18 +143,22 @@ export class Storage extends BaseStorage {
   listAllModels(modelType, userName) {
     return DB.instance.models
       .find({
-        $or: [{ $and: [{ ownerName: userName }, { type: modelType }] },
-        {
-          $or: [
-            { $and: [{ sharingOption: 'Public' }, { type: modelType }] },
-            {
-              $and: [
-                { type: modelType },
-                { sharingOption: 'Shared' }
-              ]
-            }
-          ]
-        }
+        $or: [
+          { $and: [
+            {$or: [{ ownerName: userName }, { isCustom: false }]},
+            { type: modelType }
+          ]},
+          {
+            $or: [
+              { $and: [{ sharingOption: 'Public' }, { type: modelType }] },
+              {
+                $and: [
+                  { type: modelType },
+                  { sharingOption: 'Shared' }
+                ]
+              }
+            ]
+          }
         ]
       })
       .then(res => {
@@ -179,6 +185,7 @@ export class Storage extends BaseStorage {
             path: f.path,
             ownerName: f.ownerName,
             type: f.type,
+            isCustom: f.isCustom,
             isShared: ((f.sharingOption === 'Public' || f.sharingOption === 'Shared')
               && f.ownerName !== userName) ? true : false
           }));
@@ -255,21 +262,34 @@ export class Storage extends BaseStorage {
       .then(res => res.map(f => ({ name: f.name, type: f.type, ownerName: f.ownerName, path: f.path })));
   }
 
-  getModelPath(modelType, modelName) {
+  getModelDBInstance(modelType, modelName) {
     return DB.instance.models
       .findOne({ $and: [{ name: modelName }, { type: modelType }] })
-      .then(existingExp => {
-        if (!existingExp) return q.reject(`The model: ${modelName} does not exist in the Models database.`);
-        return existingExp.path;
+      .then(existingModel => {
+        if (!existingModel) return q.reject(`The model: ${modelName} does not exist in the Models database.`);
+        return existingModel;
       });
   }
 
-  getModelFolder(modelType, modelName) {
-    return DB.instance.models
-      .findOne({ $and: [{ name: modelName }, { type: modelType }] })
-      .then(existingExp => {
-        if (!existingExp) return q.reject(`The model: ${modelName} does not exist in the Models database.`);
-        return q.denodeify(fs.readFile)(path.join(customModelAbsPath, existingExp.path));
+  getModelPath(modelType, modelName) {
+    return this.getModelDBInstance(modelType, modelName)
+      .then(model => model.path);
+  }
+
+  getModelFullPath(modelType, modelName) {
+    return this.getModelDBInstance(modelType, modelName)
+      .then(model => {
+        const modelAbsPath = model.isCustom ? customModelAbsPath : templateModelAbsPath;
+        return path.join(modelAbsPath, model.type, model.path);
+      });
+  }
+
+  getModelZip(modelType, modelName) {
+    return this.getModelDBInstance(modelType, modelName)
+      .then(model => {
+        const modelAbsPath = model.isCustom ? customModelAbsPath : templateModelAbsPath;
+        return utils.getZipOfFolder(path.join(modelAbsPath, model.type, model.path))
+          .generateAsync({type: 'nodebuffer'});
       });
   }
 
@@ -283,7 +303,7 @@ export class Storage extends BaseStorage {
     let deletionResult: number | null;
     try {
       // remove the custom model from the FS
-      await q.denodeify(fs.unlink)(path.join(customModelAbsPath, modelToDelete.path));
+      await q.denodeify(fs.remove)(path.join(customModelAbsPath, modelToDelete.type, modelToDelete.path));
       // remove model from DB
       deletionResult = await DB.instance.models.remove({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
       if (!deletionResult)
@@ -291,28 +311,51 @@ export class Storage extends BaseStorage {
     } catch {
       // even if the model is not in the FS (cause it could have been manually removed)
       // still try to remove it from the DB
-      await await DB.instance.models.remove({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
+      await DB.instance.models.remove({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
       // if the FS call failed, we log the problem
       return q.reject(`Could not find the model ${modelName} to remove in the user storage.`);
     }
     return q.resolve(`Succesfully deleted model ${modelName} from the user storage.`);
   }
 
-  createCustomModel(model, zip) {
-    return DB.instance.models
-      .findOne({ $and: [{ name: model.name }, { type: model.type }] })
-      .then(existingExp => {
-        if (!existingExp)
-          DB.instance.models.insert({
-            ownerName: model.ownerName,
-            name: model.name,
-            type: model.type,
-            path: model.path,
-          });
-        return q.denodeify(fs.writeFile)(path.join(customModelAbsPath, model.path), zip, {
-              encoding: 'binary'
-            });
+  async createCustomModel(model, zip, override) {
+    const existingModel = await DB.instance.models
+      .findOne({ $and: [{ name: model.name }, { type: model.type }] });
+    if (!existingModel || (existingModel.ownerName === model.ownerName && override)) {
+      const existingPath = await DB.instance.models
+        .findOne({ path: model.path });
+      if (existingPath !== existingModel) {
+        return q.reject(`One of the models already has the root folder named: ${model.path}`);
+      }
+      DB.instance.models.insert({
+        ownerName: model.ownerName,
+        name: model.name,
+        type: model.type,
+        path: model.path,
+        isCustom: true
       });
+      return jszip.loadAsync(zip)
+        .then(zipContent => {
+          const mapFile = async filepath => {
+            if (path.parse(filepath).dir !== '' && filepath.substr(-1) !== path.sep) {
+              const content = await zipContent.file(filepath).async('nodebuffer');
+              filepath = filepath.substring(filepath.indexOf('/') + 1); // Removes the largest enclosing folder from the filepath
+              const dest = path.join(customModelAbsPath, model.type, model.path, filepath);
+              if (!await fs.exists(path.dirname(dest))) {
+                await fs.ensureDir(path.dirname(dest));
+              }
+              return q.denodeify(fs.writeFile)(dest, content);
+            }
+          };
+          return q.all(Object.keys(zipContent.files).map(mapFile));
+        }).then(() =>
+          q.resolve({path: model.path})
+        );
+    } else if (existingModel.ownerName === model.ownerName && !override) {
+        return q.reject(`One of your custom models already has the name: ${model.name}`);
+    } else {
+      return q.reject('The model you tried to upload already exists in the database. Rename it and try uploading it again.');
+    }
   }
 
   listModelsbyType(modelType) {
@@ -323,8 +366,7 @@ export class Storage extends BaseStorage {
           name: f.name,
           path: f.path,
           ownerName: f.ownerName,
-          type: f.type,
-          fileName: path.basename(f.path)
+          type: f.type
         }))
       )
       .catch(() => []);
@@ -338,7 +380,8 @@ export class Storage extends BaseStorage {
           name: f.name,
           path: f.path,
           ownerId: f.ownerName,
-          type: f.type
+          type: f.type,
+          isCustom: f.isCustom
         }))
       )
       .catch(() => []);
@@ -621,7 +664,7 @@ export class Storage extends BaseStorage {
   async extractZip(zipContent, destFolderName, removeEnclosingFolder= true) {
     const mapFile = async filepath => {
       if (path.parse(filepath).dir !== '' && filepath.substr(-1) !== path.sep) {
-        const content = await zipContent.file(filepath).async('nodebuffer');
+        const content = await zipContent.file(  filepath).async('nodebuffer');
         if (removeEnclosingFolder) {
           filepath = filepath.substring(filepath.indexOf('/') + 1); // Removes the largest enclosing folder from the filepath
         }
@@ -629,11 +672,10 @@ export class Storage extends BaseStorage {
         if (!await fsExtra.exists(path.dirname(dest))) {
           await fsExtra.ensureDir(path.dirname(dest));
         }
-        await fsExtra.writeFile(dest, content);
+        return q.denodeify(fsExtra.writeFile)(dest, content);
       }
     };
-    const files = Object.keys(zipContent.files).map(mapFile);
-    return q.all(files);
+    return q.all(Object.keys(zipContent.files).map(mapFile));
   }
 
   getStoragePath() {
@@ -655,5 +697,10 @@ export class Storage extends BaseStorage {
     return this.userIdHasAccessToPath(userId, relativePath)
       .then(() => jszip.loadAsync(fileContent))
       .then(content => this.extractZip(content, experiment, false));
+  }
+
+  getModelConfigFullPath(model) {
+    const modelAbsPath = (model.isCustom) ? customModelAbsPath : templateModelAbsPath;
+    return path.join(modelAbsPath, model.type, model.path, 'model.config');
   }
 }
