@@ -16,16 +16,18 @@ configurationManager.initialize();
 const config = configurationManager.loadConfigFile();
 let storage;
 
-const loadDependenciesInjection = async () => {
+async function loadDependenciesInjection() {
+
     const storageBasePath = path.resolve(
         path.join(__dirname, 'storage', config.storage)
     );
-    const {Storage} = await import(path.join(storageBasePath, 'Storage'));
+    const { Storage } = await import(path.join(storageBasePath, 'Storage'));
+
     storage = new Storage(config);
-};
+}
 
 // find old custom models, extract their zips and update the entries in the DB
-const refactorCustomModels = async () => {
+async function refactorCustomModels() {
 
     const oldModels = await DB.instance.models.find();
     return Promise.all(
@@ -47,9 +49,9 @@ const refactorCustomModels = async () => {
                 await DB.instance.models.remove(
                     {
                         $and: [
-                            {$or: [{path: modelPath}, {fileName: modelPath}]},
-                            {$or: [{ownerName: modelOwnerName}, {token: modelOwnerName}]},
-                            {type: model.type}
+                            { $or: [{ path: modelPath }, { fileName: modelPath }] },
+                            { $or: [{ ownerName: modelOwnerName }, { token: modelOwnerName }] },
+                            { type: model.type }
                         ]
                     }
                 );
@@ -65,7 +67,7 @@ const refactorCustomModels = async () => {
             return fse.unlink(zipPath);
         })
     );
-};
+}
 
 const generateUniqueName = (basename, directory) => {
     if (basename === '') {
@@ -80,7 +82,7 @@ const generateUniqueName = (basename, directory) => {
     return generatedName;
 };
 
-const refactorBibi = async (bibiPath) => {
+async function refactorBibi(bibiPath) {
     const parser = new xml2js.Parser();
     const builder = new xml2js.Builder();
 
@@ -133,7 +135,7 @@ const refactorBibi = async (bibiPath) => {
                 if (typeof bodyModel === 'string') {
                     bodyModels[i] = {
                         _: path.basename(bodyModel),
-                        $: {robotId}
+                        $: { robotId }
                     };
                 } else {
                     bodyModel.$.robotId = robotId;
@@ -155,18 +157,32 @@ const refactorBibi = async (bibiPath) => {
 
     const xml = builder.buildObject(json);
     return fse.writeFile(bibiPath, xml);
-};
+}
 
-const refactorExperiments = async () => {
+async function refactorExperiments() {
     let experiments = await fse.readdir(utils.storagePath);
     experiments = experiments.filter(file => INTERNALS.indexOf(file) < 0);
-    experiments.map(async exp => {
-        const files = await q.denodeify(fse.readdir)(path.join(utils.storagePath, exp));
-        files.filter(f => f.endsWith('.bibi')).map(f => refactorBibi(path.join(utils.storagePath, exp, f)));
-    });
-};
 
-loadDependenciesInjection()
-    .then(refactorCustomModels)
-    .then(refactorExperiments)
-    .catch(e => console.error(e));
+    return Promise.all(
+        experiments.map(async exp => {
+            const files = await fse.readdir(path.join(utils.storagePath, exp));
+            const bibis = files.filter(f => f.endsWith('.bibi'));
+            const multipleBibiWarning =  bibis.length > 1 ? ' More than one BIBI file has been found; using:' : '';
+            console.debug(`Processing: "${exp}".${multipleBibiWarning} BIBI: "${bibis[0]}"`);
+            return refactorBibi(path.join(utils.storagePath, exp, bibis[0]));
+        })
+    );
+}
+
+async function main() {
+    try {
+        await loadDependenciesInjection();
+        await refactorCustomModels();
+        await refactorExperiments();
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+main()
+    .then(_ => process.exit(0));
