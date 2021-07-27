@@ -280,7 +280,7 @@ abstract class BaseExperimentService {
     const bibi = bibiFile.bibi;
     let brainModelFile;
     if (bibi.brainModel) {
-      brainModelFile = bibi.brainModel.file.toString();
+
       if (populations.length > 0)
         bibi.brainModel.populations = populations.map(pop => {
           if (pop.list) {
@@ -311,43 +311,44 @@ abstract class BaseExperimentService {
           }
         });
 
-      if (removePopulations) delete bibiFile.bibi.brainModel.populations;
+      if (removePopulations) delete bibi.brainModel.populations;
+
+      let brainModelFileText = bibi.brainModel.file.toString();
+      let brainModelModelAttr = bibi.brainModel._model;
+
       if (newBrain) {
-        bibiFile.bibi.brainModel = {
+        brainModelFileText = newBrain.scriptPath;
+        brainModelModelAttr = newBrain.name;
+
+        bibi.brainModel = {
           __prefix: bibi.__prefix,
-          _model: newBrain.name,
+          _model: brainModelModelAttr,
           file: {
             __prefix: bibi.__prefix,
-            __text: newBrain.scriptPath,
+            __text: brainModelFileText,
           }
         };
       }
 
-      if (bibiFile.bibi.brainModel._model) {
-        brainModelFile = path.join(bibiFile.bibi.brainModel._model, bibiFile.bibi.brainModel.file.__text);
-      } else {
-        brainModelFile = bibiFile.bibi.brainModel.file.__text;
-      }
+      brainModelFile = brainModelModelAttr ? path.join(brainModelModelAttr, brainModelFileText) : brainModelFileText;
+
     } else {
-      bibiFile.bibi.brainModel = {
+
+      bibi.brainModel = {
         __prefix: bibi.__prefix,
         file: {
           __prefix: bibi.__prefix,
           __text: undefined
         }
       };
+
       if (newBrain) {
-        if (newBrain.isKnowledgeGraphBrain) {
-          bibiFile.bibi.brainModel.file.__text = path.join(newBrain.name, newBrain.scriptPath);
-          brainModelFile = path.join(newBrain.name, newBrain.scriptPath);
-        } else {
-          bibiFile.bibi.brainModel.file.__text = newBrain.scriptPath;
-          bibiFile.bibi.brainModel._model = newBrain.name;
-          brainModelFile = path.join(newBrain.name, newBrain.scriptPath);
-        }
+        bibi.brainModel.file.__text = newBrain.isKnowledgeGraphBrain ? path.join(newBrain.name, newBrain.scriptPath) : newBrain.scriptPath;
+        bibi.brainModel._model = newBrain.name;
+
+        brainModelFile = path.join(newBrain.name, newBrain.scriptPath);
       } else {
-        brainModelFile = 'brain_script.py';
-        bibiFile.bibi.brainModel.file.__text = brainModelFile;
+        bibi.brainModel.file.__text = brainModelFile = 'brain_script.py';
       }
     }
 
