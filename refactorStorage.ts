@@ -44,7 +44,7 @@ async function refactorCustomModels() {
                 zip = fse.readFileSync(zipPath);
             } catch (e) {
                 console.warn(e);
-                return Promise.resolve(model.fileName + ' not found');
+                return Promise.resolve(`${model.fileName} not found`);
             } finally {
                 await DB.instance.models.remove(
                     {
@@ -70,25 +70,27 @@ async function refactorCustomModels() {
 }
 
 const generateUniqueName = (basename, directory) => {
-    if (basename === '') {
-        basename = 'robot';
-    }
+    basename = (basename !== '') ? basename : 'robot';
     let generatedName = basename;
     let i = 0;
     while (fse.existsSync(path.join(directory, generatedName))) {
-        generatedName = basename + '_' + i;
+        generatedName = `${basename}_${i}`;
         i += 1;
     }
     return generatedName;
 };
 
 async function refactorBibi(bibiPath) {
-    const parser = new xml2js.Parser();
     const builder = new xml2js.Builder();
 
     const experimentFolder = path.dirname(bibiPath);
     const content = fse.readFileSync(bibiPath);
-    const json = await q.denodeify(parser.parseString)(content);
+    const json = await q.denodeify(xml2js.parseString)(content);
+    if (json == null) {
+        const msg = 'Skipping: Can\'t refactor! BIBI is empty.';
+        console.warn(msg);
+        return Promise.resolve(msg);
+    }
     const bibi = json.bibi || json['ns1:bibi'];
     const bodyModels = bibi.bodyModel || bibi['ns1:bodyModel'];
 
@@ -165,11 +167,20 @@ async function refactorExperiments() {
 
     return Promise.all(
         experiments.map(async exp => {
-            const files = await fse.readdir(path.join(utils.storagePath, exp));
-            const bibis = files.filter(f => f.endsWith('.bibi'));
-            const multipleBibiWarning =  bibis.length > 1 ? ' More than one BIBI file has been found; using:' : '';
-            console.debug(`Processing: "${exp}".${multipleBibiWarning} BIBI: "${bibis[0]}"`);
-            return refactorBibi(path.join(utils.storagePath, exp, bibis[0]));
+            let files;
+            try {
+                files = await fse.readdir(path.join(utils.storagePath, exp));
+            } catch (e) {
+                const msg = `Skipping: ${exp} is not a directory.`;
+                console.warn(msg);
+                return Promise.resolve(msg);
+            }
+            if (files) {
+                const bibis = files.filter(f => f.endsWith('.bibi'));
+                const multipleBibiWarning = bibis.length > 1 ? ' More than one BIBI file has been found; using:' : '';
+                console.debug(`Processing: "${exp}".${multipleBibiWarning} BIBI: "${bibis[0]}"`);
+                return refactorBibi(path.join(utils.storagePath, exp, bibis[0]));
+            }
         })
     );
 }
