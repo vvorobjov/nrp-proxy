@@ -34,7 +34,7 @@ async function refactorCustomModels() {
         oldModels.map(async model => {
             // skip updated models
             if (model.isCustom !== undefined) {
-                return;
+                return Promise.resolve(`Skip updated model ${model}`);
             }
             const modelPath = model.path || model.fileName;
             const modelOwnerName = model.ownerName || model.token;
@@ -64,13 +64,20 @@ async function refactorCustomModels() {
             const modelMetaData = await modelsService.getZipModelMetaData(lightModel, zip);
             modelMetaData.ownerName = modelOwnerName;
             await storage.createCustomModel(modelMetaData, zip, false);
-            return fse.unlink(zipPath);
+            try {
+                return fse.unlinkSync(zipPath);
+            } catch (e) {
+                return Promise.resolve(`${zipPath} not found`);
+            }
         })
     );
 }
 
 const generateUniqueName = (basename, directory) => {
-    basename = (basename !== '') ? basename : 'robot';
+    // default model directory is 'robot'
+    if (basename === '' || basename === '.') {
+        basename = 'robot';
+    }
     let generatedName = basename;
     let i = 0;
     while (fse.existsSync(path.join(directory, generatedName))) {
@@ -118,41 +125,64 @@ async function refactorBibi(bibiPath) {
                 if (typeof bodyModelValue !== 'string') {
                     bodyModelValue = bodyModel._;
                 }
-                const robotId = generateUniqueName(path.dirname(bodyModelValue), experimentFolder);
+                const bodyModelDir = path.dirname(bodyModelValue);
+                const bodyModelFile = path.basename(bodyModelValue);
+
+                const robotId = generateUniqueName(bodyModelDir, experimentFolder);
+                // create new model directory named robotId
                 fse.ensureDirSync(path.join(experimentFolder, robotId));
-                if (fse.existsSync(path.join(experimentFolder, bodyModelValue))) {
+
+                const newBodyModelPath = path.join(experimentFolder, robotId, bodyModelFile);
+                let oldBodyModelPath;
+
+                // look for model in experiment folder
+                if (fse.existsSync(oldBodyModelPath = path.join(experimentFolder, bodyModelDir, bodyModelFile)) ||
+                    fse.existsSync(oldBodyModelPath = path.join(experimentFolder, 'robot', bodyModelFile))) {
                     fse.renameSync(
-                        path.join(experimentFolder, bodyModelValue),
-                        path.join(experimentFolder, robotId, path.basename(bodyModelValue))
-                    );
-                } else if (fse.existsSync(path.join(config.modelsPath, bodyModelValue))) {
+                        oldBodyModelPath, newBodyModelPath);
+                } else if (fse.existsSync(oldBodyModelPath = path.join(config.modelsPath, bodyModelDir, bodyModelFile))) { // in $HBP/Models
                     fse.copyFileSync(
-                        path.join(config.modelsPath, bodyModelValue),
-                        path.join(experimentFolder, robotId, path.basename(bodyModelValue))
-                    );
+                        oldBodyModelPath, newBodyModelPath);
                 } else {
                     throw `unable to find body model in ${experimentFolder}`;
                 }
-
+                // edit BIBI with new info
                 if (typeof bodyModel === 'string') {
                     bodyModels[i] = {
-                        _: path.basename(bodyModel),
+                        _: bodyModelFile,
                         $: { robotId }
                     };
                 } else {
                     bodyModel.$.robotId = robotId;
-                    bodyModel._ = path.basename(bodyModelValue);
+                    bodyModel._ = bodyModelFile;
                 }
             } else {
-                const sdfName = path.basename(bodyModel._);
-                const robotId = bodyModel.$.robotId;
-                if (fse.existsSync(path.join(experimentFolder, robotId, sdfName))) {
-                    bodyModel._ = sdfName;
+                const bodyModelDir = path.dirname(bodyModel._);
+                const bodyModelFile = path.basename(bodyModel._);
+
+                const robotId = bodyModel.$.robotId; // robotId attribute is present
+
+                // enforce robotId/bodyModelFile structure
+
+                if (fse.existsSync(path.join(experimentFolder, robotId, bodyModelFile))) {
+                    bodyModel._ = bodyModelFile; // normalize bodyModel value (i.e. SDF files, no paths)
+                } else if (fse.existsSync(path.join(experimentFolder, bodyModelDir, bodyModelFile))) {
+                    // rename bodyModelDir to robotId
+                    fse.renameSync(
+                        path.join(experimentFolder, bodyModelDir),
+                        path.join(experimentFolder, robotId));
+                    bodyModel._ = bodyModelFile;
+                } else if (fse.existsSync(path.join(config.modelsPath, bodyModelDir, bodyModelFile))) {
+                    fse.ensureDirSync(path.join(experimentFolder, robotId));
+                    // copy bodyModelFile from $HBP/Models
+                    fse.copyFileSync(
+                        path.join(config.modelsPath, bodyModelDir, bodyModelFile),
+                        path.join(experimentFolder, robotId, bodyModelFile));
                 } else {
                     throw `unable to find body model in ${experimentFolder}`;
                 }
             }
-
+            // delete isCustom attribute
             delete bodyModels[i].$.isCustom;
         }
     }
@@ -178,8 +208,19 @@ async function refactorExperiments() {
             if (files) {
                 const bibis = files.filter(f => f.endsWith('.bibi'));
                 const multipleBibiWarning = bibis.length > 1 ? ' More than one BIBI file has been found; using:' : '';
+                if (bibis.length === 0) {
+                    console.debug(`Skipping: "${exp}". NO BIBI found`);
+                    return Promise.resolve();
+                }
                 console.debug(`Processing: "${exp}".${multipleBibiWarning} BIBI: "${bibis[0]}"`);
-                return refactorBibi(path.join(utils.storagePath, exp, bibis[0]));
+                try {
+                    await refactorBibi(path.join(utils.storagePath, exp, bibis[0]));
+                    return Promise.resolve();
+                } catch (err) {
+                    const msg = `ERROR: ${err}`;
+                    console.warn(msg);
+                    return Promise.resolve(msg);
+                }
             }
         })
     );
@@ -188,8 +229,15 @@ async function refactorExperiments() {
 async function main() {
     try {
         await loadDependenciesInjection();
+
+        console.log('==REFACTORING CUSTOM MODELS==');
         await refactorCustomModels();
+        console.log('==COMPLETE==');
+        console.log();
+        console.log('==REFACTORING EXPERIMENTS==');
         await refactorExperiments();
+        console.log('==COMPLETE==');
+
     } catch (error) {
         console.error(error);
     }
