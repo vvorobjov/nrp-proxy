@@ -414,19 +414,19 @@ var consoleMock = {
 
 var mockSuccessfulOidcResponse = function() {
   nock(URL)
-    .post('/token')
+    .post('/protocol/openid-connect/token')
     .reply(200, { access_token: 'testToken' });
 };
 
 var mockFailedOidcResponse = function() {
   nock(URL)
-    .post('/token')
+    .post('/protocol/openid-connect/token')
     .reply(500, {});
 };
 
 var mockNonJsonOidcResponse = function() {
   nock(URL)
-    .post('/token')
+    .post('/protocol/openid-connect/token')
     .reply(200, 'OK!');
 };
 

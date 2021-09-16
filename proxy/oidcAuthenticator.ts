@@ -28,13 +28,22 @@ const q = require('q');
 // workaround for https://github.com/nodejs/help/issues/1730
 require('tls').DEFAULT_ECDH_CURVE = 'auto';
 
-const CREATE_TOKEN_URL = '/token';
+const CREATE_TOKEN_URL = '/protocol/openid-connect/token';
+const USERINFO_ENDPOINT = '/protocol/openid-connect/userinfo';
 let authConfig;
 let lastRenewalTime = 0;
 let lastRetrievedToken;
 
 const configure = newAuthConfig => {
   authConfig = newAuthConfig;
+};
+
+const getAuthConfig = () => {
+  return authConfig;
+};
+
+const getUserinfoEndpoint = () => {
+  return authConfig.url + USERINFO_ENDPOINT;
 };
 
 const getToken = () => {
@@ -58,6 +67,7 @@ const getToken = () => {
     },
     url: authConfig.url + CREATE_TOKEN_URL
   };
+  console.log(options.url);
 
   const deferred = q.defer();
 
@@ -84,5 +94,7 @@ const getToken = () => {
 
 export default {
   getToken,
-  configure
+  configure,
+  getAuthConfig,
+  getUserinfoEndpoint
 };

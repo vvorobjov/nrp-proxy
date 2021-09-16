@@ -26,71 +26,62 @@
 import BaseIdentity from '../BaseIdentity';
 import CollabConnector from './CollabConnector';
 
+const oidcAuthenticator = require('../../proxy/oidcAuthenticator').default;
+
 export class Identity extends BaseIdentity {
   usersList: any[] = [];
-
-  static get IDENTITY_API_URL() {
-    return 'https://services.humanbrainproject.eu/idm/v1/api';
-  }
 
   getUniqueIdentifier(token) {
     return this.getUserInfo('me', token).then(({id}) => id);
   }
 
   getUserInfo(userId, token) {
-    return CollabConnector.instance
-      .get(`${Identity.IDENTITY_API_URL}/user/${userId}`, token)
-      .then(res => JSON.parse(res));
+    // remap from collab 2 api to old one
+    const userInfo = CollabConnector.instance
+      .get(oidcAuthenticator.getUserinfoEndpoint(), token)
+      .then(res => JSON.parse(res, function(k, v) {
+        if (k === 'name')
+          this.displayName = v;
+        else if (k === 'preferred_username')
+          this.username = v;
+        else if (k === 'mitreid-sub')
+          this.id = v;
+        else
+          return v;
+      }))
+      .then(value => {
+        if (userId !== value.id && userId !== 'me')
+          return {};
+        else
+          return value;
+      });
+
+    return userInfo;
   }
 
   getUserGroups(token) {
     return CollabConnector.instance
       .get(
-        `${Identity.IDENTITY_API_URL}/user/me/member-groups?page=0&pageSize=1000`,
+        oidcAuthenticator.getUserinfoEndpoint(),
         token
       )
-      .then(res => JSON.parse(res)._embedded.groups);
+      .then(res => JSON.parse(res).roles.group);
   }
 
+  // instead of returning a list of all users,
+  // this function returns a list of a single user, which is active
+  // that's a patch for Collab 2, which doesn't allow to get a full list
   async getUsersList(token) {
     if (this.usersList.length === 0) {
-      const res = await this.getUserListPage(token, 0);
-      const totalPages = res.page.totalPages;
-      this.usersList = this.usersList.concat(res._embedded.users.map(u => {
-        return {
-          displayName: u.displayName,
-          id: u.id,
-          username: u.username
-        };
-      }));
-
-      const jobs: any[] = [];
-      for (let i = 1; i < totalPages; i++) {
-        jobs.push(this.getUserListPage(token, i));
-      }
-
-      const results = await Promise.all(jobs);
-      for (const result of results) {
-        this.usersList = this.usersList.concat(result._embedded.users.map(u => {
-          return {
-            displayName: u.displayName,
-            id: u.id,
-            username: u.username
-          };
-        }));
-      }
+      const res = await this.getUserInfo('me', token);
+      // const totalPages = 1;
+      this.usersList.push({
+        displayName: res.displayName,
+        id: res.id,
+        username: res.username
+      });
     }
 
     return this.usersList;
   }
-
-  getUserListPage(token, pageNumber) {
-    return CollabConnector.instance
-      .get(
-        `${Identity.IDENTITY_API_URL}/user?page=${pageNumber}&pageSize=500`,
-        token
-      )
-      .then(res => JSON.parse(res));
-  }
-
 }
