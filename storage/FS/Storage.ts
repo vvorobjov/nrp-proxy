@@ -54,22 +54,31 @@ let glob = q.denodeify(require('glob')),
   knowledgeGraphDataPath = path.join(utils.storagePath, KG_DATA_FOLDER);
 // tslint:enable: prefer-const
 
-// Routine task to unregister deleted experiment folders from the database
+// Unregister deleted experiment folders from the database
 const scanExperiments = async () => {
   const storageContents: string[] = await fs.readdir(utils.storagePath);
   const fsExperiments = storageContents.map(file => ({ uuid: file, name: file }));
   const dbExperiments = (await DB.instance.experiments.find()).map(e => ({ uuid: e.experiment, name: e.experiment }));
+
+  fsExperiments.sort( (e1, e2) => e1.uuid.localeCompare(e2.uuid) );
+  dbExperiments.sort( (e1, e2) => e1.uuid.localeCompare(e2.uuid) );
 
   const deletedExperiments = _.differenceWith(
     dbExperiments,
     fsExperiments,
     (exp1, exp2) => exp1.uuid === exp2.uuid);
 
-  deletedExperiments.forEach(e => DB.instance.experiments.remove({experiment: e.uuid}) );
+  console.log(`Unregistering ${deletedExperiments.length} deleted experiments from DB`);
+
+  deletedExperiments.forEach(e => {
+    DB.instance.experiments.remove({experiment: e.uuid});
+    console.log(e.name);
+  });
+
   return deletedExperiments.map(entry => entry.name);
 };
-// cron-like format: every midnight
-schedule.scheduleJob('0 0 * * *', scanExperiments);
+// cron-like format: every 2 hours
+schedule.scheduleJob('0 */2 * * *', scanExperiments);
 
 export class Storage extends BaseStorage {
 
