@@ -310,10 +310,10 @@ describe('ExperimentServiceFactory', function() {
     });
   });
 
-  it('.getCSVFiles() should get the csv files', async () => {
+  it('.getFiles() should get the files', async () => {
     sinon.stub(rh, 'listFiles', folder => {
       switch (folder) {
-        case experimentId:
+        case experimentId + '/csv_records':
           return q.when([
             {
               name: 'NOT_csv_records',
@@ -328,6 +328,21 @@ describe('ExperimentServiceFactory', function() {
               type: 'folder'
             }
           ]);
+        case experimentId + '/profiler_data':
+          return q.when([
+            {
+              name: 'NOT_profiler_data',
+              type: 'folder'
+            },
+            {
+              name: 'profiler_data_2',
+              type: 'folder'
+            },
+            {
+              name: 'profiler_data_1',
+              type: 'folder'
+            }
+          ]);
         default:
           return q.when([
             {
@@ -338,13 +353,31 @@ describe('ExperimentServiceFactory', function() {
     });
     var esf = new ExperimentServiceFactory(rh);
     var es = esf.createExperimentService(experimentId, contextId);
-    const csvFiles = await es.getCSVFiles();
+    const csvFiles = await es.getFiles('csv');
+    const profilerFiles = await es.getFiles('profiler');
 
     expect(csvFiles).to.eql([
-      { folder: '2', uuid: 'experiment1%2Fcsv_records_2%2Fcsvfile' },
-      { folder: '1', uuid: 'experiment1%2Fcsv_records_1%2Fcsvfile' }
+      {
+        folder: '2',
+        uuid: 'experiment1%2Fcsv_records%2Fcsv_records_2%2Fcsvfile'
+      },
+      {
+        folder: '1',
+        uuid: 'experiment1%2Fcsv_records%2Fcsv_records_1%2Fcsvfile'
+      }
     ]);
-    return csvFiles;
+
+    expect(profilerFiles).to.eql([
+      {
+        folder: '2',
+        uuid: 'experiment1%2Fprofiler_data%2Fprofiler_data_2%2Fcsvfile'
+      },
+      {
+        folder: '1',
+        uuid: 'experiment1%2Fprofiler_data%2Fprofiler_data_1%2Fcsvfile'
+      }
+    ]);
+    return { csvFiles, profilerFiles };
   });
 
   it('should return return null if bibi has no brainModel', async () => {

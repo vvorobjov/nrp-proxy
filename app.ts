@@ -708,12 +708,12 @@ app.get('/experiment/:experiment/transferFunctions', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.get('/experiment/:experiment/csvfiles', async (req, res) => {
+app.get('/experiment/:experiment/files/:filetype', async (req, res) => {
   try {
-    const csvFiles = await experimentServiceFactory
+    const files = await experimentServiceFactory
       .createExperimentService(req.params.experiment, getAuthToken(req))
-      .getCSVFiles();
-    res.send(csvFiles);
+      .getFiles(req.params.filetype);
+    res.send(files);
   } catch (err) {
     handleError(res, err);
   }

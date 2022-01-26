@@ -23,6 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
+import e from 'express';
 import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
@@ -432,31 +433,41 @@ abstract class BaseExperimentService {
     ]).then(() => ({}));
   }
 
-  async getCSVFiles() {
-    const CSV_FOLDER_PREFIX = 'csv_records_';
-    const files = await this.listFiles();
-    const csvFolders = files
+  async getFiles(type= '') {
+    let FOLDER, FOLDER_PREFIX;
+    if (type === 'csv') {
+      FOLDER = 'csv_records';
+      FOLDER_PREFIX = 'csv_records_';
+    } else if (type === 'profiler') {
+      FOLDER = 'profiler_data';
+      FOLDER_PREFIX = 'profiler_data_';
+    } else {
+      FOLDER = 'xx';
+      FOLDER_PREFIX = 'xx';
+    }
+
+    const files = await this.listFiles(FOLDER);
+    const fileFolders = files
       .filter(f => f.type === 'folder')
-      .filter(f => f.name.startsWith(CSV_FOLDER_PREFIX));
+      .filter(f => f.name.startsWith(FOLDER_PREFIX));
 
     const getRunName = folder =>
-      folder.name.replace(new RegExp(`^${CSV_FOLDER_PREFIX}`), '');
-    const csvFolderFiles = await Promise.all(
-      csvFolders.map(folder =>
-        this.listFiles(folder.name).then(files =>
+      folder.name.replace(new RegExp(`^${FOLDER_PREFIX}`), '');
+    const collectedFolderFiles = await Promise.all(
+      fileFolders.map(folder =>
+        this.listFiles(FOLDER + '/' + folder.name).then(files =>
           files.map(file => ({
             folder: getRunName(folder),
             ...file
           }))
         )
-      )
+     )
     );
-    const csvFiles = _.flatMap(csvFolderFiles).map(file => ({
+    const collectedFiles = _.flatMap(collectedFolderFiles).map(file => ({
       ...file,
       uuid: encodeURIComponent(file.uuid)
     }));
-
-    return csvFiles;
+    return collectedFiles;
   }
 
   protected abstract async getFile(filename, type);
