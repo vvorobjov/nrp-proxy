@@ -215,44 +215,36 @@ abstract class BaseExperimentService {
   }
 
   async getBrain() {
+
+    const response: any = {};
+
     const bibi = (await this.getBibi())[0].bibi;
-    if (!bibi.brainModel) return null;
-    let brainModelFile = bibi.brainModel.file.toString();
-    if (bibi.brainModel._model) {
-      brainModelFile = path.join(bibi.brainModel._model, brainModelFile);
+
+    let brainMode: string;
+    if (!bibi.mode) {
+      brainMode = 'SynchronousPynnNestSimulation';
+    } else {
+      brainMode = bibi.mode.__text;
     }
-    const brain = (await this.getFile(
-      brainModelFile.toString(),
-      FILE_TYPE.BRAIN
-    )).toString();
+    response.mode = brainMode;
 
-    if (!bibi.brainModel.populations) bibi.brainModel.populations = [];
-    else if (!Array.isArray(bibi.brainModel.populations))
-      bibi.brainModel.populations = [bibi.brainModel.populations];
+    if (bibi.brainModel) {
+      let brainModelFile = bibi.brainModel.file.toString();
+      if (bibi.brainModel._model) {
+        brainModelFile = path.join(bibi.brainModel._model, brainModelFile);
+      }
+      const brain = (await this.getFile(
+        brainModelFile.toString(),
+        FILE_TYPE.BRAIN
+      )).toString();
 
-    const robots: string[] = [];
-    if (!bibi.bodyModel) bibi.bodyModel = [];
-    else if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
+      if (!bibi.brainModel.populations) bibi.brainModel.populations = [];
+      else if (!Array.isArray(bibi.brainModel.populations))
+        bibi.brainModel.populations = [bibi.brainModel.populations];
 
-    if (bibi.bodyModel.length && !bibi.bodyModel[0]._robotId) {
-      robots.push('robot'); // legacy config
-    } else if (bibi.bodyModel.length) {
-      bibi.bodyModel.forEach(model => {
-        if (!model._robotId) {
-          console.error(
-            'Multiple bodyModels has been defined with same or no names.' +
-            'Please check bibi config file.'
-          );
-        }
-        robots.push(model._robotId);
-      });
-    }
-
-    return Promise.resolve({
-      brain,
-      brainType: path.extname(brainModelFile).substr(1),
-      robots,
-      populations: _.reduce(
+      response.brain = brain;
+      response.brainType = path.extname(brainModelFile).substr(1);
+      response.populations = _.reduce(
         bibi.brainModel.populations,
         (acc, pop) => {
           let popObj;
@@ -272,8 +264,29 @@ abstract class BaseExperimentService {
           return { ...acc, [pop._population]: popObj };
         },
         {}
-      )
-    });
+      );
+    }
+
+    const robots: string[] = [];
+    if (!bibi.bodyModel) bibi.bodyModel = [];
+    else if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
+
+    if (bibi.bodyModel.length && !bibi.bodyModel[0]._robotId) {
+      robots.push('robot'); // legacy config
+    } else if (bibi.bodyModel.length) {
+      bibi.bodyModel.forEach(model => {
+        if (!model._robotId) {
+          console.error(
+            'Multiple bodyModels has been defined with same or no names.' +
+            'Please check bibi config file.'
+          );
+        }
+        robots.push(model._robotId);
+      });
+    }
+    response.robots = robots;
+
+    return Promise.resolve(response);
   }
 
   async setBrain(brain, populations, removePopulations = false, newBrain?) {

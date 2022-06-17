@@ -380,7 +380,7 @@ describe('ExperimentServiceFactory', function() {
     return { csvFiles, profilerFiles };
   });
 
-  it('should return return null if bibi has no brainModel', async () => {
+  it('should only return default mode and robots if bibi has no brainModel', async () => {
     const mockedBrainFileContent = 'brain_file_content';
     let mockedBibiJSWithoutBrain = JSON.parse(JSON.stringify(mockedBibiJS));
     delete mockedBibiJSWithoutBrain.bibi.brainModel;
@@ -390,7 +390,10 @@ describe('ExperimentServiceFactory', function() {
       .stub(es, 'getBibi')
       .returns(Promise.resolve([mockedBibiJSWithoutBrain]));
     sinon.stub(es, 'getFile').returns(Promise.resolve(mockedBrainFileContent));
-    return es.getBrain().should.eventually.be.null;
+    return es.getBrain().should.eventually.deep.equal({
+      mode: 'SynchronousPynnNestSimulation',
+      robots: ['robot']
+    });
   });
 
   it('should return the brain from the bibi', async () => {
@@ -402,6 +405,7 @@ describe('ExperimentServiceFactory', function() {
     return es.getBrain().should.eventually.deep.equal({
       brain: mockedBrainFileContent,
       brainType: 'py',
+      mode: 'SynchronousPynnNestSimulation',
       populations: {
         sensors: { from: 0, to: 5, step: NaN },
         actors: { from: 5, to: 8, step: NaN }
@@ -423,6 +427,7 @@ describe('ExperimentServiceFactory', function() {
     return es.getBrain().should.eventually.deep.equal({
       brain: mockedBrainFileContent,
       brainType: 'py',
+      mode: 'SynchronousPynnNestSimulation',
       populations: {},
       robots: ['robot']
     });
@@ -441,6 +446,7 @@ describe('ExperimentServiceFactory', function() {
     return es.getBrain().should.eventually.deep.equal({
       brain: mockedBrainFileContent,
       brainType: 'py',
+      mode: 'SynchronousPynnNestSimulation',
       populations: {
         sensors: { from: 0, to: 5, step: NaN },
         actors: { from: 5, to: 8, step: NaN }
