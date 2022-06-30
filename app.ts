@@ -73,7 +73,7 @@ const checkAdminRights = (req, res, next) => {
   return storageRequestHandler
     .getUserGroups(getAuthToken(req))
     .then(groups => {
-      if (!groups.some(g => g.name === 'hbp-sp10-administrators'))
+      if (!groups.some(g => g === 'group-HBP-NRP-Admins'))
         throw 'Administration rights required';
     })
     .then(() => next())
@@ -86,7 +86,7 @@ const checkAdminRights = (req, res, next) => {
 const isAdmin = req => {
   return storageRequestHandler
     .getUserGroups(getAuthToken(req))
-    .then(groups => groups.some(g => g.name === 'hbp-sp10-administrators'));
+    .then(groups => groups.some(g => g === 'group-HBP-NRP-Admins'));
 };
 
 const handleError = (res, err) => {

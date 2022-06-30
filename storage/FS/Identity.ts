@@ -85,8 +85,8 @@ export class Identity extends BaseIdentity {
   }
 
   getUserGroups(token, userId) {
-    const groups = [{ name: 'hbp-sp10-user-edit-rights' }];
-    if (userId === 'admin') groups.push({ name: 'hbp-sp10-administrators' });
+    const groups = ['hbp-sp10-user-edit-rights'];
+    if (userId === 'admin') groups.push('group-HBP-NRP-Admins');
     return q.when(groups);
   }
 }

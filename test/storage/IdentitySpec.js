@@ -62,14 +62,11 @@ describe('FSidentity', () => {
   it(`should return default groups`, () => {
     return identity
       .getUserGroups()
-      .should.eventually.deep.equal([{ name: 'hbp-sp10-user-edit-rights' }]);
+      .should.eventually.deep.equal(['hbp-sp10-user-edit-rights']);
   });
 
   it(`should return the default group plus admin group`, () => {
-    let expectedGroup = [
-      { name: 'hbp-sp10-user-edit-rights' },
-      { name: 'hbp-sp10-administrators' }
-    ];
+    let expectedGroup = ['hbp-sp10-user-edit-rights', 'group-HBP-NRP-Admins'];
     return identity
       .getUserGroups(fakeToken, 'admin')
       .should.eventually.deep.equal(expectedGroup);

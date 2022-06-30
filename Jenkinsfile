@@ -31,15 +31,15 @@ pipeline {
         // Jenkins global scope (def ..=..)
         TOPIC_BRANCH = "${TOPIC_BRANCH}"
         DEFAULT_BRANCH = "${DEFAULT_BRANCH}"
-
-        HBP = "/home/bbpnrsoa/nrp/src"
     }
     agent {
         docker {
             label 'ci_label'
-
+            alwaysPull true
             // NEXUS_REGISTRY_IP and NEXUS_REGISTRY_PORT are Jenkins global variables
-            image "${env.NEXUS_REGISTRY_IP}:${env.NEXUS_REGISTRY_PORT}/nrp_frontend:${IMG_TAG}"
+            registryUrl "https://${env.NEXUS_REGISTRY_IP}:${env.NEXUS_REGISTRY_PORT}"
+            registryCredentialsId 'nexusadmin'
+            image "nrp_frontend:${IMG_TAG}"
             args '--entrypoint="" -u root --privileged'
         }
     }

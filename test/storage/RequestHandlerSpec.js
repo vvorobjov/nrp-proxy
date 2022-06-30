@@ -872,9 +872,7 @@ describe('Storage request handler', () => {
   // getUserGroups success
   it(`should successfully return the group info`, () => {
     return storageRequestHandler.getUserGroups(fakeToken).then(resp => {
-      resp[0].should.deep.equal({
-        name: 'hbp-sp10-user-edit-rights'
-      });
+      resp[0].should.deep.equal('hbp-sp10-user-edit-rights');
     });
   });
 
