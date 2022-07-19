@@ -165,11 +165,12 @@ async function getExperimentsAndSimulations(configuration) {
         simulations[serverId] && simulations[serverId].stoppedSimulation
     )
     .shuffle()
-    .sortBy(
-      ({ id }) =>
-        HEALTH_STATUS_PRIORITY[health[id] && health[id].state] ||
-        HEALTH_STATUS_PRIORITY.DOWN
-    )
+// The following sort function is commented since it ruins the balance between backends
+//    .sortBy(
+//      ({ id }) =>
+//        HEALTH_STATUS_PRIORITY[health[id] && health[id].state] ||
+//        HEALTH_STATUS_PRIORITY.DOWN
+//    )
     .value();
 
   // get servers that have no backend running on them

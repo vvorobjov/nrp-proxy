@@ -144,8 +144,14 @@ async function getServersStatus() {
 }
 
 function getServer(serverId) {
-  if (configuration.servers[serverId])
-    return q.resolve(configuration.servers[serverId]);
+  if (configuration.servers[serverId]) {
+    const serverInfo = configuration.servers[serverId];
+    const curatedServerInfo: any = Object.assign({}, serverInfo);
+    // Internal IP of the backends is hidden from the user for security purposes. User will only use backend_id (instance
+    // name on CSCS infrastructure) to connect to it, and the proxy will route the request to the proper backend.
+    delete curatedServerInfo.internalIp;
+    return q.resolve(curatedServerInfo);
+  }
 
   console.error('Wrong Server ID');
   return q.reject(`'serverId' not found\n`);
@@ -172,7 +178,12 @@ function getJoinableServers(experimentId) {
 }
 
 function getAvailableServers() {
-  return q.resolve(availableServers);
+  const response = availableServers.map(server => {
+    const curatedServerInfo: any = Object.assign({}, server);
+    delete curatedServerInfo.internalIp;
+    return curatedServerInfo;
+  });
+  return q.resolve(response);
 }
 
 function getServersWithNoBackend() {
