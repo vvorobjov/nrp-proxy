@@ -53,6 +53,7 @@ var CLIENT_ID = 'CLIENT_ID';
 var CLIENT_SECRET = 'CLIENT_SECRET';
 
 var config = {
+  nrpVersion: '3.2.1',
   refreshInterval: 5000,
   auth: {
     renewInternal: 0,
@@ -84,10 +85,7 @@ var configInternalIp = {
   servers: {
     genevaInternalIp: {
       internalIp: BASE_INTERNAL_URL + '/' + 'genevaInternalIp',
-      gzweb: {
-        assets: BASE_URL + '/' + 'genevaInternalIp',
-        'nrp-services': BASE_URL + '/' + 'genevaInternalIp'
-      }
+      'nrp-services': BASE_URL + '/' + 'genevaInternalIp'
     }
   }
 };
@@ -95,17 +93,14 @@ var configInternalIp = {
 //build server config
 SERVERS.forEach(function(server) {
   config.servers[server] = {
-    gzweb: {
-      assets: BASE_URL + '/' + server,
-      'nrp-services': BASE_URL + '/' + server
-    }
+    'nrp-services': BASE_URL + '/' + server
   };
 });
 
 var experimentsConf = {
-  experiment1: { experimentConfiguration: 'experimentConf1' },
-  experiment2: { experimentConfiguration: 'experimentConf2' },
-  experiment3: { experimentConfiguration: 'experimentConf3' }
+  experiment1: { experimentId: 'experimentConf1' },
+  experiment2: { experimentId: 'experimentConf2' },
+  experiment3: { experimentId: 'experimentConf3' }
 };
 
 var serverExperiments = {
@@ -167,12 +162,6 @@ var serveserverSimulationsInternalIp = {
   ]
 };
 
-var serversStatus = {
-  geneva1: 'OK',
-  geneva2: 'OK',
-  geneva3: 'OK'
-};
-
 var serversStatusInternalIp = {
   genevaInternalIp: 'OK'
 };
@@ -181,54 +170,39 @@ var experimentList = {
   experiment1: {
     availableServers: [
       {
-        gzweb: {
-          assets: 'http://localhost/geneva1',
-          'nrp-services': 'http://localhost/geneva1'
-        },
+        'nrp-services': 'http://localhost/geneva1',
         id: 'geneva1'
       },
       {
-        gzweb: {
-          assets: 'http://localhost/geneva2',
-          'nrp-services': 'http://localhost/geneva2'
-        },
+        'nrp-services': 'http://localhost/geneva2',
         id: 'geneva2'
       }
     ],
     downServers: [
       {
-        gzweb: {
-          assets: 'http://localhost/geneva5',
-          'nrp-services': 'http://localhost/geneva5'
-        },
+        'nrp-services': 'http://localhost/geneva5',
         id: 'geneva5'
       },
       {
-        gzweb: {
-          assets: 'http://localhost/geneva6',
-          'nrp-services': 'http://localhost/geneva6'
-        },
+        'nrp-services': 'http://localhost/geneva6',
         id: 'geneva6'
       }
     ],
     configuration: {
-      experimentConfiguration: 'experimentConf1',
+      experimentId: 'experimentConf1',
       thumbnail: 'test.png',
       path: 'data/experiments/experiment1'
     },
     joinableServers: [
       {
         runningSimulation: {
-          experimentConfiguration: 'experimentConf1',
+          experimentId: 'experimentConf1',
           state: 'started'
         },
         server: 'geneva3'
       },
       {
-        gzweb: {
-          assets: 'http://10.1.1.96/genevaInternalIp',
-          'nrp-services': 'http://localhost/genevaInternalIp'
-        },
+        'nrp-services': 'http://localhost/genevaInternalIp',
         id: 'genevaInternalIp'
       }
     ]
@@ -236,20 +210,17 @@ var experimentList = {
   experiment2: {
     availableServers: [
       {
-        gzweb: {
-          assets: 'http://localhost/geneva2',
-          'nrp-services': 'http://localhost/geneva2'
-        },
+        'nrp-services': 'http://localhost/geneva2',
         id: 'geneva2'
       }
     ],
-    configuration: { experimentConfiguration: 'experimentConf2' },
+    configuration: { experimentId: 'experimentConf2' },
     joinableServers: [
       {
         runningSimulation: {
           contextID: 'ctxId',
           experimentID: EXPERIMENT_ID,
-          experimentConfiguration: 'experimentConf2',
+          experimentId: 'experimentConf2',
           state: 'created'
         },
         server: 'geneva4'
@@ -258,7 +229,7 @@ var experimentList = {
   },
   experiment3: {
     availableServers: [],
-    configuration: { experimentConfiguration: 'experimentConf3' },
+    configuration: { experimentId: 'experimentConf3' },
     joinableServers: []
   }
 };
@@ -267,26 +238,20 @@ var experimentListNoCTXID = {
   experiment1: {
     availableServers: [
       {
-        gzweb: {
-          assets: 'http://localhost/geneva1',
-          'nrp-services': 'http://localhost/geneva1'
-        },
+        'nrp-services': 'http://localhost/geneva1',
         id: 'geneva1'
       },
       {
-        gzweb: {
-          assets: 'http://localhost/geneva2',
-          'nrp-services': 'http://localhost/geneva2'
-        },
+        'nrp-services': 'http://localhost/geneva2',
         id: 'geneva2'
       }
     ],
-    configuration: { experimentConfiguration: 'experimentConf1' },
+    configuration: { experimentId: 'experimentConf1' },
     joinableServers: [
       {
         runningSimulation: {
           contextID: null,
-          experimentConfiguration: 'experimentConf1',
+          experimentId: 'experimentConf1',
           state: 'started'
         },
         server: 'geneva3'
@@ -296,19 +261,16 @@ var experimentListNoCTXID = {
   experiment2: {
     availableServers: [
       {
-        gzweb: {
-          assets: 'http://localhost/geneva2',
-          'nrp-services': 'http://localhost/geneva2'
-        },
+        'nrp-services': 'http://localhost/geneva2',
         id: 'geneva2'
       }
     ],
-    configuration: { experimentConfiguration: 'experimentConf2' },
+    configuration: { experimentId: 'experimentConf2' },
     joinableServers: [
       {
         runningSimulation: {
           contextID: null,
-          experimentConfiguration: 'experimentConf2',
+          experimentId: 'experimentConf2',
           state: 'created'
         },
         server: 'geneva4'
@@ -317,7 +279,7 @@ var experimentListNoCTXID = {
   },
   experiment3: {
     availableServers: [],
-    configuration: { experimentConfiguration: 'experimentConf3' },
+    configuration: { experimentId: 'experimentConf3' },
     joinableServers: []
   }
 };
@@ -328,9 +290,10 @@ var mockResponses = function() {
       .get('/experiment')
       .reply(200, { data: serverExperiments[server] });
 
-    nock(BASE_URL + '/' + server)
-      .get('/health/errors')
-      .reply(200, { state: serversStatus[server] });
+    // NRP 4.0 no longer supports /health
+    // nock(BASE_URL + '/' + server)
+    //   .get('/health/errors')
+    //   .reply(200, { state: serversStatus[server] });
 
     nock(BASE_URL + '/' + server)
       .get('/simulation')
@@ -344,9 +307,10 @@ var mockResponsesInternalIp = function() {
       .get('/experiment')
       .reply(200, { data: serverExperimentsInternalIp[server] });
 
-    nock(BASE_INTERNAL_URL + '/' + server)
-      .get('/health/errors')
-      .reply(200, { state: serversStatusInternalIp[server] });
+    // NRP 4.0 no longer supports /health
+    // nock(BASE_INTERNAL_URL + '/' + server)
+    //   .get('/health/errors')
+    //   .reply(200, { state: serversStatusInternalIp[server] });
 
     nock(BASE_INTERNAL_URL + '/' + server)
       .get('/simulation')
@@ -360,9 +324,10 @@ var mockNonJsonResponses = function() {
       .get('/experiment')
       .reply(200, 'experiments');
 
-    nock(BASE_URL + '/' + server)
-      .get('/health/errors')
-      .reply(200, 'errors');
+    // NRP 4.0 no longer supports /health
+    // nock(BASE_URL + '/' + server)
+    //   .get('/health/errors')
+    //   .reply(200, 'errors');
 
     nock(BASE_URL + '/' + server)
       .get('/simulation')
@@ -376,9 +341,10 @@ var mockFailedResponses = function() {
       .get('/experiment')
       .reply(500, {});
 
-    nock(BASE_URL + '/' + server)
-      .get('/health/errors')
-      .reply(500, {});
+    // NRP 4.0 no longer supports /health
+    // nock(BASE_URL + '/' + server)
+    //   .get('/health/errors')
+    //   .reply(500, {});
 
     nock(BASE_URL + '/' + server)
       .get('/simulation')

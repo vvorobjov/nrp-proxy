@@ -34,7 +34,8 @@ require('log-prefix')(() => dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z'));
 const REQUEST_TIMEOUT = 20 * 1000; // ms
 
 const SERVER_URLS = {
-  HEALTH: '/health/errors',
+  // NRP 4.0 no longer supports this endpoint
+  // HEALTH: '/health/errors',
   SIMULATION: '/simulation'
 };
 
@@ -49,8 +50,7 @@ const SIMULATION_STATES = {
   CREATED: 'created',
   STARTED: 'started',
   PAUSED: 'paused',
-  INITIALIZED: 'initialized',
-  HALTED: 'halted',
+  COMPLETED: 'completed',
   FAILED: 'failed',
   STOPPED: 'stopped'
 };
@@ -59,8 +59,7 @@ const RUNNING_SIMULATION_STATES = [
   SIMULATION_STATES.CREATED,
   SIMULATION_STATES.PAUSED,
   SIMULATION_STATES.STARTED,
-  SIMULATION_STATES.INITIALIZED,
-  SIMULATION_STATES.HALTED
+  SIMULATION_STATES.COMPLETED
 ];
 
 const STOPPED_SIMULATION_STATES = [
@@ -109,8 +108,9 @@ const executeServerRequest = (url: string): Promise<any> => {
 
 const executeRequestForAllServers = (configuration, urlPostFix) => {
   const serversResponses: any[] = [];
+
   _.forOwn(configuration.servers, (serverConfig, serverId) => {
-    const serverUrl = serverConfig.internalIp || serverConfig.gzweb['nrp-services'];
+    const serverUrl = serverConfig.internalIp || serverConfig['nrp-services'];
     serversResponses.push(
       executeServerRequest(serverUrl + urlPostFix)
         .then(serverResponse => {
@@ -123,18 +123,22 @@ const executeRequestForAllServers = (configuration, urlPostFix) => {
 };
 
 async function getExperimentsAndSimulations(configuration) {
-  let [health, simulations] = await q.all([
-    executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
+  let [simulations] = await q.all([
     executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
   ]);
+  // let [health, simulations] = await q.all([
+  //   executeRequestForAllServers(configuration, SERVER_URLS.HEALTH),
+  //   executeRequestForAllServers(configuration, SERVER_URLS.SIMULATION)
+  // ]);
 
   // map to dictionary<server, healthStatus>
-  health = _.fromPairs(health);
+  // NRP 4.0 no longer supports /health
+  // health = _.fromPairs(health);
 
   // map to dictionary<server, simulationStatus>
   simulations = _.fromPairs(
     simulations.filter(
-      simulation => simulation[1] && !(simulation[1].data instanceof Error)
+      ([host, info]) => info && !(info.data instanceof Error)
     )
   );
 
@@ -146,16 +150,16 @@ async function getExperimentsAndSimulations(configuration) {
     } else {
       let simRunning = false;
       serverSimulations.forEach(value => {
-        if (RUNNING_SIMULATION_STATES.includes(value.state)) {
+        if (!STOPPED_SIMULATION_STATES.includes(value.state)) {
           simRunning = true;
         }
       });
       serverSimulations.stoppedSimulation = !simRunning;
     }
 
-    serverSimulations.runningSimulation = _.find(serverSimulations, sim =>
-      RUNNING_SIMULATION_STATES.includes(sim.state)
-    );
+    serverSimulations.runningSimulation =
+      _.find(serverSimulations,
+              sim => !STOPPED_SIMULATION_STATES.includes(sim.state));
   });
 
   // get servers that are not running a simulation, sorted by health status
@@ -187,18 +191,20 @@ async function getExperimentsAndSimulations(configuration) {
   _.forOwn(simulations, ({ runningSimulation }, serverId) => {
     if (
       runningSimulation &&
-      runningSimulation.state !== SIMULATION_STATES.HALTED
+      runningSimulation.state !== SIMULATION_STATES.FAILED
     ) {
-      if (!joinableServers[runningSimulation.experimentConfiguration])
-        joinableServers[runningSimulation.experimentConfiguration] = [];
+      if (!joinableServers[runningSimulation.experimentId])
+        joinableServers[runningSimulation.experimentId] = [];
 
-      joinableServers[runningSimulation.experimentConfiguration].push({
+      joinableServers[runningSimulation.experimentId].push({
         server: serverId,
         runningSimulation
       });
     }
   });
-  return [joinableServers, simulations, availableServers, health, downServers];
+  // return [joinableServers, simulations, availableServers, health, downServers];
+  // NRP 4.0 no longer supports /health
+  return [joinableServers, simulations, availableServers, downServers];
 }
 
 export default {

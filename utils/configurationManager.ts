@@ -56,7 +56,7 @@ const loadConfigFile = () => {
       configFile[pathProp] = resolveReplaceEnvVariables(configFile[pathProp]);
     }
 
-    configuration.notify(configFile);
+    configuration.resolve(configFile);
     return configFile;
   } catch (err) {
     if (err.code === 'ENOENT' && !configFile) {

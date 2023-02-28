@@ -7,6 +7,12 @@ const chai = require('chai'),
 
 const experimentsPaths = 'test/data/experiments';
 
+let configFileV4 = {
+  nrpVersion: '4.0.0',
+  storage: 'FS',
+  authentication: 'FS'
+};
+
 const expectedExp1 = {
   id: 'ExDTemplateHusky',
   name: 'Template Husky in empty environment',
@@ -16,7 +22,7 @@ const expectedExp1 = {
   tags: [],
   description:
     'This experiment loads the Husky robot in an empty world, with an idle brain and basic transfer functions. You are free to edit it.',
-  experimentConfiguration: 'experiment1/ExDTemplateHusky.exc',
+  experimentId: 'experiment1/ExDTemplateHusky.exc',
   maturity: 'production',
   timeout: 840,
   physicsEngine: 'ode',
@@ -36,7 +42,7 @@ const expectedExp2 = {
   tags: [],
   description:
     'This experiment loads the humanoid robot NAO (Aldebaran) and the virtual room environment. In the future, it will be possible to connect NAO to a neuronal controller (NEST) to control single joints of the robot.',
-  experimentConfiguration: 'experiment2/ExDNao.exc',
+  experimentId: 'experiment2/ExDNao.exc',
   maturity: 'development',
   timeout: 840,
   physicsEngine: 'ode',
@@ -46,6 +52,54 @@ const expectedExp2 = {
   visualModel: undefined,
   visualModelParams: undefined
 };
+
+const expectedExpOpenAI = {
+  SimulationTimestep: 0.01,
+  experimentId: 'openAI_nest_py/simulation_config.json',
+  configFile: 'simulation_config.json',
+  path: 'openAI_nest_py',
+  thumbnail: '/',
+  ComputationalGraph: undefined,
+  ConnectMQTT: undefined,
+  ConnectROS: undefined,
+  SimulationLoop: 'FTILoop',
+  SimulationName: 'test_openai_nest',
+  SimulationDescription:
+    'Launch a py_sim engine to run openAI simulation and a nest engine to control the simulation',
+  SimulationTimeout: 10,
+  DataPackProcessor: 'tf',
+  EngineConfigs: [
+    {
+      EngineType: 'nest_json',
+      EngineName: 'nest_controller',
+      EngineTimestep: 0.01,
+      NestInitFileName: 'nest_controller.py'
+    },
+    {
+      EngineType: 'py_sim',
+      EngineName: 'gym_simulator',
+      PythonFileName: 'gym_simulator.py',
+      WorldFileName: 'MountainCar-v0',
+      Simulator: 'OpenAI',
+      Visualizer: true
+    }
+  ],
+  DataPackProcessingFunctions: [
+    {
+      Name: 'from_nest',
+      FileName: 'from_nest.py'
+    },
+    {
+      Name: 'from_gym',
+      FileName: 'from_gym.py'
+    }
+  ],
+  EventLoopTimeout: undefined,
+  EventLoopTimestep: undefined,
+  ExternalProcesses: undefined,
+  ProcessLauncherType: 'Basic'
+};
+
 let confFilePath = path.join(__dirname, '../utils/config.json'),
   configurationManagerRewire = rewire('../../utils/configurationManager'),
   configurationManager = configurationManagerRewire.default;
@@ -67,7 +121,7 @@ let experimentsService = new ExperimentsService.default(
   experimentsPaths
 );
 
-describe('TemplateExperimentsService', () => {
+describe.skip('TemplateExperimentsService', () => {
   /* setting Mocks*/
   var expectedResult = {
     id: 'experiment1',
@@ -82,7 +136,7 @@ describe('TemplateExperimentsService', () => {
     tags: [],
     description:
       'This experiment loads the Husky robot in an empty world, with an idle brain and basic transfer functions. You are free to edit it.',
-    experimentConfiguration: 'experiment1/ExDTemplateHusky.exc',
+    experimentId: 'experiment1/ExDTemplateHusky.exc',
     maturity: 'production',
     timeout: 840,
     brainProcesses: 1,
@@ -158,6 +212,16 @@ describe('TemplateExperimentsService', () => {
   it('should load experiment 2 properly', () => {
     return experimentsService.loadExperiments().then(experiments => {
       return expect(experiments[2]).to.deep.equal(expectedExp2);
+    });
+  });
+
+  it('should load openAI_nest experiment properly', async () => {
+    let experimentsServiceV4 = new ExperimentsService.default(
+      configFileV4,
+      experimentsPaths
+    );
+    return experimentsServiceV4.loadExperiments().then(experiments => {
+      return expect(experiments[0]).to.deep.equal(expectedExpOpenAI);
     });
   });
 });

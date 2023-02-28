@@ -3,7 +3,7 @@ class templateExperimentService {
   loadSharedExperiments() {
     return Promise.resolve([
       {
-        id: 'test1',
+        experimentId: 'test1',
         name: 'test1'
       }
     ]);

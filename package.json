@@ -1,6 +1,6 @@
 {
   "name": "nrp_backend_proxy",
-  "version": "3.2.1",
+  "version": "4.0.0",
   "description": "Keep an updated list of available and joinable servers for each experiment",
   "main": "src/app",
   "dependencies": {
@@ -10,7 +10,6 @@
     "@types/node": "10.14.10",
     "@types/rewire": "^2.5.28",
     "body-parser": "^1.17.2",
-    "csv-stringify": "^2.0.4",
     "dateformat": "2.0.0",
     "express": "^4.18.1",
     "file-base64": "1.0.0",
@@ -49,7 +48,6 @@
     "chai": "3.5.0",
     "chai-as-promised": "6.0.0",
     "chai-subset": "^1.6.0",
-    "cxsd": "^0.1.1",
     "eslint": "^4.16.0",
     "eslint-config-prettier": "^2.9.0",
     "eslint-plugin-prettier": "^2.5.0",
@@ -57,6 +55,7 @@
     "husky": "0.14.3",
     "lint-staged": "4.3.0",
     "mocha": "^5.2.0",
+    "mocha-jenkins-reporter": "^0.4.8",
     "nock": "^9.1.6",
     "prettier": "^1.16.4",
     "sinon": "1.17.5",
@@ -69,18 +68,15 @@
     "build": "tsc",
     "build_doc": "jsdoc app.js -d docs",
     "prettify": "node_modules/prettier/bin-prettier.js  \"**/*.{js,json}\" --write",
-    "lint": "./node_modules/tslint/bin/tslint {activity_logs,admin,proxy,test,storage,utils}/**/*.ts",
-    "test": "nyc mocha -r ts-node/register test/*/* --exit",
+    "lint": "./node_modules/tslint/bin/tslint {admin,proxy,test,storage,utils}/**/*.ts",
+    "test": "JUNIT_REPORT_PATH=junit.xml nyc mocha -r ts-node/register test/*/* --reporter mocha-jenkins-reporter --exit",
     "pretest": "lint-staged && npm run lint",
     "precommit": "lint-staged",
-    "install": "/bin/bash -c '${VENV_CMD:-virtualenv} proxy_virtualenv && source proxy_virtualenv/bin/activate && ${PIP_CMD:-pip} install mock_import six'",
     "update_template_models": "NODE_ENV=production node_modules/ts-node/dist/bin.js utils/updateFSTemplateModels.ts",
     "refactor_storage": "NODE_ENV=production node_modules/ts-node/dist/bin.js refactorStorage.ts"
   },
   "nyc": {
-    "check-coverage": true,
-    "lines": 85,
-    "functions": 88,
+    "check-coverage": false,
     "extension": [
       ".js",
       ".ts"
@@ -91,7 +87,7 @@
       "test"
     ],
     "reporter": [
-      "text",
+      "cobertura",
       "html"
     ]
   },

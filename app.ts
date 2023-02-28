@@ -29,12 +29,12 @@ import bodyParser from 'body-parser';
 import express from 'express';
 import iplocation from 'iplocation';
 import _ from 'lodash';
-import ActivityLogger from './activity_logs/ActivityLogger';
+import path from 'path';
 import AdminService from './admin/AdminService';
-import pizDaintRequestHandler from './piz_daint/requestHandler';
 import ExperimentServiceFactory from './proxy/ExperimentServiceFactory';
 import proxyRequestHandler from './proxy/requestHandler';
 import StorageRequestHandler from './storage/requestHandler';
+import * as storageConsts from './storage/StorageConsts';
 import configurationManager from './utils/configurationManager';
 import loggerManager from './utils/loggerManager';
 
@@ -47,11 +47,9 @@ const config = configurationManager.loadConfigFile();
 configurationManager.watch();
 
 proxyRequestHandler.initialize(config);
-pizDaintRequestHandler.initialize(config);
 
 const storageRequestHandler = new StorageRequestHandler(config),
   adminService = new AdminService(config, proxyRequestHandler),
-  activityLogger = new ActivityLogger(config['activity-logs']),
   experimentServiceFactory = new ExperimentServiceFactory(
     storageRequestHandler,
     config,
@@ -149,6 +147,7 @@ app.post('/admin/backendlogs/:server', (req, res, next) =>
     .catch(_.partial(handleError, res))
 );
 
+// TODO: [NRRPLT-8681] Fix endpoint
 app.get('/experimentImage/:experiment', (req, res, next) => {
   proxyRequestHandler
     .getExperimentImageFile(req.params.experiment)
@@ -242,7 +241,6 @@ app.get('/storage/experiments', async (req, res) => {
         exp.joinableServers = joinableServers;
       })
     );
-
     const configurationPromises = experiments.map(
       exp =>
         experimentServiceFactory
@@ -251,15 +249,14 @@ app.get('/storage/experiments', async (req, res) => {
           .then(configuration => {
             exp.configuration = {
               maturity: 'production',
+              experimentId: path.join(exp.uuid, storageConsts.defaultConfigName),
+              path: exp.uuid,
+              configFile: storageConsts.defaultConfigName,
               ...configuration
             };
-          })
-          .catch(_.partial(handleError, res))
-
+          }).catch(_.partial(handleError, res))
     );
-
     await Promise.all([...joinableServerPromises, ...configurationPromises]);
-
     const decoratedExperiments = experiments
       .filter(exp => exp.configuration) // discard experiments without config
       .map(exp => ({
@@ -422,6 +419,18 @@ app.get('/storage/experiments/:experimentId/sharingmode', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+app.post('/storage/experiments/:experimentId/rename', (req, res) => {
+  storageRequestHandler
+    .renameExperiment(
+      req.params.experimentId,
+      // reg.body.experimentConfig,
+      req.body.newSimulationName,
+      getAuthToken(req)
+    )
+    .then(r => res.send(r))
+    .catch(_.partial(handleError, res));
+});
+
 app.post('/storage/clonenew', (req, res) => {
   return storageRequestHandler
     .cloneNewExperiment(
@@ -527,17 +536,18 @@ app.get('/storage/:experiment/:filename', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
+// TODO: [NRRPLT-8725] add zipping of the experiment for 4.0
 app.get('/storage/experiments/:experimentId/zip', async (req, res) => {
-  const expService = experimentServiceFactory.createExperimentService(req.params.experimentId, getAuthToken(req));
-  const bibi = (await expService.getBibi())[0].bibi;
-  const exc = (await expService.getExc())[0].ExD;
-  storageRequestHandler
-    .getExperimentZips(
-      req.params.experimentId,
-      getAuthToken(req), bibi, exc
-    )
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+  // const expService = experimentServiceFactory.createExperimentService(req.params.experimentId, getAuthToken(req));
+  // const bibi = (await expService.getBibi())[0].bibi;
+  // const exc = (await expService.getExc())[0].ExD;
+  // storageRequestHandler
+  //   .getExperimentZips(
+  //     req.params.experimentId,
+  //     getAuthToken(req), bibi, exc
+  //   )
+  //   .then(r => res.send(r))
+  //   .catch(_.partial(handleError, res));
 });
 
 app.get('/storage/zip', (req, res) => {
@@ -657,55 +667,60 @@ app.get('/experiment/:experimentId/config', async (req, res) => {
 });
 
 app.get('/experiment/:experiment/brain', async (req, res) => {
-  experimentServiceFactory
-    .createExperimentService(
-      req.params.experiment,
-      getAuthToken(req),
-      req.query.template === 'true'
-    )
-    .getBrain()
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+  // experimentServiceFactory
+  //   .createExperimentService(
+  //     req.params.experiment,
+  //     getAuthToken(req),
+  //     req.query.template === 'true'
+  //   )
+  //   .getBrain()
+  //   .then(r => res.send(r))
+  //   .catch(_.partial(handleError, res));
+  res.send('Endpoint unsupported');
 });
 
 app.put('/experiment/:experiment/brain', async (req, res) => {
-  experimentServiceFactory
-    .createExperimentService(req.params.experiment, getAuthToken(req))
-    .setBrain(req.body.brain, req.body.populations, req.body.removePopulations, req.body.newBrain)
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+  // experimentServiceFactory
+  //   .createExperimentService(req.params.experiment, getAuthToken(req))
+  //   .setBrain(req.body.brain, req.body.populations, req.body.removePopulations, req.body.newBrain)
+  //   .then(r => res.send(r))
+  //   .catch(_.partial(handleError, res));
+  res.send('Endpoint unsupported');
 });
 
 app.get('/experiment/:experiment/stateMachines', async (req, res) => {
-  experimentServiceFactory
-    .createExperimentService(
-      req.params.experiment,
-      getAuthToken(req),
-      req.query.template === 'true'
-    )
-    .getStateMachines()
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+  // experimentServiceFactory
+  //   .createExperimentService(
+  //     req.params.experiment,
+  //     getAuthToken(req),
+  //     req.query.template === 'true'
+  //   )
+  //   .getStateMachines()
+  //   .then(r => res.send(r))
+  //   .catch(_.partial(handleError, res));
+  res.send('Endpoint unsupported');
 });
 
 app.put('/experiment/:experiment/stateMachines', async (req, res) => {
-  experimentServiceFactory
-    .createExperimentService(req.params.experiment, getAuthToken(req))
-    .setStateMachines(req.body.stateMachines)
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+  // experimentServiceFactory
+  //   .createExperimentService(req.params.experiment, getAuthToken(req))
+  //   .setStateMachines(req.body.stateMachines)
+  //   .then(r => res.send(r))
+  //   .catch(_.partial(handleError, res));
+  res.send('Endpoint unsupported');
 });
 
 app.get('/experiment/:experiment/transferFunctions', (req, res) => {
-  experimentServiceFactory
-    .createExperimentService(
-      req.params.experiment,
-      getAuthToken(req),
-      req.query.template === 'true'
-    )
-    .getTransferFunctions()
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+  // experimentServiceFactory
+  //   .createExperimentService(
+  //     req.params.experiment,
+  //     getAuthToken(req),
+  //     req.query.template === 'true'
+  //   )
+  //   .getTransferFunctions()
+  //   .then(r => res.send(r))
+  //   .catch(_.partial(handleError, res));
+  res.send('Endpoint unsupported');
 });
 
 app.get('/experiment/:experiment/files/:filetype', async (req, res) => {
@@ -719,54 +734,13 @@ app.get('/experiment/:experiment/files/:filetype', async (req, res) => {
   }
 });
 
-app.get('/submitjob', async (req, res) => {
-  try {
-    res.send(await pizDaintRequestHandler.setUpJob(getAuthToken(req), req.query.server));
-  } catch (err) {
-    handleError(res, err);
-  }
-});
-
-app.get('/getjobs', async (req, res) => {
-  try {
-    res.send(await pizDaintRequestHandler.getJobs(getAuthToken(req)));
-  } catch (err) {
-    handleError(res, err);
-  }
-});
-
-app.get('/getjobinfo', async (req, res) => {
-  try {
-    res.send(
-      await pizDaintRequestHandler.getJobStatus(
-        getAuthToken(req),
-        req.query.jobUrl
-      )
-    );
-  } catch (err) {
-    handleError(res, err);
-  }
-});
-
-app.get('/getjoboutcome', async (req, res) => {
-  try {
-    res.send(
-      await pizDaintRequestHandler.getJobOutcome(
-        getAuthToken(req),
-        req.query.jobUrl
-      )
-    );
-  } catch (err) {
-    handleError(res, err);
-  }
-});
-
 app.put('/experiment/:experiment/transferFunctions', (req, res) => {
-  experimentServiceFactory
-    .createExperimentService(req.params.experiment, getAuthToken(req))
-    .saveTransferFunctions(req.body.transferFunctions)
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
+  // experimentServiceFactory
+  //   .createExperimentService(req.params.experiment, getAuthToken(req))
+  //   .saveTransferFunctions(req.body.transferFunctions)
+  //   .then(r => res.send(r))
+  //   .catch(_.partial(handleError, res));
+  res.send('Endpoint unsupported');
 });
 
 app.get('/identity/gdpr', (req, res) => {
@@ -808,41 +782,11 @@ const getReqIp = req =>
 
 const ANONYMOUS_ACTIVITIES = new Set(['install', 'update']);
 
-app.post('/activity_log/:activity', async (req, res) => {
-  try {
-    const logData = { user: 'ANONYMOUS' };
-    if (!ANONYMOUS_ACTIVITIES.has(req.params.activity)) {
-      const userInfo = await storageRequestHandler.getUserInfo(
-        'me',
-        getAuthToken(req)
-      );
-      logData.user = userInfo.displayName;
-    }
-    const clientIP = getReqIp(req);
-    const ipdata = await iplocation(clientIP);
-    const r = await activityLogger.log(req.params.activity, {
-      ...logData,
-      ...req.body,
-      city: String(ipdata.city),
-      country: String(ipdata.country)
-    });
-    res.send(r);
-  } catch (err) {
-    handleError(res, err);
-  }
-});
-
 app.post('/checkupdate', async (req, res) => {
   const packagePath = require('path').resolve('./package.json');
   const version = require(packagePath).version;
   const clientIP = getReqIp(req);
   const ipdata = await iplocation(clientIP);
-
-  activityLogger.log('check_update', {
-    ...req.body,
-    city: String(ipdata.city),
-    country: String(ipdata.country)
-  });
 
   res.send({ version });
 });

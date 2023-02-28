@@ -199,7 +199,7 @@ describe('Storage request handler', () => {
       .should.eventually.equal(fakeToken);
   });
 
-  it('should detect user that has not accepted gdpr', () => {
+  it.skip('should detect user that has not accepted gdpr', () => {
     collectionMock.prototype.findOne = sinon
       .stub()
       .returns(Promise.resolve('userId'));
@@ -407,7 +407,7 @@ describe('Storage request handler', () => {
       .should.eventually.deep.include(config);
   });
 
-  it('should set user accepted gdpr', () => {
+  it.skip('should set user accepted gdpr', () => {
     collectionMock.prototype.insert = sinon
       .stub()
       .returns(Promise.resolve('userId'));

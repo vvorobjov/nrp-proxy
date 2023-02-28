@@ -1,4 +1,5 @@
 {
+  "nrpVersion": "3.2.1",
   "refreshInterval": 5000,
   "auth": {
     "renewInternal": 600000,

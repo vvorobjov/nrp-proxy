@@ -23,6 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
+import { SDK_VERSION } from 'firebase-admin';
 import _ from 'lodash';
 import q from 'q';
 
@@ -78,7 +79,7 @@ function reloadConfiguration(config) {
   return templateExperimentsService.loadExperiments().then(experiments => {
     experimentList = _(experiments)
       .map(exp => [
-        exp.id,
+        exp.experimentId,
         {
           configuration: exp,
           joinableServers: []
@@ -86,7 +87,8 @@ function reloadConfiguration(config) {
       ])
       .fromPairs()
       .value();
-  });
+  }
+  );
 }
 
 const filterJoinableExperimentByContext = experiments => {
@@ -111,17 +113,17 @@ function updateExperimentList() {
         joinableServers,
         simulations,
         serversAvailable,
-        _healthStatus,
         _downServers
       ]) => {
         simulationList = simulations;
         availableServers = serversAvailable;
-        healthStatus = _healthStatus;
+        // NRP 4.0 no longer supports /health
+        healthStatus = 'NRP_4_NOT_SUPPORTED';
         downServers = _downServers;
         // build experimentList with exp config + joinable servers + available servers
         _.forOwn(experimentList, (exp: any) => {
           exp.joinableServers =
-            joinableServers[exp.configuration.experimentConfiguration] || [];
+            joinableServers[exp.configuration.experimentId] || [];
         });
       }
     )
@@ -136,7 +138,7 @@ function updateExperimentList() {
 async function getServersStatus() {
   return _.map(configuration.servers, (server: any) => ({
     server: server.id,
-    api: (server.internalIp || server.gzweb['nrp-services']),
+    api: (server.internalIp || server['nrp-services']),
     health: healthStatus[server.id],
     runningSimulation:
       simulationList[server.id] && simulationList[server.id].runningSimulation
@@ -164,7 +166,7 @@ function getJoinableServers(experimentId) {
     serverSimulations.forEach(simulation => {
       if (
         simulation.experimentID === experimentId &&
-        serversProxy.RUNNING_SIMULATION_STATES.indexOf(simulation.state) !== -1
+        serversProxy.RUNNING_SIMULATION_STATES.includes(simulation.state)
       ) {
         contextSims.push({
           server: serverId,
@@ -194,24 +196,24 @@ function getExperiments() {
   return q.resolve(filterJoinableExperimentByContext(experimentList));
 }
 
-function getExperimentImageFile(experimentId) {
-  if (experimentList[experimentId]) {
-    const experiment = experimentList[experimentId].configuration;
+function getExperimentImageFile(experimentConfig) {
+  if (experimentList[experimentConfig]) {
+    const experiment = experimentList[experimentConfig].configuration;
     return q.resolve(
       templateExperimentsService.getExperimentFilePath(
         experiment.path,
         experiment.thumbnail
       )
     );
-  } else if (sharedExperimentsList[experimentId]) {
-    const experiment = sharedExperimentsList[experimentId].configuration;
+  } else if (sharedExperimentsList[experimentConfig]) {
+    const experiment = sharedExperimentsList[experimentConfig].configuration;
     return q.resolve(
       templateExperimentsService.getSharedExperimentFilePath(
         experiment.path,
         experiment.thumbnail
       )
     );
-  } else throw `No experiment id: ${experimentId}`;
+  } else throw `No experiment config: ${experimentConfig}`;
 }
 
 function getSharedExperiments(req) {
@@ -221,7 +223,7 @@ function getSharedExperiments(req) {
       sharedExperimentsList = _(experiments)
         .filter(exp => exp)
         .map((exp: any) => [
-          exp.id,
+          exp.experimentId,
           {
             configuration: exp,
             joinableServers: []

@@ -1,0 +1,31 @@
+{
+  "SimulationName": "test_openai_nest",
+  "SimulationDescription ": "Launch a py_sim engine to run openAI simulation and a nest engine to control the simulation",
+  "SimulationTimeout": 10,
+  "EngineConfigs": [
+    {
+      "EngineType": "nest_json",
+      "EngineName": "nest_controller",
+      "EngineTimestep": 0.01,
+      "NestInitFileName": "nest_controller.py"
+    },
+    {
+      "EngineType": "py_sim",
+      "EngineName": "gym_simulator",
+      "PythonFileName": "gym_simulator.py",
+      "WorldFileName": "MountainCar-v0",
+      "Simulator": "OpenAI",
+      "Visualizer": true
+    }
+  ],
+  "DataPackProcessingFunctions": [
+    {
+      "Name": "from_nest",
+      "FileName": "from_nest.py"
+    },
+    {
+      "Name": "from_gym",
+      "FileName": "from_gym.py"
+    }
+  ]
+}

@@ -24,7 +24,7 @@
 'use strict';
 
 import X2JS from 'x2js';
-import configurationManager from '../utils/configurationManager';
+import ConfigurationManager from '../utils/configurationManager';
 
 // mocked modules
 // tslint:disable: prefer-const variable-name
@@ -37,29 +37,32 @@ const fs = require('fs'),
   path = require('path'),
   readFile = q.denodeify(fs.readFile);
 
-configurationManager.initialize();
+ConfigurationManager.initialize();
 let storageRequestHandler;
 // not a constant, because mocked on unit test
 // tslint:disable-next-line: prefer-const
 let glob = q.denodeify(require('glob'));
 
-export default class ExperimentsService {
-  static get EXC_FILE_PATTERN() {
-    return '*/*.exc';
+export default class TemplatesExperimentsService {
+  static get JSON_FILE_PATTERN() {
+    return '*/*.json';
   }
 
   private experimentsPath: string;
+  private proxyConfig;
 
   constructor(private config, experimentsPath) {
+    this.proxyConfig = config;
     this.experimentsPath = path.resolve(experimentsPath);
     storageRequestHandler = new StorageRequestHandler(config);
   }
 
-  loadExperiments() {
-    return glob(
-      path.join(this.experimentsPath, ExperimentsService.EXC_FILE_PATTERN)
-    ).then(excFiles =>
-      q.all(excFiles.map(excFile => this.buildExperiment(excFile)))
+  async loadExperiments() {
+    let expConfigFilepath;
+    expConfigFilepath = await glob(path.join(this.experimentsPath, TemplatesExperimentsService.JSON_FILE_PATTERN));
+
+    return glob(path.join(this.experimentsPath, TemplatesExperimentsService.JSON_FILE_PATTERN)).then(experimentConfigFiles =>
+      q.all(experimentConfigFiles.map(expConfigFile => this.buildExperiment(expConfigFile)))
     );
   }
 
@@ -68,16 +71,16 @@ export default class ExperimentsService {
       storageRequestHandler
         .listExperimentsSharedByUsers(req)
         .then(exps =>
-          exps.map(exp =>
-            glob(
-              path.join(utils.storagePath, exp.name + '/*.exc')
-            ).then(pathFile =>
-              this.buildExperiment(pathFile[0], exp.name, true)
-            )
-          )
+          exps.map(exp => {
+            let expConfigFilepath;
+            expConfigFilepath = path.join(utils.storagePath, exp.name + '*/*.json');
+
+            return glob(expConfigFilepath).then(pathFile => this.buildExperiment(pathFile[0], exp.name, true));
+          })
         )
     );
   }
+
   getSharedExperimentFilePath(experimentPath, experimentFile) {
     return path.join(utils.storagePath, experimentPath, experimentFile);
   }
@@ -86,7 +89,7 @@ export default class ExperimentsService {
     return path.join(this.experimentsPath, experimentPath, experimentFile);
   }
 
-  getExcProperty(prop, defaultValue?: string) {
+  getJsonProperty(prop, defaultValue?: string | undefined | number) {
     const exists: boolean = Boolean(prop);
     const isNamespaced: boolean = exists && Boolean(prop.__text);
     if (isNamespaced)
@@ -94,96 +97,47 @@ export default class ExperimentsService {
     return exists ? prop : defaultValue ? defaultValue : undefined;
   }
 
-  getTags(strTags) {
-    const tags = this.getExcProperty(strTags);
-    return tags ? tags.split(/\s/) : [];
-  }
-
   async buildExperiment(fileName, expName = '', isExperimentshared = false) {
+
     let experimentContent;
+
     try {
+
       experimentContent = await readFile(fileName, 'utf8');
-    } catch (err) {
-      console.error(err);
-      return;
-    }
-    console.log(`Parsing experiment file ${fileName}`);
-    const id = isExperimentshared ? expName : path.parse(fileName).name,
-      fileConfigPath = isExperimentshared
+
+      const experimentConfig = JSON.parse(experimentContent);
+      const fileConfigPath = isExperimentshared
         ? path.relative(utils.storagePath, fileName)
         : path.relative(this.experimentsPath, fileName),
-      configPath = isExperimentshared
-        ? utils.storagePath
-        : this.experimentsPath,
       expPath = path.dirname(fileConfigPath);
-    // TODO: Parse the exc and bibi with the proper nodeJS xsd parser
-    const exc: any = new X2JS().xml2js(experimentContent);
-    return q.when(exc.ExD)
-      .then(exc =>
-        q.all([
-          exc,
-          readFile(
-            path.join(configPath, expPath, exc.bibiConf._src),
-            'utf8'
-          ).then(data => new X2JS().xml2js(data))
-        ])
-      )
-      .then(([exc, { bibi: bibi }]) => {
-        let robotPaths = {};
-        if (bibi.bodyModel) {
-          if (!Array.isArray(bibi.bodyModel)) bibi.bodyModel = [bibi.bodyModel];
 
-          if (bibi.bodyModel.length && !bibi.bodyModel[0]._robotId) {
-            robotPaths = {
-              robot: bibi.bodyModel[0].__text || bibi.bodyModel[0]
-            }; // legacy config
-          } else if (bibi.bodyModel.length) {
-            bibi.bodyModel.forEach(model => {
-              if (!model._robotId) {
-                console.error(
-                  'Multiple bodyModels has been defined with same or no names.' +
-                  'Please check bibi config file.'
-                );
-              }
-              robotPaths[model._robotId] = model.__text || model;
-            });
-          }
-        }
+      return {
+        path: expPath,
+        configFile: path.basename(fileConfigPath),
+        experimentId: fileConfigPath,
+        thumbnail: '/',
+        SimulationName: this.getJsonProperty(experimentConfig.SimulationName),
+        SimulationDescription: this.getJsonProperty(experimentConfig.SimulationDescription , 'No description available for this experiment.'),
+        SimulationTimeout: this.getJsonProperty(experimentConfig.SimulationTimeout, 0),
+        DataPackProcessor: this.getJsonProperty(experimentConfig.DataPackProcessor, 'tf'),
+        SimulationLoop: this.getJsonProperty(experimentConfig.SimulationLoop, 'FTILoop'),
+        ComputationalGraph: this.getJsonProperty(experimentConfig.ComputationalGraph),
+        ConnectMQTT: this.getJsonProperty(experimentConfig.ConnectMQTT),
+        SimulationTimestep: this.getJsonProperty(experimentConfig.SimulationTimestep, 0.01),
+        ProcessLauncherType: this.getJsonProperty(experimentConfig.ProcessLauncherType, 'Basic'),
+        EngineConfigs: this.getJsonProperty(experimentConfig.EngineConfigs),
+        ExternalProcesses: this.getJsonProperty(experimentConfig.ExternalProcesses),
+        DataPackProcessingFunctions: this.getJsonProperty(experimentConfig.DataPackProcessingFunctions),
+        EventLoopTimeout: this.getJsonProperty(experimentConfig.EventLoopTimeout),
+        EventLoopTimestep: this.getJsonProperty(experimentConfig.EventLoopTimestep),
+        ConnectROS: this.getJsonProperty(experimentConfig.ConnectROS),
+      };
+  } catch (err) {
 
-        return {
-          id,
-          name: this.getExcProperty(exc.name) || id,
-          isShared: isExperimentshared,
-          thumbnail: this.getExcProperty(exc.thumbnail),
-          robotPaths,
-          path: expPath,
-          physicsEngine:
-            this.getExcProperty(exc.physicsEngine, 'ode'),
-          tags: exc.tags ? this.getTags(exc.tags) : [],
-          description:
-            this.getExcProperty(exc.description, 'No description available for this experiment.'),
-          experimentConfiguration: fileConfigPath,
-          maturity:
-            this.getExcProperty(exc.maturity) === 'production' ? 'production' : 'development',
-          timeout: exc.timeout ? parseInt(this.getExcProperty(exc.timeout), 10) : 600,
-          brainProcesses:
-            this.getExcProperty(exc.bibiConf).processes ? this.getExcProperty(exc.bibiConf).processes : 1,
-          cameraPose: exc.cameraPose && [
-            ...['_x', '_y', '_z'].map(p => parseFloat(exc.cameraPose.cameraPosition[p])),
-            ...['_x', '_y', '_z'].map(p => parseFloat(exc.cameraPose.cameraLookAt[p]))
-          ],
-          visualModel:
-            exc.visualModel ? this.getExcProperty(exc.visualModel) : undefined,
-          visualModelParams:
-            exc.visualModel ? [
-              ...['_x', '_y', '_z', '_ux', '_uy', '_uz'].map(
-                p => exc.visualModel.visualPose[p]
-              ),
-              exc.visualModel.scale ?
-                exc.visualModel.scale
-                : 1
-            ] : undefined
-        };
-      });
+        console.error(err);
+
+        return;
+
+      }
   }
 }

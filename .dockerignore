@@ -1,8 +1,6 @@
 node_modules/
 reports
 coverage
-config.json
-config.json.sample.local
 .nyc_output
 artifacts
 cache
@@ -13,7 +11,14 @@ dist
 .vscode
 out
 
-report.xml
+.git
+
+config.json*
+!config.json.sample.docker 
+
+Jenkinsfile
 junit.xml
 
-*json.bak*
+package-lock.json
+
+usersLogged.log

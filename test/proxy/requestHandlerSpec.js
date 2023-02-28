@@ -43,7 +43,7 @@ describe('requestHandler', function() {
     var expectedResult = {
       test1: {
         configuration: {
-          id: 'test1',
+          experimentId: 'test1',
           name: 'test1'
         },
         joinableServers: []
@@ -87,7 +87,6 @@ describe('requestHandler', function() {
         runningSimulation: testConf.serveserverSimulations['geneva4'][0]
       }
     ];
-
     return requestHandler
       .getJoinableServers(testConf.EXPERIMENT_ID)
       .should.eventually.deep.equal(myobj);
@@ -181,7 +180,7 @@ describe('requestHandler', function() {
     try {
       requestHandler.getExperimentImageFile('falseExperiment');
     } catch (e) {
-      e.should.equal('No experiment id: falseExperiment');
+      e.should.equal('No experiment config: falseExperiment');
     }
   });
 });

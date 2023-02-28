@@ -3,7 +3,7 @@ class StorageRequestHandler {
   listExperimentsSharedByUsers() {
     return Promise.resolve([
       {
-        id: 'experiment1',
+        experimentId: 'experiment1',
         name: 'experiment1'
       }
     ]);

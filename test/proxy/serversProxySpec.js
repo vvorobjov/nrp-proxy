@@ -28,11 +28,8 @@ describe('serversProxy', function() {
       testConf.config
     );
     return experiments.then(function(x) {
-      expect(
-        x[0].experimentConf1[0].runningSimulation.experimentConfiguration
-      ).to.equal(
-        testConf.experimentList.experiment1.configuration
-          .experimentConfiguration
+      expect(x[0].experimentConf1[0].runningSimulation.experimentId).to.equal(
+        testConf.experimentList.experiment1.configuration.experimentId
       );
       expect(_.isEqual(x[1], testConf.serveserverSimulations)).to.equal(true);
     });
@@ -44,11 +41,8 @@ describe('serversProxy', function() {
       testConf.configInternalIp
     );
     return experiments.then(function(x) {
-      expect(
-        x[0].experimentConf1[0].runningSimulation.experimentConfiguration
-      ).to.equal(
-        testConf.experimentList.experiment1.configuration
-          .experimentConfiguration
+      expect(x[0].experimentConf1[0].runningSimulation.experimentId).to.equal(
+        testConf.experimentList.experiment1.configuration.experimentId
       );
       expect(_.isEqual(x[1], testConf.serveserverSimulations)).to.equal(false);
     });
@@ -64,10 +58,7 @@ describe('serversProxy', function() {
         expect(exp[0]).to.deep.equal({});
         expect(exp[1]).to.deep.equal({});
         expect(exp[2]).to.deep.equal([]);
-        expect(exp[3]).to.deep.equal(
-          _.fromPairs(testConf.SERVERS.map(s => [s, null]))
-        );
-        expect(exp[4]).to.have.members([
+        expect(exp[3]).to.have.members([
           testConf.config.servers['geneva1'],
           testConf.config.servers['geneva2'],
           testConf.config.servers['geneva3'],
@@ -86,10 +77,7 @@ describe('serversProxy', function() {
         expect(exp[0]).to.deep.equal({});
         expect(exp[1]).to.deep.equal({});
         expect(exp[2]).to.deep.equal([]);
-        expect(exp[3]).to.deep.equal(
-          _.fromPairs(testConf.SERVERS.map(s => [s, null]))
-        );
-        expect(exp[4]).to.have.members([
+        expect(exp[3]).to.have.members([
           testConf.config.servers['geneva1'],
           testConf.config.servers['geneva2'],
           testConf.config.servers['geneva3'],

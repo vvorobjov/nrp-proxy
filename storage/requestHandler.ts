@@ -159,6 +159,15 @@ ${ex.stack}`);
       );
   }
 
+  renameExperiment(experimentID, newSimulationName, token) {
+    return this.authenticator
+      .checkToken(token)
+      .then(() => this.getUserIdentifier(token))
+      .then(userId =>
+        this.storage.renameExperiment(experimentID, newSimulationName, token, userId)
+      );
+  }
+
   deleteFolder(filename, parentDir, token, byname = false) {
     return this.authenticator
       .checkToken(token)
@@ -350,7 +359,6 @@ ${ex.stack}`);
   async cloneExperiment(token, expPath, contextId) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
-
     return new TemplateExperimentCloner(
       this.storage,
       this.config

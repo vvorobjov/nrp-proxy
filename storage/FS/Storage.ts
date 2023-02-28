@@ -57,6 +57,7 @@ let glob = q.denodeify(require('glob')),
 // Unregister deleted experiment folders from the database
 const scanExperiments = async () => {
   const storageContents: string[] = await fs.readdir(utils.storagePath);
+
   const fsExperiments = storageContents.map(file => ({ uuid: file, name: file }));
   const dbExperiments = (await DB.instance.experiments.find()).map(e => ({ uuid: e.experiment, name: e.experiment }));
 
@@ -82,6 +83,8 @@ schedule.scheduleJob('0 */2 * * *', scanExperiments);
 
 export class Storage extends BaseStorage {
 
+  protected experimentConfigName = 'simulation_config.json';
+
   userIdHasAccessToPath(userId, filename) {
     const experiment = filename.split('/')[0];
     return DB.instance.experiments
@@ -95,16 +98,20 @@ export class Storage extends BaseStorage {
       .then(res => res || q.reject(Authenticator.AUTHORIZATION_ERROR));
   }
 
-  calculateFilePath(experiment, filename, model = false) {
+  async calculateFilePath(experiment, filename, model = false) {
     let filePath;
     if (model) {
-      filePath = path.join(
+      filePath = await glob(path.join(
         utils.storagePath,
         USER_DATA_FOLDER,
         experiment,
         filename
-      );
-    } else filePath = path.join(utils.storagePath, filename);
+      ));
+    } else filePath = await glob(path.join(utils.storagePath, filename));
+    filePath = filePath[0];
+    if (filePath === undefined) { // when creating/cloning an experiment there is not existing file
+      filePath = path.join(utils.storagePath, filename);
+    }
     if (!filePath.startsWith(utils.storagePath))
       // file name attempts at going somewhere else (ie '../../someosfile' or '/usr/someimportantfile')
       return q.reject(Authenticator.AUTHORIZATION_ERROR);
@@ -425,6 +432,25 @@ export class Storage extends BaseStorage {
       .then(() => undefined);
   }
 
+  renameExperiment(experimentPath, newName, token, userId) {
+    return this.getFile(this.experimentConfigName, experimentPath, token, userId, true)
+      .then(expConfig => {
+        return JSON.parse(expConfig.body);
+      })
+      .then(expConfig => {
+        expConfig.SimulationName = newName;
+        this.createOrUpdate(
+          this.experimentConfigName,
+          JSON.stringify(expConfig, null, 4),
+          'application/json',
+          experimentPath,
+          token,
+          userId
+         );
+      })
+      .then(() => undefined);
+  }
+
   deleteFolder(foldername, experiment, token, userId) {
     return this.userIdHasAccessToPath(userId, foldername)
       .then(() => this.calculateFilePath(experiment, foldername))
@@ -508,23 +534,12 @@ export class Storage extends BaseStorage {
   }
 
   /*
-  Decorates the experiment_configuration file with an extra xml attribute. The attribute
-  is also checked for the __prefix value and if it exists in the .exc then we also
-  add it in the atribute itself. The expConf is read as a buffer and converted into a utf8 string
+  Updates JSON config attrbute
   */
-  decorateExpConfigurationWithAttribute(attribute, value, expConf) {
-    const expConfString: string = new X2JS().xml2js(expConf.toString('utf8'));
-    const exD: string = 'ExD';
-    // only add the attribute if it is not there
-    if (expConfString[exD].__prefix) {
-      expConfString[exD][attribute] = {
-        __prefix: expConfString[exD].__prefix,
-        __text: value
-      };
-    } else {
-      expConfString[exD][attribute] = value;
-    }
-    return pd.xml(new X2JS({ escapeMode: false }).js2xml(expConfString));
+  updateAttribute(attribute, value, expConf) {
+    const config = JSON.parse(expConf);
+    config[attribute] = value;
+    return JSON.stringify(config, null, 4);
   }
 
   async copyExperiment(experiment, token, userId) {
@@ -540,9 +555,9 @@ export class Storage extends BaseStorage {
     await this.copyFolderContents(experiment, copiedExpName);
 
     // Decorate the experiment configuration with the cloneDate attribute
-    const experimentConfiguration = await this.getFile('experiment_configuration.exc', copiedExpName, token, userId, true);
-    const decoratedExpConf = this.decorateExpConfigurationWithAttribute('cloneDate', utils.getCurrentTimeAndDate(), experimentConfiguration.body);
-    await this.createOrUpdate('experiment_configuration.exc',
+    const experimentConfiguration = await this.getFile(this.experimentConfigName, copiedExpName, token, userId, true);
+    const decoratedExpConf = this.updateAttribute('cloneDate', utils.getCurrentTimeAndDate(), experimentConfiguration.body);
+    await this.createOrUpdate(this.experimentConfigName,
       decoratedExpConf,
       experimentConfiguration.contentType,
       copiedExpName,

@@ -25,14 +25,14 @@
 
 import X2JS from 'x2js';
 import utils from './FS/utils';
-import ModelsService from './ModelsService';
+import * as storageConsts from './StorageConsts';
 
 const path = require('path'),
   q = require('q'),
   _ = require('lodash'),
-  pd = require('pretty-data').pd,
-  exec = require('child_process').exec,
   walk = require('walk');
+
+const glob = q.denodeify(require('glob'));
 
 // constants below are overriden in unit tests
 // tslint:disable: prefer-const
@@ -49,108 +49,97 @@ const ensureArrayProp = (obj, prop) => {
 
 abstract class ExperimentCloner {
   protected tmpFolder = tmp.dirSync({ unsafeCleanup: true });
-  protected experimentFolder?;
+  protected templateFolder?;
   private downloadedFiles: Array<Promise<string>> = [];
 
   constructor(protected storage, protected config) { }
 
-  abstract getBibiFullPath(bibiConfFile, expUUID, token, userId);
-
   abstract getExperimentFileFullPath(
     expPath,
-    expUUID,
     token,
     userId,
     defaultName
   );
 
-  async createUniqueExperimentId(token, userId, expPath, contextId) {
+  async createUniqueExperimentId(token, userId, templateConfPath, contextId) {
     // finds an unused name for a new experiment in the form 'templatename_0'
-    const dirname = path.dirname(expPath);
+    const dirname = path.dirname(templateConfPath);
     return this.storage.createUniqueExperimentId(token, userId, dirname, contextId);
   }
 
-  async cloneExperiment(token, userId, expPath, contextId, defaultName, defaultMode) {
-    // clones the experiment
+  /**
+   * Clones the experiment from the template
+   * @param token access token
+   * @param userId user ID
+   * @param {string} templateConfPath the path to the template JSON configuration file
+   * @param contextId context ID
+   * @returns {Array} the list of files
+   */
+  async cloneExperiment(token, userId, templateConfPath, contextId, defaultName, defaultMode) {
+    const expPath = await this.createUniqueExperimentId(token, userId, templateConfPath, contextId);
+    // expUUID == expPath (dir name) in local storage
+    const { uuid: expUUID } = await this.storage.createExperiment(expPath, token, userId, contextId);
 
-    let expName;
-
-    expName = await this.createUniqueExperimentId(
-      token,
-      userId,
-      expPath,
-      contextId
-    );
-
-    const { uuid: expUUID } = await this.storage.createExperiment(
-      expName,
-      token,
-      userId,
-      contextId
-    );
     try {
-      this.experimentFolder = path.dirname(
-        path.join(this.config.experimentsPath, expPath)
-      );
+      this.templateFolder = path.dirname(path.join(this.config.experimentsPath, templateConfPath));
 
-      const bibiConf = await this.flattenExperiment(
-        expPath,
-        expUUID,
-        token,
-        userId,
-        defaultName
-      );
-
-      await this.flattenBibiConf(expPath, bibiConf, expUUID, token, userId, defaultMode);
+      // const proxyConfig = ConfigurationManager.loadConfigFile();
+      const newConfig = await this.flattenExperiment(templateConfPath, expPath, token, userId, defaultName);
 
       const files = await this.readDownloadedFiles();
+      await this.uploadDownloadedFiles(files, expPath, token, userId);
+      await this.copyResourcesFolder(expPath, token, userId);
+      await this.copyAssetsFolder(expPath, token, userId);
 
-      await this.uploadDownloadedFiles(files, expUUID, token, userId);
-
-      await this.copyResourcesFolder(
-        this.experimentFolder,
-        expName,
-        expUUID,
+      // write updated config
+      this.storage.createOrUpdate(
+        storageConsts.defaultConfigName,
+        JSON.stringify(newConfig, null, 4),
+        'application/json',
+        expPath,
         token,
         userId
       );
 
-      await this.copyAssetsFolder(
-        this.experimentFolder,
-        expName,
-        expUUID,
-        token,
-        userId
-      );
-
-      return expUUID;
+      return expPath;
     } catch (e) {
-      this.storage.deleteExperiment(expName, expName, token, userId);
+      this.storage.deleteExperiment(expPath, expPath, token, userId);
       throw e;
     }
   }
 
-  async copyResourcesFolder(experimentFolder, expName, expUUID, token, userId) {
-    const resExpPath = path.join(this.experimentFolder, 'resources');
-    const resPath = path.join(expUUID, 'resources');
-    if (fs.existsSync(path.join(experimentFolder, 'resources'))) {
-      const files = await this.downloadResourcesfiles(resExpPath);
-      await this.storage.createFolder('resources', expName, token, userId);
-      await this.uploadDownloadedFiles(files, resPath, token, userId);
+  /**
+   * Copies the `resources` folder from the template/experiment to the new experiment folder
+   * @param {string} expPath the destination experiment directory name (coincides with the experiment ID)
+   * @param {string} token access roken
+   * @param {string} userId user ID
+   */
+  async copyResourcesFolder(expPath: string, token: string, userId: string) {
+    const srcResourcesPath = path.join(this.templateFolder, 'resources');
+    const dstResourcesPath = path.join(expPath, 'resources');
+    if (fs.existsSync(path.join(this.templateFolder, 'resources'))) {
+      const files = await this.downloadResourcesfiles(srcResourcesPath);
+      await this.storage.createFolder('resources', expPath, token, userId);
+      await this.uploadDownloadedFiles(files, dstResourcesPath, token, userId);
     } else {
-      await this.storage.createFolder('resources', expName, token, userId);
+      await this.storage.createFolder('resources', expPath, token, userId);
     }
-    if (!fs.existsSync(path.join(experimentFolder, 'resources', 'textures'))) {
+    if (!fs.existsSync(path.join(this.templateFolder, 'resources', 'textures'))) {
       await this.storage.createFolder(
         path.join('resources', 'textures'),
-        expName,
+        expPath,
         token,
         userId
       );
     }
   }
 
-  async downloadResourcesfiles(resExpPath) {
+  /**
+   * Generates the list of the `resources` folder files
+   * @param {string} resourcesPath the path to the `resources` folder
+   * @returns {Array} the list of files
+   */
+  async downloadResourcesfiles(resourcesPath: string) {
     const files = [] as any[];
     const options = {
       listeners: {
@@ -171,23 +160,34 @@ abstract class ExperimentCloner {
         }
       }
     };
-    walk.walkSync(resExpPath, options);
+    walk.walkSync(resourcesPath, options);
     return files;
   }
 
-  async copyAssetsFolder(experimentFolder, expName, expUUID, token, userId) {
-    const assetsExpPath = path.join(this.experimentFolder, 'assets');
-    const assetsPath = path.join(expUUID, 'assets');
-    if (fs.existsSync(path.join(experimentFolder, 'assets'))) {
-      const files = await this.downloadAssetsfiles(assetsExpPath);
-      await this.storage.createFolder('assets', expName, token, userId);
-      await this.uploadDownloadedFiles(files, assetsPath, token, userId);
+  /**
+   * Copies the `assets` folder from the template/experiment to the new experiment folder
+   * @param {string} expPath the destination experiment directory name (coincides with the experiment ID)
+   * @param {string} token access roken
+   * @param {string} userId user ID
+   */
+  async copyAssetsFolder(expPath, token, userId) {
+    const srcAssetsPath = path.join(this.templateFolder, 'assets');
+    const dstAssetsPath = path.join(expPath, 'assets');
+    if (fs.existsSync(path.join(this.templateFolder, 'assets'))) {
+      const files = await this.downloadAssetsfiles(srcAssetsPath);
+      await this.storage.createFolder('assets', expPath, token, userId);
+      await this.uploadDownloadedFiles(files, dstAssetsPath, token, userId);
     } else {
-      await this.storage.createFolder('assets', expName, token, userId);
+      await this.storage.createFolder('assets', expPath, token, userId);
     }
   }
 
-  async downloadAssetsfiles(assetsExpPath) {
+  /**
+   * Generates the list of the `assets` folder files
+   * @param {string} assetsPath the path to the `assets` folder
+   * @returns {Array} the list of files
+   */
+  async downloadAssetsfiles(assetsPath) {
     const files = [] as any[];
     const options = {
       listeners: {
@@ -207,11 +207,11 @@ abstract class ExperimentCloner {
         }
       }
     };
-    walk.walkSync(assetsExpPath, options);
+    walk.walkSync(assetsPath, options);
     return files;
   }
 
-  uploadDownloadedFiles(files, expUUID, token, userId) {
+  uploadDownloadedFiles(files, expPath, token, userId) {
     // uploads all the files copied locally
     return q.all(
       files.map(file =>
@@ -219,7 +219,7 @@ abstract class ExperimentCloner {
           file.name,
           file.content,
           file.contentType,
-          expUUID,
+          expPath,
           token,
           userId
         )
@@ -250,196 +250,73 @@ abstract class ExperimentCloner {
     return files;
   }
 
-  async flattenExperiment(expPath, expUUID, token, userId, defaultName) {
+  async flattenExperiment(configPath, expPath, token, userId, defaultName) {
     // copies the experiment files into a a temporary flatten structure
-    console.log('Flattening experiment');
 
     const fullExpPath = await this.getExperimentFileFullPath(
-      expPath,
-      expUUID,
+      configPath,
       token,
       userId,
       defaultName
     );
-
-    const experimentConf = await readFile(fullExpPath, 'utf8').then(expContent =>
-      new X2JS().xml2js(expContent)
+    // TODO: detect source config more accurately
+    this.downloadFile(configPath.split('/')[1], this.templateFolder,
+      storageConsts.defaultConfigName
     );
 
-    const experiment = experimentConf.ExD;
-    if (
-      experiment.experimentControl &&
-      experiment.experimentControl.stateMachine
-    ) {
-      ensureArrayProp(experiment.experimentControl, 'stateMachine');
-      for (const sm of experiment.experimentControl.stateMachine) {
-        this.downloadFile(sm._src);
-      }
-    }
-
-    this.downloadFile(experiment.thumbnail);
-
-    let dstFile = experiment.environmentModel._src;
-    let srcDir = this.experimentFolder;
-    if (experiment.environmentModel._model) {
-      dstFile = path.join(
-        experiment.environmentModel._model,
-        experiment.environmentModel._src
-      );
-      srcDir = await this.storage.getModelFullPath(
-        'environments',
-        experiment.environmentModel._model
-        );
-    }
-    this.downloadFile(
-      experiment.environmentModel._src,
-      srcDir,
-      dstFile
-      );
-
-    const launchFiles = fs.readdirSync(srcDir).filter(f => {
-      return path.extname(f).toLowerCase() === '.launch';
-    });
-
-    for (const launchFile of launchFiles) {
-      const model = experiment.environmentModel._model || '';
-      this.downloadFile(
-        launchFile,
-        srcDir,
-        path.join(model, launchFile)
-      );
-    }
-
-    if (ensureArrayProp(experiment, 'configuration'))
-      for (const conf of experiment.configuration) this.downloadFile(conf._src);
-
-    if (experiment.rosLaunch) this.downloadFile(experiment.rosLaunch._src);
+    // The parsed experiment JSON configuration
+    const experiment = await readFile(fullExpPath, 'utf8').then(expContent =>
+      JSON.parse(expContent)
+    );
 
     experiment.cloneDate = utils.getCurrentTimeAndDate();
+    experiment.SimulationName = utils.getCurrentTimeAndDate() + ' ' + experiment.SimulationName;
 
-    const expFile = path.join(
-      this.tmpFolder.name,
-      'experiment_configuration.exc'
-    );
-
-    const bibiConf = experimentConf.ExD.bibiConf._src;
-    experiment.bibiConf._src = 'bibi_configuration.bibi';
-
-    const xmlFile = pd.xml(new X2JS({ escapeMode: false }).js2xml(experimentConf)); // In particular, we don't escape quotes in ExD.description
-    fs.writeFileSync(expFile, xmlFile);
-    this.downloadedFiles.push(q.resolve(expFile));
-
-    return bibiConf;
-  }
-
-  async copyH5File(pythonModuleName) {
-    // in case we have an h5 file we have to copy it over as well
-    const pathToPythonScript = path.join(__dirname, 'h5FileExtractor.py');
-    try {
-      const h5FileName = (await q.denodeify(exec)(
-        `python ${pathToPythonScript} ${pythonModuleName}`
-      ))[1];
-      const brainModelPath = path.join(this.config.modelsPath, 'brain_model');
-      if (h5FileName) this.downloadFile(h5FileName, brainModelPath);
-    } catch (err) {
-      console.log('No h5 file to copy');
-    }
-  }
-
-  async flattenBibiConf(expPath, bibiConfFile, expUUID, token, userId, defaultMode) {
-    // copies the bibi files into a a temporary flatten structure
-    const bibiFullPath = await this.getBibiFullPath(
-      bibiConfFile,
-      expUUID,
-      token,
-      userId
-    );
-    const bibi = await readFile(bibiFullPath, 'utf8').then(bibiContent =>
-      new X2JS().xml2js(bibiContent)
-    );
-    const bibiConf = bibi.bibi;
-
-    if (ensureArrayProp(bibiConf, 'configuration')) {
-      for (const conf of bibiConf.configuration) {
-        this.downloadFile(conf._src);
+    // TODO: [NRRPLT-8771] Provide sofisticated cloning with specifying the dependencies in the configuration JSON
+    // Currently, the whole directory is cloned
+    const experimentGlob = `${this.templateFolder}/**/*.!(json)`;
+    const experimentFiles = await glob(experimentGlob);
+    for (const f of experimentFiles) {
+      try {
+        this.downloadFile(path.relative(this.templateFolder, f));
+      } catch (err) {
+        console.error('Could not clone file ' + f.toString());
       }
     }
 
-    if (bibiConf.bodyModel) {
-      if (!Array.isArray(bibiConf.bodyModel))
-        bibiConf.bodyModel = [bibiConf.bodyModel];
+    // // TODO clean this
+    // //  if (await fs.exists(experiment.thumbnail)) {
+    // //    try {
+    // //      this.downloadFile(experiment.thumbnail);
+    // //    } catch (err) {
+    // //      console.log('No picture available.');
+    // //    }
+    // //  }
 
-      for (let model of bibiConf.bodyModel) {
-        if (model) {
-          const bodyModelFile = model.__text || model;
-          model = {
-            __text: bodyModelFile,
-            _robotId: model._robotId ? model._robotId : 'robot',
-            __prefix: bibiConf.__prefix,
-            _model: model._model
-          };
-          const robotid = model._robotId ? model._robotId : 'robot';
-          const dstFile = path.join(robotid, bodyModelFile);
-          let srcDir = path.join(this.experimentFolder, model._robotId);
-          if (model._model) {
-            srcDir = await this.storage.getModelFullPath('robots', model._model);
-          }
-          this.downloadFile(model.__text, srcDir, dstFile);
+    // if (ensureArrayProp(experiment, 'configuration'))
+    //   for (const conf of experiment.configuration) this.downloadFile(conf._src);
 
-          // find and upload roslaunch file into experiments directory
-          const sdfFolder = path.dirname(
-            path.join(this.config.modelsPath, model.__text)
-          );
-          const launchFile = fs.readdirSync(sdfFolder).filter(f => {
-            return path.extname(f).toLowerCase() === '.launch';
-          });
-          if (launchFile.length) {
-            this.downloadFile(
-              launchFile[0],
-              sdfFolder,
-              path.join(robotid, launchFile[0])
-            );
-          }
-        }
-      }
-    }
+    // if (experiment.rosLaunch) this.downloadFile(experiment.rosLaunch._src);
 
-    if (bibiConf.brainModel) {
-      const brainFile =
-        bibiConf.brainModel.file.__text || bibiConf.brainModel.file;
+    // // Download main_script.py
+    // // TODO: detect the name of the script carefully
+    // this.downloadFile('main_script.py', this.templateFolder,
+    //   'main_script.py'
+    // );
 
-      let srcDir = path.join(this.experimentFolder, path.dirname(brainFile));
-      let dstFile = brainFile;
-      if (bibiConf.brainModel._model) {
-        srcDir = await this.storage.getModelFullPath('brains', bibiConf.brainModel._model);
-        dstFile = path.join(bibiConf.brainModel._model, brainFile);
-      }
-      this.downloadFile(brainFile, srcDir, dstFile);
+    // this.readProcessLaunchers(configPath, experiment);
 
-      bibiConf.brainModel.file = {
-        __text: brainFile,
-        __prefix: bibiConf.__prefix
-      };
+    // this.readEngines(configPath, experiment);
 
-      await this.copyH5File(brainFile);
-    }
+    // this.readComputationalGraph(configPath, experiment);
 
-    if (defaultMode) bibiConf.mode = {__text: defaultMode, __prefix: bibiConf.__prefix};
+    // this.readTransceiverFunctions(configPath, experiment);
 
-    if (ensureArrayProp(bibiConf, 'transferFunction'))
-      for (const tf of bibiConf.transferFunction)
-        if (tf._src) {
-          this.downloadFile(tf._src);
-        }
-
-    const bibiFile = path.join(this.tmpFolder.name, 'bibi_configuration.bibi');
-
-    fs.writeFileSync(bibiFile, pd.xml(new X2JS().js2xml(bibi)));
-    this.downloadedFiles.push(q.resolve(bibiFile));
+    return experiment;
   }
 
-  downloadFile(srcFile, srcDir = this.experimentFolder, dstFile = srcFile) {
-    const dstPath = path.join(this.tmpFolder.name, dstFile);
+  async downloadFile(srcFile, srcDir = this.templateFolder, dstFile = srcFile) {
+    const dstPath = path.join(this.tmpFolder.name.toString(), dstFile);
 
     this.downloadedFiles.push(
       fs
@@ -449,18 +326,104 @@ abstract class ExperimentCloner {
         )
     );
   }
+
+  async readTransceiverFunctions(expPath, experimentConf) {
+    const DataPackProcessingFunctions = experimentConf.DataPackProcessingFunctions;
+    // "required" : ["Name", "FileName"]
+    if (DataPackProcessingFunctions !== undefined) {
+      for (const tf of DataPackProcessingFunctions) {
+        try {
+          this.downloadFile(tf.FileName);
+        } catch (err) {
+          console.error('no specified transceiver function');
+        }
+      }
+    }
+  }
+
+  async readComputationalGraph(expPath, experimentConf) {
+    const graphes = experimentConf.ComputationalGraph;
+    if (graphes !== undefined) {
+      for (const cg of graphes) {
+        try {
+          this.downloadFile(cg);
+        } catch (err) {
+          console.error(' computational graph could not be downloaded : ', cg);
+        }
+      }
+    }
+  }
+
+  async readProcessLaunchers(expPath, experimentConf) {
+    const processes = experimentConf.ExternalProcesses;
+    if (processes !== undefined) {
+      for (const process of processes) {
+        try {
+          const cmd = process.ProcCmd.split(' ');
+          for (const i in cmd) {
+            const word = cmd[i];
+            if (word.includes('.launch')) {
+              this.downloadFile(word); // dl .launch files
+            }
+          }
+        } catch (err) {
+          console.error(' No process launch command for process launcher : ', process.title);
+        }
+      }
+    }
+  }
+
+  async readEngines(expPath, experimentConf) {
+    const engines = experimentConf.EngineConfigs;
+    const files = Array();
+    if (engines !== undefined) {
+      for (const engine of engines) {
+        try {
+          const engineType = engine.EngineType.split('_');
+          const type = engineType[0];
+          switch (type) {
+            case 'opensim':
+              break;
+            case 'nest':
+              const nestPath = engine.NestInitFileName;
+              files.push(nestPath);
+              break;
+            case 'gazebo':
+              const wordPath = engine.GazeboWorldFile;
+              files.push(wordPath);
+              break;
+            case 'python':
+              const pythonfilePath = engine.PythonFileName;
+              files.push(pythonfilePath);
+              if (engineType[1] === 'sim') {
+                // to correct
+                const wordPath = engine.WorldFileName;
+                files.push(wordPath);
+              }
+              break;
+            case 'datatransfer':
+              break;
+          }
+        } catch (err) {
+          console.error('Incorrect engine(s) definition :', engine.EngineName);
+        }
+
+      }
+      for (const i in files) {
+        this.downloadFile(files[i]);
+      }
+    }
+  }
 }
 
 export class TemplateExperimentCloner extends ExperimentCloner {
-  getBibiFullPath(bibiConfFile) {
-    return path.join(this.experimentFolder, bibiConfFile);
-  }
 
   getExperimentFileFullPath(expPath) {
     return path.join(this.config.experimentsPath, expPath);
   }
 }
 
+// TODO: adopt for 4.0 version
 export class NewExperimentCloner extends ExperimentCloner {
   private newExpConfigurationPath;
   private newExpBibiPath;
@@ -481,22 +444,8 @@ export class NewExperimentCloner extends ExperimentCloner {
     );
   }
 
-  async getBibiFullPath() {
-    const bibi = await readFile(this.newExpBibiPath, 'utf8').then(bibiContent =>
-      new X2JS().xml2js(bibiContent)
-    );
-
-    const bibiFullPath = path.join(
-      this.tmpFolder.name,
-      'bibi_configuration.bibi'
-    );
-    fs.writeFileSync(bibiFullPath, new X2JS().js2xml(bibi));
-    return bibiFullPath;
-  }
-
   async getExperimentFileFullPath(
     expPath,
-    expUUID,
     token,
     userId,
     defaultName

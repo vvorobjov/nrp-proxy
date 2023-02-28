@@ -433,7 +433,7 @@ describe('FSStorage', () => {
 
     sinon.stub(fsStorage, 'copyFolderContents').returns(q.when());
     fsStorage.getFile = () => q.resolve({ body: 'expConfBody' });
-    sinon.stub(fsStorage, 'decorateExpConfigurationWithAttribute').returns({});
+    sinon.stub(fsStorage, 'updateAttribute').returns({});
     fsStorage.createOrUpdate = () => q.resolve();
     return fsStorage
       .copyExperiment('Exp_0', fakeToken, fakeUserId)
@@ -447,42 +447,6 @@ describe('FSStorage', () => {
       .should.eventually.deep.equal('copiedDirectory');
   });
 
-  //copy folderContents
-  it(`should decorate an .exc with a new attribute`, () => {
-    const excBufferWithPrefix = `<ns1:ExD xmlns:ns1="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig"></ns1:ExD>`;
-    let result = `<ns1:ExD 
-      xmlns:ns1="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig">
-      <ns1:cloneDate>fakeDate</ns1:cloneDate>
-    </ns1:ExD>`;
-    const excBufferWithoutPrefix = `<ExD 
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-    xmlns="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig" xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig ../ExDConfFile.xsd">
-   </ExD>`;
-
-    let decoratedExpConf = fsStorage.decorateExpConfigurationWithAttribute(
-      'cloneDate',
-      'fakeDate',
-      excBufferWithPrefix
-    );
-    // for the expectation we remove the whitespaces and the newlines as they confuse the comparison
-    expect(result.replace(/\n$/, '').replace(/ /g, '')).to.deep.equal(
-      decoratedExpConf.replace(/\n$/, '').replace(/ /g, '')
-    );
-    decoratedExpConf = fsStorage.decorateExpConfigurationWithAttribute(
-      'cloneDate',
-      'fakeDate',
-      excBufferWithoutPrefix
-    );
-    result = `<ExD 
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-    xmlns="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig" xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig ../ExDConfFile.xsd">
-    <cloneDate>fakeDate</cloneDate>
-    </ExD>`;
-    expect(result.replace(/\n$/, '').replace(/ /g, '')).to.deep.equal(
-      decoratedExpConf.replace(/\n$/, '').replace(/ /g, '')
-    );
-  });
-
   it(`should throw when we check a non-existing token`, () => {
     collectionMock.prototype.findOne = sinon
       .stub()
@@ -494,11 +458,13 @@ describe('FSStorage', () => {
   });
 
   //calculateFilePath
-  it(`should calculate the file path given an existing folder and file name `, () => {
+  it(`should calculate the file path given an existing folder and file name `, async () => {
     const expectedPath = path.join(__dirname, '/dbMock/folder1/fakeFile');
-    return fsStorage
-      .calculateFilePath('', 'folder1/fakeFile')
-      .should.equal(expectedPath);
+    const testFilepath = await fsStorage.calculateFilePath(
+      '',
+      'folder1/fakeFile'
+    );
+    return testFilepath.should.equal(expectedPath);
   });
 
   it(`should throw an exception when trying to calculate a path
