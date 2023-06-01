@@ -27,6 +27,7 @@ import BaseAuthenticator from '../BaseAuthenticator';
 import { Identity } from './Identity';
 
 const q = require('q'),
+  path = require('path'),
   identity = new Identity();
 
 export class Authenticator extends BaseAuthenticator {
@@ -66,6 +67,7 @@ export class Authenticator extends BaseAuthenticator {
   }
 
   getLoginPage() {
+    console.info('getloginpage--------------------------------------------------------------------');
     throw 'not implemented';
   }
 }

@@ -3,6 +3,7 @@ reports
 coverage
 config.json
 config.json.sample.local
+config.json.sample.oicd
 .nyc_output
 artifacts
 cache

@@ -90,7 +90,7 @@ describe('Collabidentity', () => {
       displayName: 'nrpuser'
     };
 
-    nock('http://localhost')
+    nock('https://localhost')
       .get('/protocol/openid-connect/userinfo')
       .reply(200, response);
 
@@ -105,7 +105,7 @@ describe('Collabidentity', () => {
       displayName: 'nrpuser'
     };
 
-    nock('http://localhost')
+    nock('https://localhost')
       .get('/protocol/openid-connect/userinfo')
       .reply(200, response);
 

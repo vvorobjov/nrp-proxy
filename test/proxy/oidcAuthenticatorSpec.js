@@ -33,7 +33,7 @@ describe('oidcAuthenticator', function() {
   });
 
   it('should fail when auth deactivate is true', function() {
-    const URL = 'http://localhost';
+    const URL = 'https://localhost';
     const CLIENT_ID = 'CLIENT_ID';
     const CLIENT_SECRET = 'CLIENT_SECRET';
     const auth = {

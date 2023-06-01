@@ -63,21 +63,21 @@ describe('CollabAuthenticator', () => {
     } = require('../../storage/Collab/Authenticator'),
     nock = require('nock');
 
-  it('should resolve to true when trying to authenticate with collab storage', () => {
-    let collabAuth = new CollabAuthenticator({ storage: 'Collab' });
-    return collabAuth.checkToken('emptyToken').should.eventually.equal(true);
-  });
-
   it('should get user info when trying to authenticate with non collab storage', () => {
     const response = { id: 'some_id' };
     let collabAuth = new CollabAuthenticator({ storage: 'FS' });
-    nock('http://localhost')
+    nock('https://localhost')
       .get('/protocol/openid-connect/userinfo')
       .reply(200, response);
 
     return collabAuth
       .checkToken('emptyToken')
       .should.eventually.deep.equal(response);
+  });
+
+  it('should resolve to true when trying to authenticate with collab storage', () => {
+    let collabAuth = new CollabAuthenticator({ storage: 'Collab' });
+    return collabAuth.checkToken('emptyToken').should.eventually.equal(true);
   });
 
   // it('should not get get user info when data is in cache', () => {

@@ -35,7 +35,7 @@ export type File = {
 
 export default abstract class BaseStorage {
 
-  abstract listFiles(experiment, token, userId): File[];
+  abstract listFiles(experiment, token, userId);
 
   abstract getFile(filename, experiment, token, userId, byname);
 
@@ -92,7 +92,7 @@ export default abstract class BaseStorage {
 
   abstract createExperiment(newExperiment, token, userId, contextId);
 
-  abstract getModelZip(modelType, modelName, userId);
+  abstract getModelZip(modelType, modelName, userId, token);
 
   abstract copyExperiment(experiment, token, userId, contextId);
 
