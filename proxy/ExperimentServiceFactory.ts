@@ -79,11 +79,11 @@ abstract class BaseExperimentService {
   constructor(protected experimentId, protected contextId, protected config) {}
 
   async getSimConfigV4() {
-    const configFile = await this.getFile(
-      storageConsts.defaultConfigName,
-      V4_FILE_TYPE.JSON
-    );
     try {
+      const configFile = await this.getFile(
+        storageConsts.defaultConfigName,
+        V4_FILE_TYPE.JSON
+      );
       const config = JSON.parse(configFile.toString());
       if (config.cloneDate) {
         config.cloneDate = config.cloneDate.replace(/T/, ' ');
