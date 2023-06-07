@@ -3,9 +3,9 @@
   "refreshInterval": 5000,
   "auth": {
     "renewInternal": 600000,
-    "clientId": "nrp-backend-proxy",
+    "clientId": "nrp-proxy",
     "clientSecret": "<client_oidc_secret>",
-    "url": "https://iam.ebrains.eu/auth/realms/hbp",
+    "url": "https://iam-int.ebrains.eu/auth/realms/hbp",
     "deactivate": true
   },
   "port": 8443,
