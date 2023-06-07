@@ -48,20 +48,20 @@ export default class TemplatesExperimentsService {
     return '*/*.json';
   }
 
-  private experimentsPath: string;
+  private templatesPath: string;
   private proxyConfig;
 
-  constructor(private config, experimentsPath) {
+  constructor(private config, templatesPath) {
     this.proxyConfig = config;
-    this.experimentsPath = path.resolve(experimentsPath);
+    this.templatesPath = path.resolve(templatesPath);
     storageRequestHandler = new StorageRequestHandler(config);
   }
 
   async loadExperiments() {
     let expConfigFilepath;
-    expConfigFilepath = await glob(path.join(this.experimentsPath, TemplatesExperimentsService.JSON_FILE_PATTERN));
+    expConfigFilepath = await glob(path.join(this.templatesPath, TemplatesExperimentsService.JSON_FILE_PATTERN));
 
-    return glob(path.join(this.experimentsPath, TemplatesExperimentsService.JSON_FILE_PATTERN)).then(experimentConfigFiles =>
+    return glob(path.join(this.templatesPath, TemplatesExperimentsService.JSON_FILE_PATTERN)).then(experimentConfigFiles =>
       q.all(experimentConfigFiles.map(expConfigFile => this.buildExperiment(expConfigFile)))
     );
   }
@@ -86,7 +86,7 @@ export default class TemplatesExperimentsService {
   }
 
   getExperimentFilePath(experimentPath, experimentFile) {
-    return path.join(this.experimentsPath, experimentPath, experimentFile);
+    return path.join(this.templatesPath, experimentPath, experimentFile);
   }
 
   getJsonProperty(prop, defaultValue?: string | undefined | number) {
@@ -108,7 +108,7 @@ export default class TemplatesExperimentsService {
       const experimentConfig = JSON.parse(experimentContent);
       const fileConfigPath = isExperimentshared
         ? path.relative(utils.storagePath, fileName)
-        : path.relative(this.experimentsPath, fileName),
+        : path.relative(this.templatesPath, fileName),
       expPath = path.dirname(fileConfigPath);
 
       return {

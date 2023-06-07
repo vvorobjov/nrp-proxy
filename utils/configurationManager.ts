@@ -40,7 +40,7 @@ const initialize = () => {
 
 const PATH_CONFIG_PROPERTIES = [
   'modelsPath',
-  'experimentsPath'
+  'templatesPath'
 ];
 
 const resolveReplaceEnvVariables = (str: string) => {

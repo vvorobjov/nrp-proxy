@@ -57,7 +57,7 @@ function reloadConfiguration(config) {
   if (!configuration)
     throw 'Proxy requestHandler.reloadConfiguration: configuration required';
 
-  ['refreshInterval', 'modelsPath', 'experimentsPath'].forEach(prop => {
+  ['refreshInterval', 'modelsPath', 'templatesPath'].forEach(prop => {
     if (!configuration[prop])
       throw `Configuration key '${prop}' is missing in the config file. Please update`;
   });
@@ -74,7 +74,7 @@ function reloadConfiguration(config) {
 
   templateExperimentsService = new TemplateExperimentsService(
     config,
-    configuration.experimentsPath
+    configuration.templatesPath
   );
   return templateExperimentsService.loadExperiments().then(experiments => {
     experimentList = _(experiments)

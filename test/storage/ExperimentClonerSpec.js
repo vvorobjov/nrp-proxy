@@ -90,7 +90,7 @@ describe('Experiment cloner', () => {
   let config = {
     nrpVersion: '4.0.0',
     modelsPath: 'test/data/models',
-    experimentsPath: 'test/data/experiments'
+    templatesPath: 'test/data/experiments'
   };
 
   const storageMock = new StorageMock(),

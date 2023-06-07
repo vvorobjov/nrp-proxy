@@ -63,7 +63,7 @@ var config = {
     deactivate: false
   },
   modelsPath: 'modelsPath',
-  experimentsPath: 'test',
+  templatesPath: 'test',
   servers: {},
   'daint-cscs': {
     job_url: 'job_url',
@@ -81,7 +81,7 @@ var configInternalIp = {
     deactivate: false
   },
   modelsPath: 'modelsPath',
-  experimentsPath: 'test',
+  templatesPath: 'test',
   servers: {
     genevaInternalIp: {
       internalIp: BASE_INTERNAL_URL + '/' + 'genevaInternalIp',

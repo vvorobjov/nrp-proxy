@@ -198,7 +198,7 @@ describe.skip('TemplateExperimentsService', () => {
   });
 
   it('should construct an experiments Service instance with the correct path', () => {
-    return expect(experimentsService.experimentsPath).to.contain(
+    return expect(experimentsService.templatesPath).to.contain(
       experimentsPaths
     );
   });

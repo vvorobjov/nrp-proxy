@@ -81,7 +81,7 @@ abstract class ExperimentCloner {
     const { uuid: expUUID } = await this.storage.createExperiment(expPath, token, userId, contextId);
 
     try {
-      this.templateFolder = path.dirname(path.join(this.config.experimentsPath, templateConfPath));
+      this.templateFolder = path.dirname(path.join(this.config.templatesPath, templateConfPath));
 
       // const proxyConfig = ConfigurationManager.loadConfigFile();
       const newConfig = await this.flattenExperiment(templateConfPath, expPath, token, userId, defaultName);
@@ -419,7 +419,7 @@ abstract class ExperimentCloner {
 export class TemplateExperimentCloner extends ExperimentCloner {
 
   getExperimentFileFullPath(expPath) {
-    return path.join(this.config.experimentsPath, expPath);
+    return path.join(this.config.templatesPath, expPath);
   }
 }
 
@@ -433,7 +433,7 @@ export class NewExperimentCloner extends ExperimentCloner {
     super(storage, config);
 
     this.newExpConfigurationPath = path.join(
-      this.config.experimentsPath,
+      this.config.templatesPath,
       this.templateExc
     );
     this.newExpBibiPath = path.join(
