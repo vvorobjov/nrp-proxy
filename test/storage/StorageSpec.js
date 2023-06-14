@@ -1020,8 +1020,6 @@ describe('Collab Storage', () => {
       type: 'file'
     };
 
-    console.info(await collabStorage.listFiles(fakeExperiment, fakeToken));
-
     return expect(collabStorage.listFiles(fakeExperiment, fakeToken))
       .to.eventually.be.an('array')
       .that.include(expected);

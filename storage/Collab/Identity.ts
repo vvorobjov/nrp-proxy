@@ -32,31 +32,35 @@ export class Identity extends BaseIdentity {
   usersList: any[] = [];
 
   getUniqueIdentifier(token) {
-    return this.getUserInfo('me', token).then(({id}) => id);
+    return this.getUserInfo('me', token).then(({ id }) => id);
   }
 
   async getUserInfo(userId, token) {
     // remap from collab 2 api to old one
-    const response: any = await CollabConnector.instance.getHTTPS(oidcAuthenticator.getUserinfoEndpoint(), token, undefined);
-    const userInfo = JSON.parse(response.body, function(k, v) {
-        if (k === 'name') {
-          this.displayName = v;
-        } else if (k === 'preferred_username')
-          this.username = v;
-        else if (k === 'mitreid-sub')
-          this.id = v;
-        else
-          return v; });
+    const response: any = await CollabConnector.instance.getHTTPS(
+      oidcAuthenticator.getUserinfoEndpoint(),
+      token,
+      undefined
+    );
+    const userInfo = JSON.parse(response.body, function(key, value) {
+      if (key === 'name') {
+        this.displayName = value;
+      } else if (key === 'preferred_username') {
+        this.username = value;
+        this.id = value;
+      } else return value;
+    });
 
-    if (userId !== userInfo.id && userId !== 'me')
-      return {};
-    else
-      return userInfo;
+    if (userId !== userInfo.id && userId !== 'me') return {};
+    else return userInfo;
   }
 
   async getUserGroups(token) {
-    const response: any = await CollabConnector.instance
-      .getHTTPS(oidcAuthenticator.getUserinfoEndpoint(), token, undefined);
+    const response: any = await CollabConnector.instance.getHTTPS(
+      oidcAuthenticator.getUserinfoEndpoint(),
+      token,
+      undefined
+    );
     const json = JSON.parse(response.body);
     return json.roles && json.roles.group;
   }
