@@ -36,7 +36,7 @@ export class Authenticator extends BaseAuthenticator {
 
   constructor(private config) {
     super();
-    setTimeout(this.cleanCache, CACHE_CLEANUP_INTEVAL_MS);
+    setTimeout(this.cleanCache.bind(this), CACHE_CLEANUP_INTEVAL_MS);
   }
 
   checkToken(token: string) {
