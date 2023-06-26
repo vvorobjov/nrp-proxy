@@ -791,6 +791,25 @@ app.post('/checkupdate', async (req, res) => {
   res.send({ version });
 });
 
+/**
+ * Checks the number of available backends.
+ * If there are available backends, responds with JSON {service: "healthy"}
+ * If there are no backends, responds with JSON {service: "unavailable"}
+ * The response status 200 confirms the unavailability of the proxy itself
+ */
+app.get('/health', (req, res, next) => {
+  proxyRequestHandler
+    .getAvailableServers()
+    .then(servers => {
+      if (servers.length > 0) {
+        res.send({service: 'healthy'});
+      } else {
+        res.send({service: 'unavailable'});
+      }
+    })
+    .catch(next);
+});
+
 configurationManager.configuration.then(null, null, conf =>
   proxyRequestHandler.reloadConfiguration(conf)
 );
