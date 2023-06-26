@@ -30,6 +30,7 @@ require('tls').DEFAULT_ECDH_CURVE = 'auto';
 
 const CREATE_TOKEN_URL = '/protocol/openid-connect/token';
 const USERINFO_ENDPOINT = '/protocol/openid-connect/userinfo';
+const INTROSPECT_TOKEN_URL = '/protocol/openid-connect/token/introspect';
 let authConfig;
 let lastRenewalTime = 0;
 let lastRetrievedToken;
@@ -92,8 +93,46 @@ const getToken = () => {
   return deferred.promise;
 };
 
+const introspectToken = (token) => {
+  if (authConfig.deactivate) return q(false);
+
+  const options = {
+    method: 'post',
+    form: {
+      token,
+      client_id: authConfig.clientId,
+      client_secret: authConfig.clientSecret
+    },
+    url: authConfig.url + INTROSPECT_TOKEN_URL,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  };
+
+  const deferred = q.defer();
+
+  request(options, (err, res, body) => {
+    if (err) {
+      deferred.reject(new Error(err));
+    } else if (res.statusCode < 200 || res.statusCode >= 300) {
+      deferred.reject(
+        new Error('Status code: ' + res.statusCode + '\n' + body)
+      );
+    } else {
+      try {
+        const response = JSON.parse(body);
+        deferred.resolve(response);
+      } catch (e) {
+        deferred.reject(new Error(body));
+      }
+    }
+  });
+  return deferred.promise;
+};
+
 export default {
   getToken,
+  introspectToken,
   configure,
   getAuthConfig,
   getUserinfoEndpoint

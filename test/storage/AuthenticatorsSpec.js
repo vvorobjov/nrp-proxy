@@ -62,17 +62,68 @@ describe('CollabAuthenticator', () => {
       Authenticator: CollabAuthenticator
     } = require('../../storage/Collab/Authenticator'),
     nock = require('nock');
+  const INTROSPECT_TOKEN_URL = '/protocol/openid-connect/token/introspect';
 
-  it('should get user info when trying to authenticate with non collab storage', () => {
-    const response = { id: 'some_id' };
+  it('should return the introspection endpoint response when token is active', () => {
+    const response = { active: true, other: 'someData' };
     let collabAuth = new CollabAuthenticator({ storage: 'FS' });
-    nock('https://localhost')
-      .get('/protocol/openid-connect/userinfo')
+    nock('http://localhost')
+      .post(
+        INTROSPECT_TOKEN_URL,
+        'token=emptyToken&client_id=CLIENT_ID&client_secret=CLIENT_SECRET'
+      )
+      .matchHeader('content-type', 'application/x-www-form-urlencoded')
       .reply(200, response);
 
     return collabAuth
       .checkToken('emptyToken')
       .should.eventually.deep.equal(response);
+  });
+
+  it('should retrun proper error, when token is not active', () => {
+    const response = { active: false, other: 'someData' };
+    let collabAuth = new CollabAuthenticator({ storage: 'FS' });
+    nock('http://localhost')
+      .post(
+        INTROSPECT_TOKEN_URL,
+        'token=emptyToken&client_id=CLIENT_ID&client_secret=CLIENT_SECRET'
+      )
+      .matchHeader('content-type', 'application/x-www-form-urlencoded')
+      .reply(200, response);
+
+    return collabAuth
+      .checkToken('emptyToken')
+      .should.be.rejectedWith('Token is not active.');
+  });
+
+  it('should retrun proper error, when introspection response is not successful', () => {
+    const response = { random: 'json', other: 'someData' };
+    let collabAuth = new CollabAuthenticator({ storage: 'FS' });
+    nock('http://localhost')
+      .post(
+        INTROSPECT_TOKEN_URL,
+        'token=emptyToken&client_id=CLIENT_ID&client_secret=CLIENT_SECRET'
+      )
+      .matchHeader('content-type', 'application/x-www-form-urlencoded')
+      .reply(403, response);
+
+    return collabAuth
+      .checkToken('emptyToken')
+      .should.be.rejectedWith(/Status code: 403/);
+  });
+
+  it('should retrun proper error, when introspection response body is corrupted', () => {
+    const response = 'Corrupted response body';
+    let collabAuth = new CollabAuthenticator({ storage: 'FS' });
+    nock('http://localhost')
+      .post(
+        INTROSPECT_TOKEN_URL,
+        'token=emptyToken&client_id=CLIENT_ID&client_secret=CLIENT_SECRET'
+      )
+      .matchHeader('content-type', 'application/x-www-form-urlencoded')
+      .reply(403, response);
+
+    return collabAuth.checkToken('emptyToken').should.be.rejectedWith(response);
   });
 
   it('should resolve to true when trying to authenticate with collab storage', () => {

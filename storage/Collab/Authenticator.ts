@@ -23,42 +23,66 @@
  * ---LICENSE-END**/
 'use strict';
 
+import q from 'q';
+import oidcAuthenticator from '../../proxy/oidcAuthenticator';
 import BaseAuthenticator from '../BaseAuthenticator';
-import { Identity } from './Identity';
 
-const q = require('q'),
-  path = require('path'),
-  identity = new Identity();
+// Clean the cache from the old tokens once an hour
+const CACHE_CLEANUP_INTEVAL_MS = 1000 * 60 * 60;
 
 export class Authenticator extends BaseAuthenticator {
-  static get TOKEN_CACHE_DURATION_MS() {
-    return 60 * 1000;
-  }
 
-  private authCache = new Map();
+  private authCache: Map<string, { time_ms: number; response: any }> = new Map();
 
   constructor(private config) {
     super();
+    setTimeout(this.cleanCache, CACHE_CLEANUP_INTEVAL_MS);
   }
 
-  checkToken(token) {
+  checkToken(token: string) {
     if (this.config.storage === 'Collab') {
       // No need to check token, it will be done by the underlying Collab storage requests
       return q.when(true);
     }
 
-    // do we have the token in cache?
+    // Do we have the token in cache?
     if (this.authCache.has(token)) {
       const cache = this.authCache.get(token);
-      if (Date.now() - cache.time <= Authenticator.TOKEN_CACHE_DURATION_MS) {
-        // cache still time valid
-        return q.when(cache.userinfo);
-      } else this.authCache.delete(token);
+      if (cache) {
+        if (Date.now() < cache.time_ms) {
+          // Cache still valid
+          return q.when(cache.response);
+        } else {
+          console.debug('Token in cache is expired');
+          this.authCache.delete(token);
+        }
+      }
     }
-    // no valid cache, we verify the token by trying to retrieve the user info
-    return identity.getUserInfo('me', token).then(userinfo => {
-      this.authCache.set(token, { time: Date.now(), userinfo });
-      return userinfo;
+
+    // No valid cache, verify the token by trying to retrieve the user info
+    return oidcAuthenticator.introspectToken(token).then(response => {
+      const deferred = q.defer();
+      // Check if the token is active
+      if (response.active) {
+        // Set token cache life time based on token expiration date
+        this.authCache.set(token, { time_ms: response.exp * 1000, response });
+        deferred.resolve(response);
+      } else {
+        deferred.reject(new Error('Token is not active.'));
+      }
+      return deferred.promise;
+    });
+  }
+
+  /**
+   * Removes expired entries from the authCache based on the current time.
+   */
+  cleanCache() {
+    const currentTimeMS = Date.now();
+    this.authCache.forEach((cache, key) => {
+      if (currentTimeMS >= cache.time_ms) {
+        this.authCache.delete(key);
+      }
     });
   }
 
