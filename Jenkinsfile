@@ -25,12 +25,6 @@ pipeline {
     stages {
         stage('Code checkout') {
             steps {
-                // Notify BitBucket on the start of the job
-                // The Bitbucket Build Status Notifier is used
-                // REF: https://plugins.jenkins.io/bitbucket-build-status-notifier/
-                
-                bitbucketStatusNotify(buildState: 'INPROGRESS', buildName: 'Code checkout')
-
                 // Debug information on available environment
                 echo sh(script: 'env|sort', returnStdout: true)
 
@@ -43,8 +37,6 @@ pipeline {
         
         stage('Install') {
             steps {
-                bitbucketStatusNotify(buildState: 'INPROGRESS', buildName: 'Building Proxy')
-
                 // Build operations (starting in .ci directory)
                 dir(env.GIT_CHECKOUT_DIR){
                     // Determine explicitly the shell as bash
@@ -57,8 +49,6 @@ pipeline {
         
         stage('Test Proxy') {
             steps {
-                bitbucketStatusNotify(buildState: 'INPROGRESS', buildName: 'Testing Proxy')
-
                 // Build operations (starting in .ci directory)
                 dir( env.GIT_CHECKOUT_DIR){
                     sh 'bash ./.ci/test.bash'
@@ -90,14 +80,5 @@ pipeline {
         always {
             cleanWs()
         }
-        aborted {
-            bitbucketStatusNotify(buildState: 'FAILED', buildDescription: 'Build aborted!')
-        }
-        failure {
-            bitbucketStatusNotify(buildState: 'FAILED', buildDescription: 'Build failed, see console output!')
-        }
-        success{
-            bitbucketStatusNotify(buildState: 'SUCCESSFUL', buildDescription: 'branch ' + env.BRANCH_NAME)
-        } 
     }
 }
