@@ -23,11 +23,15 @@
  * ---LICENSE-END**/
 'use strict';
 
+import { ExecException } from 'child_process';
 import { File } from './BaseStorage';
+import { Storage as CollabStorage } from './Collab/Storage';
 import * as ExperimentCloner from './ExperimentCloner';
 import { ExperimentImporter } from './ExperimentImporter';
+import { Storage as FileSystemStorage } from './FS/Storage';
 import utils from './FS/utils';
 import ModelsService from './ModelsService';
+
 const request = require('request-promise');
 const _ = require('lodash');
 
@@ -85,17 +89,21 @@ export default class RequestHandler {
       );
 
       const { Storage } = await import(path.join(storageBasePath, 'Storage'));
-      const { Authenticator } = await import(path.join(
-        authenticationBasePath,
-        'Authenticator'
-      ));
+      const { Authenticator } = await import(
+        path.join(authenticationBasePath, 'Authenticator')
+      );
       const { Identity } = await require(path.join(
         authenticationBasePath,
         'Identity'
       ));
 
       this.authenticator = new Authenticator(this.config);
-      this.storage = new Storage(this.config);
+      // this.storage = new Storage(this.config);
+      if (this.config.storage === 'FS') {
+        this.storage = new FileSystemStorage();
+      } else if (this.config.storage === 'Collab') {
+        this.storage = new CollabStorage(this.config);
+      }
       this.identity = new Identity(this.config);
     } catch (ex) {
       console.error(`Impossible to lazy load injected dependencies:
@@ -164,7 +172,12 @@ ${ex.stack}`);
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
       .then(userId =>
-        this.storage.renameExperiment(experimentID, newSimulationName, token, userId)
+        this.storage.renameExperiment(
+          experimentID,
+          newSimulationName,
+          token,
+          userId
+        )
       );
   }
 
@@ -280,56 +293,54 @@ ${ex.stack}`);
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(userId => this.storage.deleteCustomModel(modelType, modelName, userId));
+      .then(userId =>
+        this.storage.deleteCustomModel(modelType, modelName, userId)
+      );
   }
 
   async createCustomModel(model, zipFile, override) {
     await this.authenticator.checkToken(model.ownerId);
     model.ownerName = await this.getUserIdentifier(model.ownerId);
-    return this.storage.createCustomModel(
-      model, zipFile, override
-    );
+    return this.storage.createCustomModel(model, zipFile, override);
   }
 
   createZip(userName, modelType, zipName, zip, override) {
     const model = {
       ownerId: userName,
-      type: modelType,
+      type: modelType
     };
     return modelsService
       .getZipModelMetaData(model, zip)
-      .then(modelData =>
-        this.createCustomModel(modelData, zip, override)
-      );
+      .then(modelData => this.createCustomModel(modelData, zip, override));
   }
 
   listModelsbyType(customFolder, token) {
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(userId =>
-        this.storage.listModelsbyType(customFolder)
-      );
+      .then(userId => this.storage.listModelsbyType(customFolder));
   }
 
   async listUserModelsbyType(modelType, token) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
-    const userModels = await this.storage.listUserModelsbyType(modelType, userId);
+    const userModels = await this.storage.listUserModelsbyType(
+      modelType,
+      userId
+    );
     const models = await q.all(
       userModels.map(userModel =>
-        q.all([userModel, this.getModelZip(userModel.modelType,
-          userModel.fileName,
-          token)])
+        q.all([
+          userModel,
+          this.getModelZip(userModel.modelType, userModel.fileName, token)
+        ])
       )
     );
     const metaData = await q.all(
       models.map(([model, data]) =>
-        this.modelsService.getZipModelMetaData(
-          model,
-          data
-        )
-      ));
+        this.modelsService.getZipModelMetaData(model, data)
+      )
+    );
     return metaData;
   }
 
@@ -415,24 +426,25 @@ ${ex.stack}`);
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(userId =>
-        this.storage.listSharedModels(modelType, userId)
-      )
+      .then(userId => this.storage.listSharedModels(modelType, userId))
       .then(sharedModels => {
         return q.all(
           sharedModels.map(sharedModel =>
-            q.all([sharedModel, this.getModelZip(sharedModel.modelType, sharedModel.fileName, token)])
+            q.all([
+              sharedModel,
+              this.getModelZip(
+                sharedModel.modelType,
+                sharedModel.fileName,
+                token
+              )
+            ])
           )
         );
-      }
-      )
+      })
       .then(models =>
         q.all(
           models.map(([model, data]) =>
-            this.modelsService.getZipModelMetaData(
-              model,
-              data
-            )
+            this.modelsService.getZipModelMetaData(model, data)
           )
         )
       );
@@ -442,8 +454,7 @@ ${ex.stack}`);
     return this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(ownerId =>
-        this.storage.listAllModels(type, ownerId))
+      .then(ownerId => this.storage.listAllModels(type, ownerId))
       .then(allModels =>
         q.all(
           allModels.map(model =>
@@ -454,34 +465,34 @@ ${ex.stack}`);
       .then(models =>
         q.all(
           models.map(([model, data]) =>
-            this.modelsService.getZipModelMetaData(
-              model,
-              data
-            )
+            this.modelsService.getZipModelMetaData(model, data)
           )
         )
       );
   }
 
   transformKnowledgeGraphBrains(knowledgeGraphBrains, brainScripts) {
-    return knowledgeGraphBrains.map((knowledgeGraphBrain, index) =>
-      ({
-        name: knowledgeGraphBrain.name,
-        description: knowledgeGraphBrain.description,
-        maturity: 'production',
-        thumbnail: undefined,
-        script: brainScripts[index],
-        urls: { fileLoader: knowledgeGraphBrain.file_loader, fileUrl: knowledgeGraphBrain.file_url },
-        id: knowledgeGraphBrain.file_loader ? knowledgeGraphBrain.file_loader.split('/').pop() : undefined,
-        '@id': knowledgeGraphBrain['@id']
-      })
-    );
+    return knowledgeGraphBrains.map((knowledgeGraphBrain, index) => ({
+      name: knowledgeGraphBrain.name,
+      description: knowledgeGraphBrain.description,
+      maturity: 'production',
+      thumbnail: undefined,
+      script: brainScripts[index],
+      urls: {
+        fileLoader: knowledgeGraphBrain.file_loader,
+        fileUrl: knowledgeGraphBrain.file_url
+      },
+      id: knowledgeGraphBrain.file_loader
+        ? knowledgeGraphBrain.file_loader.split('/').pop()
+        : undefined,
+      '@id': knowledgeGraphBrain['@id']
+    }));
   }
 
   async get(extraOptions, url) {
     const requestOptions = {
       resolveWithFullResponse: true,
-      timeout: '5000',
+      timeout: '5000'
     };
     _.extend(requestOptions, { url, ...extraOptions });
     return request(requestOptions);
@@ -499,12 +510,23 @@ ${ex.stack}`);
           Authorization: token,
           accept: 'application/json'
         }
-      }, kgUrl);
-    const knowledgeGraphBrains = JSON.parse(knowledgeGraphBrainsResponse.body).results;
-    const knowledgeGraphBrainScripts = await q.all(knowledgeGraphBrains.map(knowledgeGraphBrain =>
-        this.get({}, knowledgeGraphBrain.file_loader || '')));
-    const brainScripts = knowledgeGraphBrainScripts.map(brainScriptResponse => brainScriptResponse.body);
-    return this.transformKnowledgeGraphBrains(knowledgeGraphBrains, brainScripts);
+      },
+      kgUrl
+    );
+    const knowledgeGraphBrains = JSON.parse(knowledgeGraphBrainsResponse.body)
+      .results;
+    const knowledgeGraphBrainScripts = await q.all(
+      knowledgeGraphBrains.map(knowledgeGraphBrain =>
+        this.get({}, knowledgeGraphBrain.file_loader || '')
+      )
+    );
+    const brainScripts = knowledgeGraphBrainScripts.map(
+      brainScriptResponse => brainScriptResponse.body
+    );
+    return this.transformKnowledgeGraphBrains(
+      knowledgeGraphBrains,
+      brainScripts
+    );
   }
 
   updateSharedExperimentMode(experimentId, sharingOption, token) {
@@ -526,7 +548,13 @@ ${ex.stack}`);
       .then(() => this.storage.listSharingUsersbyExperiment(experimentID));
   }
 
-  async cloneNewExperiment(token, contextId, environmentPath, defaultName, defaultMode) {
+  async cloneNewExperiment(
+    token,
+    contextId,
+    environmentPath,
+    defaultName,
+    defaultMode
+  ) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
 
@@ -549,14 +577,24 @@ ${ex.stack}`);
     const userId = await this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token));
-    return new ExperimentImporter(this.storage, token, userId, contextId).registerZippedExperiment(zip);
+    return new ExperimentImporter(
+      this.storage,
+      token,
+      userId,
+      contextId
+    ).registerZippedExperiment(zip);
   }
 
   async scanStorage(token, contextId) {
     const userId = await this.authenticator
       .checkToken(token)
       .then(() => this.getUserIdentifier(token));
-    return new ExperimentImporter(this.storage, token, userId, contextId).scanStorage();
+    return new ExperimentImporter(
+      this.storage,
+      token,
+      userId,
+      contextId
+    ).scanStorage();
   }
 
   getStoragePath() {
@@ -575,7 +613,11 @@ ${ex.stack}`);
       .then(() => this.getUserIdentifier(token));
 
     try {
-      const experimentZip = await new experimentZipper.ExperimentZipper(this.storage, token, userId).zipExperiment(experimentId);
+      const experimentZip = await new experimentZipper.ExperimentZipper(
+        this.storage,
+        token,
+        userId
+      ).zipExperiment(experimentId);
       zips.experimentZip = { path: experimentZip, name: '' };
     } catch (err) {
       console.error(`Zipping experiment failed. Error : ${err}`);
@@ -584,16 +626,27 @@ ${ex.stack}`);
 
     // robot zip. The bibi.bodyModel can be either an Object or an Array
     if (bibi.bodyModel) {
-      const customRobots = await this.storage.listUserModelsbyType('robots', userId);
+      const customRobots = await this.storage.listUserModelsbyType(
+        'robots',
+        userId
+      );
       if (bibi.bodyModel instanceof Array) {
         for (const bodyModel of bibi.bodyModel) {
-            const modelZip = await this.createTmpModelZip(zips, bodyModel, customRobots);
-            if (modelZip) {
-              zips.robotZips.push(modelZip);
-            }
+          const modelZip = await this.createTmpModelZip(
+            zips,
+            bodyModel,
+            customRobots
+          );
+          if (modelZip) {
+            zips.robotZips.push(modelZip);
+          }
         }
       } else if (bibi.bodyModel instanceof Object) {
-        const modelZip = await this.createTmpModelZip(zips, bibi.bodyModel, customRobots);
+        const modelZip = await this.createTmpModelZip(
+          zips,
+          bibi.bodyModel,
+          customRobots
+        );
         if (modelZip) {
           zips.robotZips.push(modelZip);
         }
@@ -602,8 +655,15 @@ ${ex.stack}`);
 
     // env zip
     if (exc.environmentModel._model) {
-      const customEnvs = await this.storage.listUserModelsbyType('environments', userId);
-      const modelZip = await this.createTmpModelZip(zips, exc.environmentModel._model, customEnvs);
+      const customEnvs = await this.storage.listUserModelsbyType(
+        'environments',
+        userId
+      );
+      const modelZip = await this.createTmpModelZip(
+        zips,
+        exc.environmentModel._model,
+        customEnvs
+      );
       if (modelZip) {
         zips.envZip = modelZip;
       }
@@ -623,7 +683,10 @@ ${ex.stack}`);
     const tmpFolder = tmp.dirSync();
     const modelDirectoryCopy = path.join(tmpFolder.name, dbModel.path);
     await q.denodeify(fs.mkdir)(modelDirectoryCopy);
-    fs.copySync(path.join(this.getStoragePath(), 'USER_DATA', dbModel.type, dbModel.path), modelDirectoryCopy);
+    fs.copySync(
+      path.join(this.getStoragePath(), 'USER_DATA', dbModel.type, dbModel.path),
+      modelDirectoryCopy
+    );
     const zipPath = tmp.fileSync();
     await zip.zip(tmpFolder.name, zipPath.name);
     return { path: zipPath.name, name: dbModel.name + '.zip' };
@@ -638,14 +701,12 @@ ${ex.stack}`);
   }
 
   unzip(filename, fileContent, parentDir, token) {
-    return this.authenticator.checkToken(token)
+    return this.authenticator
+      .checkToken(token)
       .then(() => this.getUserIdentifier(token))
-      .then(userId => this.storage.unzip(
-      filename,
-      fileContent,
-      parentDir,
-      userId
-    ));
+      .then(userId =>
+        this.storage.unzip(filename, fileContent, parentDir, userId)
+      );
   }
 
   async getModelConfigFullPath(modelType, modelName, token) {
@@ -658,6 +719,5 @@ ${ex.stack}`);
     } else {
       return this.storage.getModelConfigFullPath(model);
     }
-
   }
 }
