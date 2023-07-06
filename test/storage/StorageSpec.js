@@ -1,5 +1,10 @@
 'use strict';
 
+const { response } = require('express');
+const {
+  default: configurationManager
+} = require('../../utils/configurationManager');
+
 const fs = require('fs-extra'),
   chai = require('chai'),
   chaiAsPromised = require('chai-as-promised'),
@@ -861,7 +866,7 @@ describe('FS Storage (not mocking the mkdir)', () => {
 
 describe('FS Storage: extracting a zip experiment to the storage (no mock of fs)', () => {
   let RewiredFSStorage, fsStorage;
-  before(function() {
+  beforeEach(function() {
     const mockUtils = {
       storagePath: path.join(__dirname, '../data/experiments')
     };
@@ -916,17 +921,22 @@ describe('Collab Storage', () => {
     } = require('../../storage/Collab/CollabConnector'),
     { Storage: CollabStorage } = require('../../storage/Collab/Storage');
 
+  let confFilePath = path.join(__dirname, '../utils/config.json'),
+    confFilePath2 = path.join(__dirname, '../utils/config_2.json'),
+    configurationManagerRewire = rewire('../../utils/configurationManager');
+  configurationManagerRewire.__set__('CONFIG_FILE', confFilePath);
+  CollabConnector.instance.initConfig(confFilePath);
+
   //we need to mock all the http responses, thus we use a mocking framework called nock
   var nock = require('nock');
-
+  const fakeDownloadURL = 'https://fake/download/url';
   //instances
   let collabConnector, collabStorage;
 
   //helper variables
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
     fakeUserId = fakeToken,
-    fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168',
-    baseCollabURL = 'https://wiki.ebrains.eu/rest/v1/collabs';
+    fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168';
 
   beforeEach(() => {
     collabStorage = new CollabStorage({
@@ -934,15 +944,27 @@ describe('Collab Storage', () => {
       storage: 'Collab',
       authentication: 'Collab'
     });
+    CollabConnector.instance.initConfig(confFilePath);
+    //collabConnector = new CollabConnector();
+  });
+
+  it('should fail to create a new file', async () => {
+    nock(CollabConnector.URL_BUCKET_API)
+      .post('/fakeFolder/fakeName/copy?to=fakeFolder&name=fakeName')
+      .replyWithError({ message: 'fail ??', code: 404 });
+    collabConnector = CollabConnector.instance;
+    return await collabConnector.createFile(
+      'fakeToken',
+      'fakeFolder',
+      'fakeName',
+      'text/plain'
+    ).should.be.rejected;
+    //expect(result).to.eventually.be.rejected;
   });
 
   //Collab connector
   it('should succesfully get the correct request timeout', () => {
     return CollabConnector.REQUEST_TIMEOUT.should.equal(30 * 1000);
-  });
-
-  it('should succesfully get the correct collab api url', () => {
-    return CollabConnector.COLLAB_API_URL.should.equal(baseCollabURL);
   });
 
   it('should successfully post a new file', () => {
@@ -956,7 +978,31 @@ describe('Collab Storage', () => {
       .should.eventually.equal('success');
   });
 
-  it('should retrive the context collab id', () => {
+  it('upload file should not be implemented', () => {
+    return CollabConnector.instance
+      .uploadContent('fakeToken', 'fakeFolder/fakeName/', '')
+      .should.eventually.equal('not implemented');
+  });
+
+  it('should copy a folder with succes', () => {
+    nock(CollabConnector.URL_BUCKET_API)
+      .put(
+        '/fakeFolder/oldExperiment%2F/copy?to=fakeFolder&name=newExperiment%2F'
+      )
+      .reply(200, 'success');
+
+    return CollabConnector.instance
+      .copyFolder(
+        'fakeToken',
+        'fakeFolder',
+        'newExperiment',
+        'fakeFolder/oldExperiment'
+      )
+      .then(response => response.body)
+      .should.eventually.equal('success');
+  });
+
+  it('should retrieve the context collab id', () => {
     const response = { collab: { id: 'collabId' } };
 
     nock('https://services.humanbrainproject.eu')
@@ -973,12 +1019,13 @@ describe('Collab Storage', () => {
       .post('/fakeFolder/fakeName/copy?to=fakeFolder&name=fakeName')
       .replyWithError({ message: 'fail', code: 404 });
     collabConnector = CollabConnector.instance;
-    return collabConnector.createFile(
+    let result = collabConnector.createFile(
       'fakeToken',
       'fakeFolder',
       'fakeName',
       'text/plain'
-    ).should.be.rejected;
+    );
+    expect(result).to.eventually.be.rejected;
   });
 
   it('should throw when we have a response with a wrong status code', () => {
@@ -996,14 +1043,267 @@ describe('Collab Storage', () => {
       headers: { Authorization: 'Bearer a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24' }
     };
 
-    return CollabConnectorMock.default.instance.executeRequest(
-      options,
-      fakeToken
-    ).should.be.rejected;
+    return CollabConnectorMock.default.instance.requestHTTPS(options, fakeToken)
+      .should.be.rejected;
   });
 
   //Collab storage
 
+  //unimplemented functions
+
+  it('getStoragePath should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.getStoragePath()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('listSharedModels should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.listSharedModels()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('listUserModelsbyType should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.listUserModelsbyType()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('isDirectory should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.isDirectory()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('getExperimentSharingMode should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.getExperimentSharingMode()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('updateSharedExperimentMode should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.updateSharedExperimentMode()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('listSharingUsersbyExperiment should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.listSharingUsersbyExperiment()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('listExperimentsSharedByUsers should not be implemented', () => {
+    expect(
+      CollabStorage.prototype.listExperimentsSharedByUsers()
+    ).to.deep.equal([]);
+  });
+
+  it('deleteSharingUserFromExperiment should not be implemented', () => {
+    try {
+      expect(
+        CollabStorage.prototype.deleteSharingUserFromExperiment()
+      ).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('listAllModels should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.listAllModels()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('addUsertoSharingUserListinModel should not be implemented', () => {
+    try {
+      expect(
+        CollabStorage.prototype.addUsertoSharingUserListinModel()
+      ).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('listSharingUsersbyModel should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.listSharingUsersbyModel()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('updateSharedModelMode should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.updateSharedModelMode()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('getModelSharingMode should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.getModelSharingMode()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('deleteSharingUserFromModel should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.deleteSharingUserFromModel()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('addUsertoSharingUserListinExperiment should not be implemented', () => {
+    try {
+      expect(
+        CollabStorage.prototype.addUsertoSharingUserListinExperiment()
+      ).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('copyFolderContents should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.copyFolderContents()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('extractZip should not be implemented', async () => {
+    collabStorage
+      .extractZip('zip', 'fakeDestFolderName')
+      .should.eventually.equal('not implemented');
+  });
+
+  it('createUniqueExperimentId should not be implemented', async () => {
+    collabStorage
+      .createUniqueExperimentId()
+      .should.eventually.deep.equal('not implemented');
+  });
+
+  it('insertExperimentInDB should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.insertExperimentInDB()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('createOrUpdateKgAttachment should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.createOrUpdateKgAttachment()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('getKgAttachment should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.getKgAttachment()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('unzip should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.unzip()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  //get files
+  it('should decorate an experiment configuration with an attribute', async () => {
+    var storage = new CollabStorage();
+    //mock of the collab response
+    const attribute = 'attribute';
+    const value = 'value';
+    var experimentConfiguration = {
+      experiments: [
+        {
+          type: 'folder',
+          path: 'Experiment'
+        }
+      ]
+    };
+    const decoratedExperimentConfiguration = storage.decorateExpConfigurationWithAttribute(
+      attribute,
+      value,
+      JSON.stringify(experimentConfiguration)
+    );
+    return JSON.parse(decoratedExperimentConfiguration).attribute.should.equal(
+      value
+    );
+  });
+
+  it('should copy a folder with succes', async () => {
+    var storage = new CollabStorage();
+    nock(CollabConnector.URL_BUCKET_API)
+      .put('/fakeFolder/Experiment%2F/copy?to=fakeFolder&name=Experiment_0%2F')
+      .reply(200, 'success');
+
+    nock(CollabConnector.URL_BUCKET_API)
+      .get('/fakeFolder/nrp-experiments.json?inline=false&redirect=false')
+      .reply(200, {
+        url: fakeDownloadURL
+      });
+
+    nock(fakeDownloadURL)
+      .get('')
+      .reply(200, {
+        experiments: [
+          {
+            type: 'folder',
+            path: 'Experiment'
+          }
+        ]
+      });
+    await storage
+      .copyExperiment('fakeFolder/Experiment', 'fakeToken', 'fakeContextId')
+      .should.eventually.to.deep.equal({
+        clonedExp: 'fakeFolder/Experiment_0',
+        originalExp: 'fakeFolder/Experiment'
+      });
+  });
+
+  it('should modify an experiment name successfully', async () => {
+    const fakeExperiment = 'fakeFolder/fakeExperiment';
+    nock(CollabConnector.URL_BUCKET_API)
+      .get('/' + fakeExperiment + '?limit=9999&delimiter=%2F')
+      .replyWithFile(200, path.join(__dirname, 'replies/contents.json'));
+
+    collabStorage
+      .renameExperiment(
+        'fakeFolder/fakeExperiment',
+        'fakeNewName',
+        'fakeToken',
+        'fakeUserID'
+      )
+      .should.eventually.equal('success');
+  });
   //get files
   it.skip('should get the files under a specific experiment', async () => {
     //mock of the collab response
@@ -1023,6 +1323,12 @@ describe('Collab Storage', () => {
     return expect(collabStorage.listFiles(fakeExperiment, fakeToken))
       .to.eventually.be.an('array')
       .that.include(expected);
+  });
+
+  it('should return empty urls if config.json is incorrect', () => {
+    CollabConnector.instance.initConfig(confFilePath2);
+    CollabConnector.URL_BUCKET_API.should.equal('');
+    CollabConnector.SEARCH_TAG_URL.should.equal('');
   });
 
   //get file
@@ -1072,13 +1378,14 @@ describe('Collab Storage', () => {
   });
 
   //delete file
-  it.skip('should delete a file under a specific experiment', () => {
-    nock('https://services.humanbrainproject.eu')
-      .delete('/storage/v1/api/file/fakeFile/')
+  it('should delete a file under a specific experiment', async () => {
+    nock(CollabConnector.URL_BUCKET_API)
+      .delete('/fakeFolder/fakeExperiment/fakeFile')
       .reply(200, 'Success');
-
-    return collabStorage
-      .deleteFile('fakeFile', fakeExperiment, fakeToken)
+    console.info(CollabConnector.URL_BUCKET_API);
+    return await collabStorage
+      .deleteFile('fakeFile', 'fakeFolder/fakeExperiment', fakeToken)
+      .then(response => response.body)
       .should.eventually.equal('Success');
   });
 
