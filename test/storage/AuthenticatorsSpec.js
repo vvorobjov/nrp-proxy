@@ -3,6 +3,7 @@
 const chai = require('chai'),
   chaiAsPromised = require('chai-as-promised'),
   rewire = require('rewire'),
+  expect = chai.expect,
   path = require('path'),
   assert = chai.assert;
 chai.use(chaiAsPromised);
@@ -131,22 +132,47 @@ describe('CollabAuthenticator', () => {
     return collabAuth.checkToken('emptyToken').should.eventually.equal(true);
   });
 
-  // it('should not get get user info when data is in cache', () => {
-  //   const response = { id: 'some_id' };
-  //   let collabAuth = new CollabAuthenticator({ storage: 'FS' });
-  //   nock('http://localhost')
-  //     .get('/protocol/openid-connect/userinfo')
-  //     .reply(200, response);
+  it('should throw not implemented when calling login methods', () => {
+    try {
+      expect(
+        CollabAuthenticator.prototype.login('fakeUser', 'fakePwd')
+      ).to.throw('not implemented');
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
 
-  //   return collabAuth
-  //     .checkToken('emptyToken')
-  //     .should.eventually.deep.equal(response)
-  //     .then(() => {
-  //       nock.cleanAll();
-  //       return collabAuth.checkToken('emptyToken');
-  //     })
-  //     .should.eventually.deep.equal(response);
+    try {
+      expect(CollabAuthenticator.prototype.getLoginPage()).to.throw(
+        'not implemented'
+      );
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
 
-  //   //nock.cleanAll();
-  // });
+  it('should not get user info when data is in cache', () => {
+    const response = { id: 'some_id', active: true };
+    let collabAuth = new CollabAuthenticator({ storage: 'FS' });
+    nock('http://localhost')
+      .get('/protocol/openid-connect/userinfo')
+      .reply(200, response);
+
+    nock('http://localhost')
+      .post('/protocol/openid-connect/token/introspect')
+      .reply(200, response);
+
+    return collabAuth
+      .checkToken('emptyToken')
+      .should.eventually.deep.equal(response)
+      .then(() => {
+        nock.cleanAll();
+        nock('http://localhost')
+          .post('/protocol/openid-connect/token/introspect')
+          .reply(200, response);
+        return collabAuth.checkToken('emptyToken');
+      })
+      .should.eventually.deep.equal(response);
+
+    // nock.cleanAll();
+  });
 });

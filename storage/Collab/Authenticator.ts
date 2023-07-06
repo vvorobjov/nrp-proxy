@@ -58,7 +58,6 @@ export class Authenticator extends BaseAuthenticator {
         }
       }
     }
-
     // No valid cache, verify the token by trying to retrieve the user info
     return oidcAuthenticator.introspectToken(token).then(response => {
       const deferred = q.defer();
@@ -91,7 +90,6 @@ export class Authenticator extends BaseAuthenticator {
   }
 
   getLoginPage() {
-    console.info('getloginpage--------------------------------------------------------------------');
     throw 'not implemented';
   }
 }

@@ -47,9 +47,9 @@ const resolveReplaceEnvVariables = (str: string) => {
   return str.replace(/\$([A-Za-z]*)/g, (_m, v) => process.env[v] || '');
 };
 
-const loadConfigFile = () => {
+const loadConfigFile = (path = CONFIG_FILE) => {
   try {
-    configFile = JSON.parse(fs.readFileSync(CONFIG_FILE));
+    configFile = JSON.parse(fs.readFileSync(path));
     for (const pathProp of PATH_CONFIG_PROPERTIES) {
       if (!configFile[pathProp])
         throw `${pathProp} is missing from the config file`;
