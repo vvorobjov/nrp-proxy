@@ -56,8 +56,11 @@ let modelsService = new ModelsService();
 const gdprService = new GDPR();
 
 export default class RequestHandler {
+
   private authenticator;
   private storage;
+  private fsStorage;
+  private collabStorage;
   private identity;
   private modelsService;
   private tokenIdentifierCache;
@@ -88,7 +91,7 @@ export default class RequestHandler {
         path.join(__dirname, this.config.authentication)
       );
 
-      const { Storage } = await import(path.join(storageBasePath, 'Storage'));
+      // const { Storage } = await import(path.join(storageBasePath, 'Storage'));
       const { Authenticator } = await import(
         path.join(authenticationBasePath, 'Authenticator')
       );
@@ -99,10 +102,12 @@ export default class RequestHandler {
 
       this.authenticator = new Authenticator(this.config);
       // this.storage = new Storage(this.config);
+      this.fsStorage = new FileSystemStorage();
+      this.collabStorage = new CollabStorage(this.config);
       if (this.config.storage === 'FS') {
-        this.storage = new FileSystemStorage();
+        this.storage = this.fsStorage;
       } else if (this.config.storage === 'Collab') {
-        this.storage = new CollabStorage(this.config);
+        this.storage = this.collabStorage;
       }
       this.identity = new Identity(this.config);
     } catch (ex) {
