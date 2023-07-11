@@ -155,20 +155,23 @@ app.get('/experimentImage/:experiment', (req, res, next) => {
     .catch(next);
 });
 
-const verifyRunningMode = (req, res, next) => {
-  isAdmin(req).then(answer => {
-    adminService.getStatus().then(({ maintenance }) => {
-      // Non-admin users are deprived of all services in maintenance mode
-      if (maintenance && !answer) res.status(478).end();
-      else next();
-    });
-  });
-};
+// TODO: [NRRPLT-8953] create userGroups cache
+// const verifyRunningMode = (req, res, next) => {
+//   isAdmin(req).then(answer => {
+//     adminService.getStatus().then(({ maintenance }) => {
+//       // Non-admin users are deprived of all services in maintenance mode
+//       if (maintenance && !answer) res.status(478).end();
+//       else next();
+//     });
+//   });
+// };
 
-app.get('/maintenancemode', verifyRunningMode);
+// TODO: [NRRPLT-8953] create userGroups cache
+// app.get('/maintenancemode', verifyRunningMode);
 app.get('/maintenancemode', (_, res) => res.send({}));
 
-app.get('/experiments', verifyRunningMode);
+// TODO: [NRRPLT-8953] create userGroups cache
+// app.get('/experiments', verifyRunningMode);
 
 app.get('/experiments', (_req, res, next) => {
   proxyRequestHandler
@@ -227,7 +230,8 @@ const getAuthToken = req => {
   return authorization.length > 7 && authorization.substr(7);
 };
 
-app.get('/storage/experiments', verifyRunningMode);
+// TODO: [NRRPLT-8953] create userGroups cache
+// app.get('/storage/experiments', verifyRunningMode);
 
 app.get('/storage/experiments', async (req, res) => {
   try {
