@@ -58,11 +58,12 @@ const storageRequestHandler = new StorageRequestHandler(config),
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'accept, Authorization, Context-Id, Content-Type'
+    'Accept, Authorization, Context-Id, Content-Type, Origin, X-Requested-With'
   );
+
   res.setHeader('Access-Control-Expose-Headers', 'uuid, content-disposition');
   next();
 });
@@ -203,7 +204,7 @@ app.use(bodyParser.json({ limit: '2000mb' }));
 app.use(bodyParser.raw({ limit: '2000mb' }));
 app.use(bodyParser.text({ type: () => true, limit: '2000mb' }));
 
-app.post('/authentication/authenticate', (req, res) => {
+app.put('/authentication/authenticate', (req, res) => {
   storageRequestHandler
     .authenticate(req.body.user, req.body.password)
     .then(auth => loggerManager.log(req.body.user) && auth)
@@ -271,14 +272,14 @@ app.get('/storage/experiments', async (req, res) => {
   }
 });
 
-app.post('/storage/clone', (req, res) => {
+app.put('/storage/clone', (req, res) => {
   return storageRequestHandler
     .cloneExperiment(getAuthToken(req), req.body.expPath, req.get('context-id'))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/models/:type/:modelId/sharing/:userId', (req, res) => {
+app.put('/storage/models/:type/:modelId/sharing/:userId', (req, res) => {
   storageRequestHandler
     .addUsertoSharingUserListinModel(
       req.params.type, req.params.modelId,
@@ -296,7 +297,7 @@ app.get('/storage/models/:type/:modelId/sharingusers', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/models/:modelType/:modelId/sharingmode/:sharingMode', (req, res) => {
+app.put('/storage/models/:modelType/:modelId/sharingmode/:sharingMode', (req, res) => {
   storageRequestHandler
     .updateSharedModelMode(
       req.params.modelType, req.params.modelId,
@@ -372,7 +373,7 @@ app.get('/storage/experiments/:experimentId/sharingusers', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/experiments/:experimentId/sharingmode/:sharingMode', (req, res) => {
+app.put('/storage/experiments/:experimentId/sharingmode/:sharingMode', (req, res) => {
   storageRequestHandler
     .updateSharedExperimentMode(
       req.params.experimentId,
@@ -401,7 +402,7 @@ app.delete('/storage/experiments/:experimentId/sharingusers/:userId', (req, res)
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/experiments/:experimentId/sharingusers/:userId', (req, res) => {
+app.put('/storage/experiments/:experimentId/sharingusers/:userId', (req, res) => {
   storageRequestHandler
     .addUsertoSharingUserListinExperiment(
       req.params.experimentId,
@@ -419,7 +420,7 @@ app.get('/storage/experiments/:experimentId/sharingmode', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/experiments/:experimentId/rename', (req, res) => {
+app.put('/storage/experiments/:experimentId/rename', (req, res) => {
   storageRequestHandler
     .renameExperiment(
       req.params.experimentId,
@@ -431,7 +432,7 @@ app.post('/storage/experiments/:experimentId/rename', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/clonenew', (req, res) => {
+app.put('/storage/clonenew', (req, res) => {
   return storageRequestHandler
     .cloneNewExperiment(
       getAuthToken(req),
@@ -461,7 +462,7 @@ app.delete('/storage/models/:modelType/:modelName', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/models/:modelType/:modelName', (req, res) => {
+app.put('/storage/models/:modelType/:modelName', (req, res) => {
   storageRequestHandler
     .createZip(
       getAuthToken(req),
@@ -495,7 +496,7 @@ app.get('/storage/models/:modelType/:modelName/config', (req, res, next) => {
     .catch(next);
 });
 
-app.post('/storage/importExperiment', async (req, res) => {
+app.put('/storage/importExperiment', async (req, res) => {
   const token = getAuthToken(req);
   storageRequestHandler
     .registerZippedExperiment(
@@ -507,7 +508,7 @@ app.post('/storage/importExperiment', async (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/scanStorage', async (req, res) => {
+app.put('/storage/scanStorage', async (req, res) => {
   const token = getAuthToken(req);
   storageRequestHandler
     .scanStorage(
@@ -577,7 +578,7 @@ app.delete('/storage/:experiment', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/clone/:experiment', (req, res) => {
+app.put('/storage/clone/:experiment', (req, res) => {
   if (!req.params.experiment)
     return handleError(res, 'Experiment name is required');
 
@@ -587,11 +588,12 @@ app.post('/storage/clone/:experiment', (req, res) => {
       getAuthToken(req),
       req.get('context-id')
     )
-    .then(r => res.send(r || ''))
+    .then(r => {
+      res.send(r || ''); })
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/:experiment/*', (req, res) => {
+app.put('/storage/:experiment/*', (req, res) => {
   if (!req.params['0']) return handleError(res, 'File name is required');
   let promise: Promise<unknown>;
 
@@ -750,7 +752,7 @@ app.get('/identity/gdpr', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/identity/gdpr', (req, res) => {
+app.put('/identity/gdpr', (req, res) => {
   storageRequestHandler
     .acceptGDPRStatus(getAuthToken(req))
     .then(r => res.send(r))
@@ -782,7 +784,7 @@ const getReqIp = req =>
 
 const ANONYMOUS_ACTIVITIES = new Set(['install', 'update']);
 
-app.post('/checkupdate', async (req, res) => {
+app.put('/checkupdate', async (req, res) => {
   const packagePath = require('path').resolve('./package.json');
   const version = require(packagePath).version;
   const clientIP = getReqIp(req);

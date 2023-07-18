@@ -23,6 +23,8 @@
  * ---LICENSE-END**/
 'use strict';
 
+import { response } from 'express';
+import { type } from 'os';
 import { URL } from 'url';
 import configurationManager from '../../utils/configurationManager';
 // import { FileType } from '../BaseStorage';
@@ -30,6 +32,7 @@ import configurationManager from '../../utils/configurationManager';
 const q = require('q'),
   _ = require('lodash'),
   path = require('path'),
+  jsonFile = require('../../config.json'),
   https = require('https');
 
 // mocked in the tests
@@ -94,6 +97,9 @@ export default class CollabConnector {
   requestHTTPS(url, options, authToken) {
     return new Promise((resolve, reject) => {
       const urlObject = new URL(url);
+      /* if (options.method == 'PUT') {
+        console.info("URL object : ", urlObject);
+      } */
       _.extend(options, {
         hostname: urlObject.hostname,
         path: urlObject.pathname + urlObject.search,
@@ -160,14 +166,34 @@ export default class CollabConnector {
     });
   }
 
-  async putHTTPS(url, data, token, options, jsonType = false) {
+  async putHTTPS(url, data, token, options, jsonType = true) {
     console.info('new put method : ', url);
+    console.info('options  : ', options);
     options = options ? options : {};
     _.extend(options, {
       method: 'PUT',
       uri: url,
       body: data,
-      json: !!jsonType
+      json: data
+    });
+    return  await this.requestHTTPS(url,
+        options,
+        token
+      ).catch(e => {
+        console.info(e);
+        if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
+          console.info('Error: ESOCKETTIMEDOUT');
+        throw e;
+      });
+  }
+
+  async patchHTTPS(url, data, token, options, jsonType = true) {
+    options = options ? options : {};
+    _.extend(options, {
+      method: 'PATCH',
+      uri: url,
+      body: data,
+      json: true
     });
     return  await this.requestHTTPS(url,
         options,
@@ -195,7 +221,6 @@ export default class CollabConnector {
       method: 'DELETE'
     });
     return await this.requestHTTPS(url, options, token).then(response => {
-      console.info(response);
       return response;
     });
   }
@@ -235,7 +260,7 @@ export default class CollabConnector {
         undefined
       );
       const downloadUrl = JSON.parse(downloadResponse.body);
-      // console.info(['getBucketFile() - downloadResponse.body', downloadUrl.body]);
+      // console.info(['getBucketFile() - downloadResponse.body', downloadUrl]);
       const fileResponse: any = await this.getHTTPS(
         downloadUrl.url,
         undefined,
@@ -308,20 +333,77 @@ export default class CollabConnector {
   }
 
   async uploadContent(token, entityUuid, content) {
-    return 'not implemented';
-    /* console.info('uploading : ', typeof(content));
-    const COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}`;
+    const COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}_test`;
+    const options = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'cross-site',
+      Origin: 'https://localhost'
+    };
 
-    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, {headers: { accept: 'application/json' }})
+    // console.info("loading json config : ", json_file);
+    const contenttest = JSON.stringify({
+      SimulationName: 'tvb_opensim_0',
+      SimulationDescription: 'new test from nrp-proxy',
+      SimulationTimeout: 50,
+      EngineConfigs:
+      [
+        {
+          EngineType: 'py_sim',
+          EngineName: 'opensim',
+          Simulator: 'Opensim',
+          EngineTimestep: 0.01,
+          PythonFileName: 'opensim_engine.py',
+          WorldFileName: 'arm26/arm26_ground_offset.osim',
+          Visualizer: false
+        },
+        {
+          EngineType: 'python_json',
+          EngineTimestep: 0.01,
+          EngineName: 'tvb',
+          PythonFileName: 'tvb_engine.py'
+        },
+            {
+                EngineType: 'datatransfer_grpc_engine',
+                EngineName: 'datatransfer_engine',
+                MQTTBroker: 'localhost:1883',
+                simulationID: '0',
+                dumps: []
+            }
+      ],
+      DataPackProcessingFunctions:
+      [
+        {
+          Name: 'rec_joints',
+          FileName: 'rec_joints.py'
+        },
+        {
+          Name: 'send_cmd',
+          FileName: 'send_cmd.py'
+        }
+      ]
+    });
+    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, undefined)
       .then((response: any) => {
         console.info(response);
         const uploadUrl = JSON.parse(response.body).url;
-        this.putHTTPS(uploadUrl, content, undefined, undefined, true);
-        return response;
-      })
-      .then(() => ({uuid : entityUuid}))
-      .catch(error => console.error());
-     */
+        return uploadUrl;
+      }).then(async uploadUrl => {
+        const optHeaders = {'Access-Control-Request-Method' : 'PUT',
+          'Access-Control-Request-Headers': 'accept, origin',
+          Origin: 'https://localhost'};
+        const response = await this.requestHTTPS(uploadUrl, {method: 'OPTIONS', headers : optHeaders}, undefined);
+        console.info('OPTIONS response : ', response);
+        return uploadUrl; }
+        )
+      .then(uploadUrl => this.putHTTPS(uploadUrl, jsonFile, undefined, options, true))
+      .then((response) => {
+        console.info('Upload response : ' + entityUuid, response);
+        return {uuid : entityUuid}; })
+      .catch(error => console.error(error));
   }
 
   async deleteBucketEntity(token, parent, entityUuid, type = 'file') {
@@ -330,10 +412,23 @@ export default class CollabConnector {
       COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${entityUuid}`;
     } else if (type === 'folder') {
       COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}/`;
-      console.info(token);
     }
-    console.info(COLLAB_FILE_URL);
     return await this.deleteHTTPS(COLLAB_FILE_URL, token, undefined);
+  }
+
+  async renameBucketEntity(token, parent, entityUuid, targetName, type = 'file') {
+    let RENAME_BUCKET_URL;
+    if (type === 'file') {
+      RENAME_BUCKET_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${entityUuid}`;
+    } else if (type === 'folder') {
+      RENAME_BUCKET_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}/`;
+    }
+
+    // console.info("JSON LOADED config : ", JSON.parse(json_file));
+    const newName = { rename: { target_name: 'husky_simulation/' } };
+    return await this.patchHTTPS(RENAME_BUCKET_URL,
+      JSON.stringify(newName), token, { headers: { 'content-type': 'application/json', 'accept-encodings' : 'gzip, deflate, br' }}, true)
+        .then(response => console.info(response));
   }
 
   createBucketFile(token, parent, name, contentType) {
