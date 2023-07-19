@@ -32,7 +32,6 @@ import configurationManager from '../../utils/configurationManager';
 const q = require('q'),
   _ = require('lodash'),
   path = require('path'),
-  jsonFile = require('../../config.json'),
   https = require('https');
 
 // mocked in the tests
@@ -139,6 +138,10 @@ export default class CollabConnector {
           console.info('error start request');
           reject(e);
         });
+
+      if (options.body) {
+        request.write(options.body);
+      }
       request.on('error', e => {
         console.error(e);
       });
@@ -168,7 +171,6 @@ export default class CollabConnector {
 
   async putHTTPS(url, data, token, options, jsonType = true) {
     console.info('new put method : ', url);
-    console.info('options  : ', options);
     options = options ? options : {};
     _.extend(options, {
       method: 'PUT',
@@ -318,10 +320,7 @@ export default class CollabConnector {
     console.info('copying folder ', BUCKET_FILE_URL);
     return this.putHTTPS(
       BUCKET_FILE_URL,
-      {
-        newExpName,
-        parent
-      },
+      undefined,
       token,
       undefined,
       true
@@ -333,7 +332,7 @@ export default class CollabConnector {
   }
 
   async uploadContent(token, entityUuid, content) {
-    const COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}_test`;
+    const COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}`;
     const options = {
       Accept: 'application/json',
       'Content-Type': 'application/json',
@@ -344,64 +343,12 @@ export default class CollabConnector {
       Origin: 'https://localhost'
     };
 
-    // console.info("loading json config : ", json_file);
-    const contenttest = JSON.stringify({
-      SimulationName: 'tvb_opensim_0',
-      SimulationDescription: 'new test from nrp-proxy',
-      SimulationTimeout: 50,
-      EngineConfigs:
-      [
-        {
-          EngineType: 'py_sim',
-          EngineName: 'opensim',
-          Simulator: 'Opensim',
-          EngineTimestep: 0.01,
-          PythonFileName: 'opensim_engine.py',
-          WorldFileName: 'arm26/arm26_ground_offset.osim',
-          Visualizer: false
-        },
-        {
-          EngineType: 'python_json',
-          EngineTimestep: 0.01,
-          EngineName: 'tvb',
-          PythonFileName: 'tvb_engine.py'
-        },
-            {
-                EngineType: 'datatransfer_grpc_engine',
-                EngineName: 'datatransfer_engine',
-                MQTTBroker: 'localhost:1883',
-                simulationID: '0',
-                dumps: []
-            }
-      ],
-      DataPackProcessingFunctions:
-      [
-        {
-          Name: 'rec_joints',
-          FileName: 'rec_joints.py'
-        },
-        {
-          Name: 'send_cmd',
-          FileName: 'send_cmd.py'
-        }
-      ]
-    });
     return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, undefined)
       .then((response: any) => {
-        console.info(response);
         const uploadUrl = JSON.parse(response.body).url;
         return uploadUrl;
-      }).then(async uploadUrl => {
-        const optHeaders = {'Access-Control-Request-Method' : 'PUT',
-          'Access-Control-Request-Headers': 'accept, origin',
-          Origin: 'https://localhost'};
-        const response = await this.requestHTTPS(uploadUrl, {method: 'OPTIONS', headers : optHeaders}, undefined);
-        console.info('OPTIONS response : ', response);
-        return uploadUrl; }
-        )
-      .then(uploadUrl => this.putHTTPS(uploadUrl, jsonFile, undefined, options, true))
+      }).then(uploadUrl => this.putHTTPS(uploadUrl, content, undefined, options, true))
       .then((response) => {
-        console.info('Upload response : ' + entityUuid, response);
         return {uuid : entityUuid}; })
       .catch(error => console.error(error));
   }
@@ -425,7 +372,7 @@ export default class CollabConnector {
     }
 
     // console.info("JSON LOADED config : ", JSON.parse(json_file));
-    const newName = { rename: { target_name: 'husky_simulation/' } };
+    const newName = { rename: { target_name: targetName + '/' } };
     return await this.patchHTTPS(RENAME_BUCKET_URL,
       JSON.stringify(newName), token, { headers: { 'content-type': 'application/json', 'accept-encodings' : 'gzip, deflate, br' }}, true)
         .then(response => console.info(response));
