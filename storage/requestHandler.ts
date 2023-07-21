@@ -29,7 +29,6 @@ import { Storage as CollabStorage } from './Collab/Storage';
 import * as ExperimentCloner from './ExperimentCloner';
 import { ExperimentImporter } from './ExperimentImporter';
 import { Storage as FileSystemStorage } from './FS/Storage';
-import utils from './FS/utils';
 import ModelsService from './ModelsService';
 
 const request = require('request-promise');
@@ -84,14 +83,10 @@ export default class RequestHandler {
 
   async loadDependenciesInjection() {
     try {
-      const storageBasePath = path.resolve(
-        path.join(__dirname, this.config.storage)
-      );
       const authenticationBasePath = path.resolve(
         path.join(__dirname, this.config.authentication)
       );
 
-      // const { Storage } = await import(path.join(storageBasePath, 'Storage'));
       const { Authenticator } = await import(
         path.join(authenticationBasePath, 'Authenticator')
       );
@@ -101,7 +96,6 @@ export default class RequestHandler {
       ));
 
       this.authenticator = new Authenticator(this.config);
-      // this.storage = new Storage(this.config);
       this.fsStorage = new FileSystemStorage();
       this.collabStorage = new CollabStorage(this.config);
       if (this.config.storage === 'FS') {
@@ -111,8 +105,7 @@ export default class RequestHandler {
       }
       this.identity = new Identity(this.config);
     } catch (ex) {
-      console.error(`Impossible to lazy load injected dependencies:
-${ex.stack}`);
+      console.error(`Impossible to lazy load injected dependencies: ${ex.stack}`);
       process.exit(1);
     }
   }
