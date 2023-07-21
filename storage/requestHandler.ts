@@ -23,7 +23,6 @@
  * ---LICENSE-END**/
 'use strict';
 
-import { ExecException } from 'child_process';
 import { File } from './BaseStorage';
 import { Storage as CollabStorage } from './Collab/Storage';
 import * as ExperimentCloner from './ExperimentCloner';
