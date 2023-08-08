@@ -985,116 +985,13 @@ describe('Storage request handler', () => {
   });
 
   // getExperimentZips
-  it(`should get the experiment zips (experiment, environment, robots) if present in bibi,exc and bibi has multiple robots`, () => {
+  it(`should get the experiment zip`, () => {
     sinon.stub(fsStorage, 'getStoragePath').returns('storagePath');
-    const usersModelsStub = sinon.stub(fsStorage, 'listUserModelsbyType');
-    usersModelsStub.onCall(0).returns([
-      {
-        name: 'robot_model',
-        path: 'robot_path',
-        type: 'robots',
-        isCustom: false
-      }
-    ]);
-    usersModelsStub.onCall(1).returns([
-      {
-        name: 'virtual_room',
-        path: 'virtual_room_hbp',
-        type: 'environments',
-        isCustom: true
-      },
-      {
-        name: 'empty_world',
-        path: 'empty_world',
-        type: 'environments',
-        isCustom: false
-      }
-    ]);
-    const createTmpStub = sinon.stub(
-      storageRequestHandler,
-      'createTmpModelZip'
-    );
-    createTmpStub.onCall(0).returns(null);
-    createTmpStub.onCall(1).returns({
-      path: 'tmp-folder',
-      name: 'virtual_room.zip'
-    });
-
     const result = {
-      experimentZip: { path: 'zipExperiment', name: '' },
-      envZip: {
-        path: 'tmp-folder',
-        name: 'virtual_room.zip'
-      },
-      robotZips: []
+      experimentZip: { path: 'zipExperiment', name: 'experimentId.zip' }
     };
-    const bibi = { bodyModel: [{ model: 'model' }] };
-    const exc = { environmentModel: { _model: 'virtual_room' } };
     return storageRequestHandler
-      .getExperimentZips('experimentId', 'token', bibi, exc)
-      .should.eventually.deep.equal(result);
-  });
-
-  // getExperimentZips
-  it(`should get the experiment zips (experiment, environment, robots) if present in bibi,exc and bibi has one robot`, () => {
-    sinon.stub(fsStorage, 'getStoragePath').returns('storagePath');
-    const usersModelsStub = sinon.stub(fsStorage, 'listUserModelsbyType');
-    usersModelsStub.onCall(0).returns([
-      {
-        name: 'hbp_clearpath_robotics_husky_a200',
-        path: 'husky_path',
-        type: 'robots',
-        isCustom: true
-      }
-    ]);
-    usersModelsStub.onCall(1).returns([
-      {
-        name: 'virtual_room',
-        path: 'virtual_room_hbp',
-        type: 'environments',
-        isCustom: true
-      },
-      {
-        name: 'empty_world',
-        path: 'empty_world',
-        type: 'environments',
-        isCustom: false
-      }
-    ]);
-    const createTmpStub = sinon.stub(
-      storageRequestHandler,
-      'createTmpModelZip'
-    );
-    createTmpStub.onCall(0).returns({
-      name: 'hbp_clearpath_robotics_husky_a200.zip',
-      path: 'tmp-folder'
-    });
-    createTmpStub.onCall(1).returns({
-      path: 'tmp-folder',
-      name: 'virtual_room.zip'
-    });
-    const result = {
-      experimentZip: { path: 'zipExperiment', name: '' },
-      envZip: {
-        path: 'tmp-folder',
-        name: 'virtual_room.zip'
-      },
-      robotZips: [
-        {
-          name: 'hbp_clearpath_robotics_husky_a200.zip',
-          path: 'tmp-folder'
-        }
-      ]
-    };
-    const bibi = {
-      bodyModel: {
-        _model: 'hbp_clearpath_robotics_husky_a200',
-        _robotId: 'husky'
-      }
-    };
-    const exc = { environmentModel: { _model: 'virtual_room' } };
-    return storageRequestHandler
-      .getExperimentZips('experimentId', 'token', bibi, exc)
+      .getExperimentZips('experimentId', 'token')
       .should.eventually.deep.equal(result);
   });
 

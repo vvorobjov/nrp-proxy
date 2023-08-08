@@ -563,11 +563,11 @@ ${ex.stack}`);
     return this.storage.getStoragePath();
   }
 
-  async getExperimentZips(experimentId, token, bibi, exc) {
+  async getExperimentZips(experiment: string, token) {
     /* Returns an object containing the metadata of all the zips related to an experiment.
     These are all the experiment folder files zipped, the custom environment and custom robots
     if any. The actual zipping of the experiment is done by the ExperimentZipper */
-    const zips = { experimentZip: {}, envZip: {}, robotZips: [] as any };
+    const zips = { experimentZip: {} };
 
     // experiment zip
     const userId = await this.authenticator
@@ -575,40 +575,15 @@ ${ex.stack}`);
       .then(() => this.getUserIdentifier(token));
 
     try {
-      const experimentZip = await new experimentZipper.ExperimentZipper(this.storage, token, userId).zipExperiment(experimentId);
-      zips.experimentZip = { path: experimentZip, name: '' };
+      const experimentZip = await new experimentZipper.ExperimentZipper(
+        this.storage,
+        token,
+        userId
+      ).zipExperiment(experiment);
+      zips.experimentZip = { path: experimentZip, name: `${experiment}.zip` };
     } catch (err) {
       console.error(`Zipping experiment failed. Error : ${err}`);
       return q.reject(err);
-    }
-
-    // robot zip. The bibi.bodyModel can be either an Object or an Array
-    if (bibi.bodyModel) {
-      const customRobots = await this.storage.listUserModelsbyType('robots', userId);
-      if (bibi.bodyModel instanceof Array) {
-        for (const bodyModel of bibi.bodyModel) {
-            const modelZip = await this.createTmpModelZip(zips, bodyModel, customRobots);
-            if (modelZip) {
-              zips.robotZips.push(modelZip);
-            }
-        }
-      } else if (bibi.bodyModel instanceof Object) {
-        const modelZip = await this.createTmpModelZip(zips, bibi.bodyModel, customRobots);
-        if (modelZip) {
-          zips.robotZips.push(modelZip);
-        }
-      }
-    }
-
-    // env zip
-    if (exc.environmentModel._model) {
-      const customEnvs = await this.storage.listUserModelsbyType('environments', userId);
-      const modelZip = await this.createTmpModelZip(zips, exc.environmentModel._model, customEnvs);
-      if (modelZip) {
-        zips.envZip = modelZip;
-      }
-    } else {
-      zips.envZip = { path: '', name: '' };
     }
 
     return zips;

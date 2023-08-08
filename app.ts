@@ -541,22 +541,20 @@ app.get('/storage/:experiment/:filename', (req, res) => {
 });
 
 // TODO: [NRRPLT-8725] add zipping of the experiment for 4.0
-app.get('/storage/experiments/:experimentId/zip', async (req, res) => {
-  // const expService = experimentServiceFactory.createExperimentService(req.params.experimentId, getAuthToken(req));
-  // const bibi = (await expService.getBibi())[0].bibi;
-  // const exc = (await expService.getExc())[0].ExD;
-  // storageRequestHandler
-  //   .getExperimentZips(
-  //     req.params.experimentId,
-  //     getAuthToken(req), bibi, exc
-  //   )
-  //   .then(r => res.send(r))
-  //   .catch(_.partial(handleError, res));
+app.get('/storage/experiments/:experiment/zip', async (req, res) => {
+  storageRequestHandler
+    .getExperimentZips(
+      req.params.experiment,
+      getAuthToken(req)
+    )
+    .then(r => res.download(r.experimentZip.path, r.experimentZip.name))
+    .catch(_.partial(handleError, res));
 });
 
-app.get('/storage/zip', (req, res) => {
-  res.download(req.query.path, req.query.name);
-});
+// ultimately unsafe
+// app.get('/storage/zip', (req, res) => {
+//   res.download(req.query.path, req.query.name);
+// });
 
 app.delete('/storage/:experiment/:filename', (req, res) => {
   const fnName = req.query.type === 'folder' ? 'deleteFolder' : 'deleteFile';
