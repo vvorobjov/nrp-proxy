@@ -150,7 +150,6 @@ export default class CollabConnector {
   }
 
   postHTTPS(url, data, token, options, jsonType = false) {
-    console.info('new post method : ', url);
     const operation = () =>
       this.requestHTTPS(url,
         {
@@ -170,7 +169,6 @@ export default class CollabConnector {
   }
 
   async putHTTPS(url, data, token, options, jsonType = true) {
-    console.info('new put method : ', url);
     options = options ? options : {};
     _.extend(options, {
       method: 'PUT',
@@ -345,12 +343,14 @@ export default class CollabConnector {
 
     return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, undefined)
       .then((response: any) => {
+        console.info(response.body);
         const uploadUrl = JSON.parse(response.body).url;
         return uploadUrl;
       }).then(uploadUrl => this.putHTTPS(uploadUrl, content, undefined, options, true))
       .then((response) => {
+        console.info('Upload response : ', response);
         return {uuid : entityUuid}; })
-      .catch(error => console.error(error));
+      .catch(error => console.error('Upload error : ', error));
   }
 
   async deleteBucketEntity(token, parent, entityUuid, type = 'file') {
@@ -371,7 +371,6 @@ export default class CollabConnector {
       RENAME_BUCKET_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}/`;
     }
 
-    // console.info("JSON LOADED config : ", JSON.parse(json_file));
     const newName = { rename: { target_name: targetName + '/' } };
     return await this.patchHTTPS(RENAME_BUCKET_URL,
       JSON.stringify(newName), token, { headers: { 'content-type': 'application/json', 'accept-encodings' : 'gzip, deflate, br' }}, true)

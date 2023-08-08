@@ -596,7 +596,6 @@ app.put('/storage/clone/:experiment', (req, res) => {
 app.put('/storage/:experiment/*', (req, res) => {
   if (!req.params['0']) return handleError(res, 'File name is required');
   let promise: Promise<unknown>;
-  console.info('Request received!');
   if (req.query.type === 'folder') {
     promise = storageRequestHandler.createFolder(
       req.params['0'],
