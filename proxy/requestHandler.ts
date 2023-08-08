@@ -23,17 +23,15 @@
  * ---LICENSE-END**/
 'use strict';
 
-import { SDK_VERSION } from 'firebase-admin';
 import _ from 'lodash';
 import q from 'q';
 
 // test mocked dependencies
 // tslint:disable: prefer-const variable-name
 let TemplateExperimentsService = require('./TemplateExperimentsService')
-    .default,
-  serversProxy = require('./serversProxy').default,
-  oidcAuthenticator = require('./oidcAuthenticator').default,
-  request = q.denodeify(require('request'));
+  .default;
+let serversProxy = require('./serversProxy').default;
+let oidcAuthenticator = require('./oidcAuthenticator').default;
 
 // tslint:enable: prefer-const variable-name
 
@@ -44,7 +42,8 @@ let availableServers = [];
 let downServers = [];
 let healthStatus = {};
 
-let configuration, templateExperimentsService;
+let configuration;
+let templateExperimentsService;
 
 function initialize(config) {
   reloadConfiguration(config)
@@ -87,8 +86,7 @@ function reloadConfiguration(config) {
       ])
       .fromPairs()
       .value();
-  }
-  );
+  });
 }
 
 const filterJoinableExperimentByContext = experiments => {
@@ -108,25 +106,18 @@ function updateExperimentList() {
     .getToken()
     .then(serversProxy.setToken)
     .then(() => serversProxy.getExperimentsAndSimulations(configuration))
-    .then(
-      ([
-        joinableServers,
-        simulations,
-        serversAvailable,
-        _downServers
-      ]) => {
-        simulationList = simulations;
-        availableServers = serversAvailable;
-        // NRP 4.0 no longer supports /health
-        healthStatus = 'NRP_4_NOT_SUPPORTED';
-        downServers = _downServers;
-        // build experimentList with exp config + joinable servers + available servers
-        _.forOwn(experimentList, (exp: any) => {
-          exp.joinableServers =
-            joinableServers[exp.configuration.experimentId] || [];
-        });
-      }
-    )
+    .then(([joinableServers, simulations, serversAvailable, _downServers]) => {
+      simulationList = simulations;
+      availableServers = serversAvailable;
+      // NRP 4.0 no longer supports /health
+      healthStatus = 'NRP_4_NOT_SUPPORTED';
+      downServers = _downServers;
+      // build experimentList with exp config + joinable servers + available servers
+      _.forOwn(experimentList, (exp: any) => {
+        exp.joinableServers =
+          joinableServers[exp.configuration.experimentId] || [];
+      });
+    })
     .fail(err =>
       console.error('Polling Error. Failed to get experiments: ', err)
     )
@@ -138,7 +129,7 @@ function updateExperimentList() {
 async function getServersStatus() {
   return _.map(configuration.servers, (server: any) => ({
     server: server.id,
-    api: (server.internalIp || server['nrp-services']),
+    api: server.internalIp || server['nrp-services'],
     health: healthStatus[server.id],
     runningSimulation:
       simulationList[server.id] && simulationList[server.id].runningSimulation

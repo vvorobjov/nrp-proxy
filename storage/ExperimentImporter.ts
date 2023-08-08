@@ -23,42 +23,50 @@
  * ---LICENSE-END**/
 'use strict';
 
-const path = require('path'), jszip = require('jszip');
+const path = require('path');
+const jszip = require('jszip');
 export class ExperimentImporter {
-
-  constructor(protected storage, protected token, protected userId, protected contextId) { }
+  constructor(
+    protected storage,
+    protected token,
+    protected userId,
+    protected contextId
+  ) {}
 
   async createUniqueExperimentId(folderName) {
-    return await this.storage.createUniqueExperimentId(this.token, this.userId, folderName, this.contextId);
+    return await this.storage.createUniqueExperimentId(
+      this.token,
+      this.userId,
+      folderName,
+      this.contextId
+    );
   }
 
   async registerZippedExperiment(zipFileContent) {
     const zipContent = await jszip.loadAsync(zipFileContent);
     const folderBaseNames = new Set();
     zipContent.forEach((filepath, file) => {
-       const parts = filepath.split(path.sep);
-       if (parts.length > 1)
-         folderBaseNames.add(parts[0]);
+      const parts = filepath.split(path.sep);
+      if (parts.length > 1) folderBaseNames.add(parts[0]);
     });
     if (folderBaseNames.size === 0)
-      throw('Import error: the provided zip does contains no non-empty root folder. A non-empty experiment root folder is expected.');
+      throw 'Import error: the provided zip does contains no non-empty root folder. A non-empty experiment root folder is expected.';
     if (folderBaseNames.size > 1)
-      throw('Import error: the provided zip contains multiple folders at the root level. A unique experiment root folder is expected.');
+      throw 'Import error: the provided zip contains multiple folders at the root level. A unique experiment root folder is expected.';
     const zipBaseFolderName = Array.from(folderBaseNames)[0];
-    const destFolderName = await this.createUniqueExperimentId(zipBaseFolderName);
+    const destFolderName = await this.createUniqueExperimentId(
+      zipBaseFolderName
+    );
     await this.storage.extractZip(zipContent, destFolderName);
     await this.storage.insertExperimentInDB(this.userId, destFolderName);
-    return Promise.resolve(
-      {
-        message: `The experiment folder has been succesfully imported`,
-        zipBaseFolderName,
-        destFolderName
-      }
-    );
+    return Promise.resolve({
+      message: `The experiment folder has been succesfully imported`,
+      zipBaseFolderName,
+      destFolderName
+    });
   }
 
   async scanStorage() {
     return await this.storage.scanStorage(this.userId);
   }
-
 }

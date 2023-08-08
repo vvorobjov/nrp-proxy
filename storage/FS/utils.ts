@@ -23,17 +23,22 @@
  * ---LICENSE-END**/
 'use strict';
 
-const path = require('path'),
-jszip = require('jszip'),
-fs = require('fs-extra');
+const path = require('path');
+const jszip = require('jszip');
+const fs = require('fs-extra');
 
-const STORAGE_PATH_ENV = 'STORAGE_PATH', // STORAGE_PATH variable
-  DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
+const STORAGE_PATH_ENV = 'STORAGE_PATH'; // STORAGE_PATH variable
+const DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
+
+const IMG_EXT = ['.png', '.jpg', '.jpeg', '.gif'];
 
 // storagePath = 'STORAGE_PATH' env variable is defined, or $HOME/.opt/nrpStorage by default
 const storagePath =
   process.env[STORAGE_PATH_ENV] ||
-  DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v] as string);
+  DEFAULT_STORAGE_PATH.replace(
+    /\$([A-Z_a-z]*)/g,
+    (m, v) => process.env[v] as string
+  );
 
 console.log('STORAGE_PATH is set to ' + storagePath.toString());
 
@@ -62,14 +67,17 @@ const getCurrentTimeAndDate = () => {
   return dayWithYear + 'T' + time;
 };
 
-// Returns true if the corresponding file is an image, false otherwise
-const isImage = (filepath) => {
-  const IMG_EXT = ['png', 'jpg', 'jpeg', 'gif'];
-  return (IMG_EXT.indexOf(path.extname(filepath)) !== -1);
+/**
+ * Checks if a given filepath represents an image file based on its file extension.
+ * @param {string} filepath - The filepath to check.
+ * @returns {boolean} - True if the filepath represents an image file, false otherwise.
+ */
+const isImage = filepath => {
+  return IMG_EXT.indexOf(path.extname(filepath)) !== -1;
 };
 
 // returns a flat array of absolute paths of all files recursively contained in the dir
-const getFilePathsRecursively = (dir) => {
+const getFilePathsRecursively = dir => {
   let results: string[] = [];
   const list = fs.readdirSync(dir);
 
@@ -94,7 +102,7 @@ const getFilePathsRecursively = (dir) => {
 };
 
 // returns a JSZip instance filled with contents of dir.
-const getZipOfFolder = (dir) => {
+const getZipOfFolder = dir => {
   const allPaths = getFilePathsRecursively(dir);
 
   const zip = new jszip();
@@ -119,6 +127,7 @@ const getZipOfFolder = (dir) => {
 
 export default {
   storagePath,
+  IMG_EXT,
   generateUniqueExperimentId,
   getCurrentTimeAndDate,
   isImage,

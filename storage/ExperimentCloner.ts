@@ -23,48 +23,47 @@
  * ---LICENSE-END**/
 'use strict';
 
-import X2JS from 'x2js';
 import utils from './FS/utils';
 import * as storageConsts from './StorageConsts';
 
-const path = require('path'),
-  q = require('q'),
-  _ = require('lodash'),
-  walk = require('walk');
+const path = require('path');
+const q = require('q');
+const _ = require('lodash');
+const walk = require('walk');
 
 const glob = q.denodeify(require('glob'));
 
 // constants below are overriden in unit tests
 // tslint:disable: prefer-const
-let fs = require('fs-extra'),
-  readFile = q.denodeify(fs.readFile),
-  tmp = require('tmp');
+let fs = require('fs-extra');
+let readFile = q.denodeify(fs.readFile);
+let tmp = require('tmp');
 // tslint:enable: prefer-const
 
-const ensureArrayProp = (obj, prop) => {
-  if (!obj[prop]) return false;
-  if (!Array.isArray(obj[prop])) obj[prop] = [obj[prop]];
-  return true;
-};
+// const ensureArrayProp = (obj, prop) => {
+//   if (!obj[prop]) return false;
+//   if (!Array.isArray(obj[prop])) obj[prop] = [obj[prop]];
+//   return true;
+// };
 
 abstract class ExperimentCloner {
   protected tmpFolder = tmp.dirSync({ unsafeCleanup: true });
   protected templateFolder?;
-  private downloadedFiles: Array<Promise<string>> = [];
+  private downloadedFiles: Promise<string>[] = [];
 
-  constructor(protected storage, protected config) { }
+  constructor(protected storage, protected config) {}
 
-  abstract getExperimentFileFullPath(
-    expPath,
-    token,
-    userId,
-    defaultName
-  );
+  abstract getExperimentFileFullPath(expPath, token, userId, defaultName);
 
   async createUniqueExperimentId(token, userId, templateConfPath, contextId) {
     // finds an unused name for a new experiment in the form 'templatename_0'
     const dirname = path.dirname(templateConfPath);
-    return this.storage.createUniqueExperimentId(token, userId, dirname, contextId);
+    return this.storage.createUniqueExperimentId(
+      token,
+      userId,
+      dirname,
+      contextId
+    );
   }
 
   /**
@@ -75,16 +74,41 @@ abstract class ExperimentCloner {
    * @param contextId context ID
    * @returns {Array} the list of files
    */
-  async cloneExperiment(token, userId, templateConfPath, contextId, defaultName, defaultMode) {
-    const expPath = await this.createUniqueExperimentId(token, userId, templateConfPath, contextId);
+  async cloneExperiment(
+    token,
+    userId,
+    templateConfPath,
+    contextId,
+    defaultName,
+    defaultMode
+  ) {
+    const expPath = await this.createUniqueExperimentId(
+      token,
+      userId,
+      templateConfPath,
+      contextId
+    );
     // expUUID == expPath (dir name) in local storage
-    const { uuid: expUUID } = await this.storage.createExperiment(expPath, token, userId, contextId);
+    const { uuid: expUUID } = await this.storage.createExperiment(
+      expPath,
+      token,
+      userId,
+      contextId
+    );
 
     try {
-      this.templateFolder = path.dirname(path.join(this.config.templatesPath, templateConfPath));
+      this.templateFolder = path.dirname(
+        path.join(this.config.templatesPath, templateConfPath)
+      );
 
       // const proxyConfig = ConfigurationManager.loadConfigFile();
-      const newConfig = await this.flattenExperiment(templateConfPath, expPath, token, userId, defaultName);
+      const newConfig = await this.flattenExperiment(
+        templateConfPath,
+        expPath,
+        token,
+        userId,
+        defaultName
+      );
 
       const files = await this.readDownloadedFiles();
       await this.uploadDownloadedFiles(files, expPath, token, userId);
@@ -121,17 +145,21 @@ abstract class ExperimentCloner {
       const files = await this.downloadResourcesfiles(srcResourcesPath);
       await this.storage.createFolder('resources', expPath, token, userId);
       await this.uploadDownloadedFiles(files, dstResourcesPath, token, userId);
-    } else {
-      await this.storage.createFolder('resources', expPath, token, userId);
     }
-    if (!fs.existsSync(path.join(this.templateFolder, 'resources', 'textures'))) {
-      await this.storage.createFolder(
-        path.join('resources', 'textures'),
-        expPath,
-        token,
-        userId
-      );
-    }
+    // NRP 4 do not have dafault resources folder
+    // else {
+    //   await this.storage.createFolder('resources', expPath, token, userId);
+    // }
+    // if (
+    //   !fs.existsSync(path.join(this.templateFolder, 'resources', 'textures'))
+    // ) {
+    //   await this.storage.createFolder(
+    //     path.join('resources', 'textures'),
+    //     expPath,
+    //     token,
+    //     userId
+    //   );
+    // }
   }
 
   /**
@@ -177,9 +205,11 @@ abstract class ExperimentCloner {
       const files = await this.downloadAssetsfiles(srcAssetsPath);
       await this.storage.createFolder('assets', expPath, token, userId);
       await this.uploadDownloadedFiles(files, dstAssetsPath, token, userId);
-    } else {
-      await this.storage.createFolder('assets', expPath, token, userId);
     }
+    // NRP 4 do not have dafault assets folder
+    // else {
+    //   await this.storage.createFolder('assets', expPath, token, userId);
+    // }
   }
 
   /**
@@ -192,10 +222,7 @@ abstract class ExperimentCloner {
     const options = {
       listeners: {
         file(root, fileStats, next) {
-          const name = root.substring(
-            root.indexOf('assets') + 7,
-            root.length
-          );
+          const name = root.substring(root.indexOf('assets') + 7, root.length);
           files.push({
             name: name + '/' + fileStats.name,
             content: fs.readFileSync(root + '/' + fileStats.name)
@@ -260,7 +287,9 @@ abstract class ExperimentCloner {
       defaultName
     );
     // TODO: detect source config more accurately
-    this.downloadFile(configPath.split('/')[1], this.templateFolder,
+    this.downloadFile(
+      configPath.split('/')[1],
+      this.templateFolder,
       storageConsts.defaultConfigName
     );
 
@@ -270,7 +299,8 @@ abstract class ExperimentCloner {
     );
 
     experiment.cloneDate = utils.getCurrentTimeAndDate();
-    experiment.SimulationName = utils.getCurrentTimeAndDate() + ' ' + experiment.SimulationName;
+    experiment.SimulationName =
+      utils.getCurrentTimeAndDate() + ' ' + experiment.SimulationName;
 
     // TODO: [NRRPLT-8771] Provide sofisticated cloning with specifying the dependencies in the configuration JSON
     // Currently, the whole directory is cloned
@@ -327,97 +357,99 @@ abstract class ExperimentCloner {
     );
   }
 
-  async readTransceiverFunctions(expPath, experimentConf) {
-    const DataPackProcessingFunctions = experimentConf.DataPackProcessingFunctions;
-    // "required" : ["Name", "FileName"]
-    if (DataPackProcessingFunctions !== undefined) {
-      for (const tf of DataPackProcessingFunctions) {
-        try {
-          this.downloadFile(tf.FileName);
-        } catch (err) {
-          console.error('no specified transceiver function');
-        }
-      }
-    }
-  }
+  // async readTransceiverFunctions(expPath, experimentConf) {
+  //   const DataPackProcessingFunctions =
+  //     experimentConf.DataPackProcessingFunctions;
+  //   // "required" : ["Name", "FileName"]
+  //   if (DataPackProcessingFunctions !== undefined) {
+  //     for (const tf of DataPackProcessingFunctions) {
+  //       try {
+  //         this.downloadFile(tf.FileName);
+  //       } catch (err) {
+  //         console.error('no specified transceiver function');
+  //       }
+  //     }
+  //   }
+  // }
 
-  async readComputationalGraph(expPath, experimentConf) {
-    const graphes = experimentConf.ComputationalGraph;
-    if (graphes !== undefined) {
-      for (const cg of graphes) {
-        try {
-          this.downloadFile(cg);
-        } catch (err) {
-          console.error(' computational graph could not be downloaded : ', cg);
-        }
-      }
-    }
-  }
+  // async readComputationalGraph(expPath, experimentConf) {
+  //   const graphes = experimentConf.ComputationalGraph;
+  //   if (graphes !== undefined) {
+  //     for (const cg of graphes) {
+  //       try {
+  //         this.downloadFile(cg);
+  //       } catch (err) {
+  //         console.error(' computational graph could not be downloaded : ', cg);
+  //       }
+  //     }
+  //   }
+  // }
 
-  async readProcessLaunchers(expPath, experimentConf) {
-    const processes = experimentConf.ExternalProcesses;
-    if (processes !== undefined) {
-      for (const process of processes) {
-        try {
-          const cmd = process.ProcCmd.split(' ');
-          for (const i in cmd) {
-            const word = cmd[i];
-            if (word.includes('.launch')) {
-              this.downloadFile(word); // dl .launch files
-            }
-          }
-        } catch (err) {
-          console.error(' No process launch command for process launcher : ', process.title);
-        }
-      }
-    }
-  }
+  // async readProcessLaunchers(expPath, experimentConf) {
+  //   const processes = experimentConf.ExternalProcesses;
+  //   if (processes !== undefined) {
+  //     for (const process of processes) {
+  //       try {
+  //         const cmd = process.ProcCmd.split(' ');
+  //         for (const i in cmd) {
+  //           const word = cmd[i];
+  //           if (word.includes('.launch')) {
+  //             this.downloadFile(word); // dl .launch files
+  //           }
+  //         }
+  //       } catch (err) {
+  //         console.error(
+  //           ' No process launch command for process launcher : ',
+  //           process.title
+  //         );
+  //       }
+  //     }
+  //   }
+  // }
 
-  async readEngines(expPath, experimentConf) {
-    const engines = experimentConf.EngineConfigs;
-    const files = Array();
-    if (engines !== undefined) {
-      for (const engine of engines) {
-        try {
-          const engineType = engine.EngineType.split('_');
-          const type = engineType[0];
-          switch (type) {
-            case 'opensim':
-              break;
-            case 'nest':
-              const nestPath = engine.NestInitFileName;
-              files.push(nestPath);
-              break;
-            case 'gazebo':
-              const wordPath = engine.GazeboWorldFile;
-              files.push(wordPath);
-              break;
-            case 'python':
-              const pythonfilePath = engine.PythonFileName;
-              files.push(pythonfilePath);
-              if (engineType[1] === 'sim') {
-                // to correct
-                const wordPath = engine.WorldFileName;
-                files.push(wordPath);
-              }
-              break;
-            case 'datatransfer':
-              break;
-          }
-        } catch (err) {
-          console.error('Incorrect engine(s) definition :', engine.EngineName);
-        }
-
-      }
-      for (const i in files) {
-        this.downloadFile(files[i]);
-      }
-    }
-  }
+  // async readEngines(expPath, experimentConf) {
+  //   const engines = experimentConf.EngineConfigs;
+  //   const files = Array();
+  //   if (engines !== undefined) {
+  //     for (const engine of engines) {
+  //       try {
+  //         const engineType = engine.EngineType.split('_');
+  //         const type = engineType[0];
+  //         switch (type) {
+  //           case 'opensim':
+  //             break;
+  //           case 'nest':
+  //             const nestPath = engine.NestInitFileName;
+  //             files.push(nestPath);
+  //             break;
+  //           case 'gazebo':
+  //             const wordPath = engine.GazeboWorldFile;
+  //             files.push(wordPath);
+  //             break;
+  //           case 'python':
+  //             const pythonfilePath = engine.PythonFileName;
+  //             files.push(pythonfilePath);
+  //             if (engineType[1] === 'sim') {
+  //               // to correct
+  //               const wordPath = engine.WorldFileName;
+  //               files.push(wordPath);
+  //             }
+  //             break;
+  //           case 'datatransfer':
+  //             break;
+  //         }
+  //       } catch (err) {
+  //         console.error('Incorrect engine(s) definition :', engine.EngineName);
+  //       }
+  //     }
+  //     for (const i in files) {
+  //       this.downloadFile(files[i]);
+  //     }
+  //   }
+  // }
 }
 
 export class TemplateExperimentCloner extends ExperimentCloner {
-
   getExperimentFileFullPath(expPath) {
     return path.join(this.config.templatesPath, expPath);
   }
@@ -432,39 +464,32 @@ export class NewExperimentCloner extends ExperimentCloner {
   constructor(storage, config, protected environmentPath, private templateExc) {
     super(storage, config);
 
-    this.newExpConfigurationPath = path.join(
-      this.config.templatesPath,
-      this.templateExc
-    );
-    this.newExpBibiPath = path.join(
-      path.dirname(this.newExpConfigurationPath),
-      fs
-        .readdirSync(path.dirname(this.newExpConfigurationPath))
-        .filter(file => path.extname(file) === '.bibi')[0]
-    );
+    // this.newExpConfigurationPath = path.join(
+    //   this.config.templatesPath,
+    //   this.templateExc
+    // );
+    // this.newExpBibiPath = path.join(
+    //   path.dirname(this.newExpConfigurationPath),
+    //   fs
+    //     .readdirSync(path.dirname(this.newExpConfigurationPath))
+    //     .filter(file => path.extname(file) === '.bibi')[0]
+    // );
   }
 
-  async getExperimentFileFullPath(
-    expPath,
-    token,
-    userId,
-    defaultName
-  ) {
-    const experimentConf = await readFile(
-      this.newExpConfigurationPath,
-      'utf8'
-    ).then(expContent => new X2JS().xml2js(expContent));
-
-    if (defaultName) experimentConf.ExD.name = defaultName;
-    else {
-      experimentConf.ExD.name = 'New experiment';
-    }
-    const expFilePath = path.join(
-      this.tmpFolder.name,
-      'experiment_configuration.exc'
-    );
-    fs.writeFileSync(expFilePath, new X2JS().js2xml(experimentConf));
-
-    return expFilePath;
+  async getExperimentFileFullPath(expPath, token, userId, defaultName) {
+    // const experimentConf = await readFile(
+    //   this.newExpConfigurationPath,
+    //   'utf8'
+    // ).then(expContent => new X2JS().xml2js(expContent));
+    // if (defaultName) experimentConf.ExD.name = defaultName;
+    // else {
+    //   experimentConf.ExD.name = 'New experiment';
+    // }
+    // const expFilePath = path.join(
+    //   this.tmpFolder.name,
+    //   'experiment_configuration.exc'
+    // );
+    // fs.writeFileSync(expFilePath, new X2JS().js2xml(experimentConf));
+    // return expFilePath;
   }
 }

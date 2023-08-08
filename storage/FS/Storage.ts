@@ -23,56 +23,67 @@
  * ---LICENSE-END**/
 'use strict';
 
-import { template, unionWith } from 'lodash';
-import X2JS from 'x2js';
+import { unionWith } from 'lodash';
 import Authenticator from '../BaseAuthenticator';
 import BaseStorage from '../BaseStorage';
 
-const q = require('q'),
-  path = require('path'),
-  mime = require('mime-types'),
-  _ = require('lodash'),
-  tmp = require('tmp'),
-  pd = require('pretty-data').pd,
-  schedule = require('node-schedule'),
-  USER_DATA_FOLDER = 'USER_DATA',
-  KG_DATA_FOLDER = 'KG_DATA_FOLDER',
-  TEMPLATE_MODELS_FOLDER = 'TEMPLATE_MODELS',
-  INTERNALS = ['FS_db', USER_DATA_FOLDER, KG_DATA_FOLDER, TEMPLATE_MODELS_FOLDER];
+const q = require('q');
+const path = require('path');
+const mime = require('mime-types');
+const _ = require('lodash');
+const schedule = require('node-schedule');
+const USER_DATA_FOLDER = 'USER_DATA';
+const KG_DATA_FOLDER = 'KG_DATA_FOLDER';
+const TEMPLATE_MODELS_FOLDER = 'TEMPLATE_MODELS';
+const INTERNALS = [
+  'FS_db',
+  USER_DATA_FOLDER,
+  KG_DATA_FOLDER,
+  TEMPLATE_MODELS_FOLDER
+];
 
 // mocked in the tests thus non const
 // tslint:disable: prefer-const
-let glob = q.denodeify(require('glob')),
-  jszip = require('jszip'),
-  DB = require('./DB').default,
-  utils = require('./utils').default,
-  fs = require('fs-extra'),
-  rmdir = require('rmdir'),
-  fsExtra = require('fs-extra'),
-  templateModelAbsPath = path.join(utils.storagePath, TEMPLATE_MODELS_FOLDER),
-  customModelAbsPath = path.join(utils.storagePath, USER_DATA_FOLDER),
-  knowledgeGraphDataPath = path.join(utils.storagePath, KG_DATA_FOLDER);
+let glob = q.denodeify(require('glob'));
+let jszip = require('jszip');
+let DB = require('./DB').default;
+let utils = require('./utils').default;
+let fs = require('fs-extra');
+let rmdir = require('rmdir');
+let fsExtra = require('fs-extra');
+let templateModelAbsPath = path.join(utils.storagePath, TEMPLATE_MODELS_FOLDER);
+let customModelAbsPath = path.join(utils.storagePath, USER_DATA_FOLDER);
+let knowledgeGraphDataPath = path.join(utils.storagePath, KG_DATA_FOLDER);
 // tslint:enable: prefer-const
 
 // Unregister deleted experiment folders from the database
 const scanExperiments = async () => {
   const storageContents: string[] = await fs.readdir(utils.storagePath);
 
-  const fsExperiments = storageContents.map(file => ({ uuid: file, name: file }));
-  const dbExperiments = (await DB.instance.experiments.find()).map(e => ({ uuid: e.experiment, name: e.experiment }));
+  const fsExperiments = storageContents.map(file => ({
+    uuid: file,
+    name: file
+  }));
+  const dbExperiments = (await DB.instance.experiments.find()).map(e => ({
+    uuid: e.experiment,
+    name: e.experiment
+  }));
 
-  fsExperiments.sort( (e1, e2) => e1.uuid.localeCompare(e2.uuid) );
-  dbExperiments.sort( (e1, e2) => e1.uuid.localeCompare(e2.uuid) );
+  fsExperiments.sort((e1, e2) => e1.uuid.localeCompare(e2.uuid));
+  dbExperiments.sort((e1, e2) => e1.uuid.localeCompare(e2.uuid));
 
   const deletedExperiments = _.differenceWith(
     dbExperiments,
     fsExperiments,
-    (exp1, exp2) => exp1.uuid === exp2.uuid);
+    (exp1, exp2) => exp1.uuid === exp2.uuid
+  );
 
-  console.log(`Unregistering ${deletedExperiments.length} deleted experiments from DB`);
+  console.log(
+    `Unregistering ${deletedExperiments.length} deleted experiments from DB`
+  );
 
   deletedExperiments.forEach(e => {
-    DB.instance.experiments.remove({experiment: e.uuid});
+    DB.instance.experiments.remove({ experiment: e.uuid });
     console.log(e.name);
   });
 
@@ -82,7 +93,6 @@ const scanExperiments = async () => {
 schedule.scheduleJob('0 */2 * * *', scanExperiments);
 
 export class Storage extends BaseStorage {
-
   protected experimentConfigName = 'simulation_config.json';
 
   userIdHasAccessToPath(userId, filename) {
@@ -101,15 +111,13 @@ export class Storage extends BaseStorage {
   async calculateFilePath(experiment, filename, model = false) {
     let filePath;
     if (model) {
-      filePath = await glob(path.join(
-        utils.storagePath,
-        USER_DATA_FOLDER,
-        experiment,
-        filename
-      ));
+      filePath = await glob(
+        path.join(utils.storagePath, USER_DATA_FOLDER, experiment, filename)
+      );
     } else filePath = await glob(path.join(utils.storagePath, filename));
     filePath = filePath[0];
-    if (filePath === undefined) { // when creating/cloning an experiment there is not existing file
+    if (filePath === undefined) {
+      // when creating/cloning an experiment there is not existing file
       filePath = path.join(utils.storagePath, filename);
     }
     if (!filePath.startsWith(utils.storagePath))
@@ -141,7 +149,11 @@ export class Storage extends BaseStorage {
     const expList = await this.listExperiments(token, userId, contextId, {
       all: true
     });
-    return utils.generateUniqueExperimentId(dirname, 0, expList.map(exp => exp.name));
+    return utils.generateUniqueExperimentId(
+      dirname,
+      0,
+      expList.map(exp => exp.name)
+    );
   }
 
   getFile(filename, experiment, token, userId, byname) {
@@ -178,18 +190,17 @@ export class Storage extends BaseStorage {
     return DB.instance.models
       .find({
         $or: [
-          { $and: [
-            {$or: [{ ownerName: userName }, { isCustom: false }]},
-            { type: modelType }
-          ]},
+          {
+            $and: [
+              { $or: [{ ownerName: userName }, { isCustom: false }] },
+              { type: modelType }
+            ]
+          },
           {
             $or: [
               { $and: [{ sharingOption: 'Public' }, { type: modelType }] },
               {
-                $and: [
-                  { type: modelType },
-                  { sharingOption: 'Shared' }
-                ]
+                $and: [{ type: modelType }, { sharingOption: 'Shared' }]
               }
             ]
           }
@@ -198,20 +209,19 @@ export class Storage extends BaseStorage {
       .then(res => {
         if (typeof res !== 'undefined' && res) {
           return res.filter(element => {
-            if (element.ownerName === userName)
-              return true;
+            if (element.ownerName === userName) return true;
             else {
               if (typeof element.sharingUsers !== 'undefined' && res) {
-                return element.sharingUsers.find(sharingUser => {
-                  return sharingUser === userName;
-                }) === userName;
-              } else
-                return true;
+                return (
+                  element.sharingUsers.find(sharingUser => {
+                    return sharingUser === userName;
+                  }) === userName
+                );
+              } else return true;
             }
           });
         }
-      }
-      )
+      })
       .then(res => {
         if (typeof res !== 'undefined' && res) {
           return res.map(f => ({
@@ -220,13 +230,14 @@ export class Storage extends BaseStorage {
             ownerName: f.ownerName,
             type: f.type,
             isCustom: f.isCustom,
-            isShared: ((f.sharingOption === 'Public' || f.sharingOption === 'Shared')
-              && f.ownerName !== userName) ? true : false
+            isShared:
+              (f.sharingOption === 'Public' || f.sharingOption === 'Shared') &&
+              f.ownerName !== userName
+                ? true
+                : false
           }));
-        } else
-          return [];
-      }
-      );
+        } else return [];
+      });
   }
 
   addUsertoSharingUserListinModel(modelType, modelName, userName) {
@@ -238,15 +249,16 @@ export class Storage extends BaseStorage {
             { _id: existingModel._id },
             { $addToSet: { sharingUsers: userName } }
           );
-        return q.reject(`The model: ${modelName} does not exist in the Models database.`);
+        return q.reject(
+          `The model: ${modelName} does not exist in the Models database.`
+        );
       });
   }
 
   listSharingUsersbyModel(modelType, modelName) {
     return DB.instance.models
       .findOne({ $and: [{ name: modelName }, { type: modelType }] })
-      .then(res =>
-        (res.sharingUsers ? res.sharingUsers : []));
+      .then(res => (res.sharingUsers ? res.sharingUsers : []));
   }
 
   updateSharedModelMode(modelType, modelName, modelsharingOption) {
@@ -259,11 +271,9 @@ export class Storage extends BaseStorage {
   getModelSharingMode(modelType, modelName) {
     return DB.instance.models
       .findOne({ $and: [{ name: modelName }, { type: modelType }] })
-      .then(res => (
-        {
-          sharingOption: (res.sharingOption ? res.sharingOption : 'Private')
-        }
-      ));
+      .then(res => ({
+        sharingOption: res.sharingOption ? res.sharingOption : 'Private'
+      }));
   }
 
   deleteSharingUserFromModel(modelType, modelName, userName) {
@@ -285,81 +295,136 @@ export class Storage extends BaseStorage {
       .find({
         $and: [
           {
-            sharingOption: { $ne: 'Private' }, type: modelType,
+            sharingOption: { $ne: 'Private' },
+            type: modelType,
             $or: [
               { sharingUsers: { $in: userName } },
-              { $and: [{ ownerName: { $ne: userName }, sharingOption: 'Public' }] }
+              {
+                $and: [
+                  { ownerName: { $ne: userName }, sharingOption: 'Public' }
+                ]
+              }
             ]
           }
         ]
       })
-      .then(res => res.map(f => ({ name: f.name, type: f.type, ownerName: f.ownerName, path: f.path })));
+      .then(res =>
+        res.map(f => ({
+          name: f.name,
+          type: f.type,
+          ownerName: f.ownerName,
+          path: f.path
+        }))
+      );
   }
 
   getModelDBInstance(modelType, modelName) {
     return DB.instance.models
       .findOne({ $and: [{ name: modelName }, { type: modelType }] })
       .then(existingModel => {
-        if (!existingModel) return q.reject(`The model: ${modelName} does not exist in the Models database.`);
+        if (!existingModel)
+          return q.reject(
+            `The model: ${modelName} does not exist in the Models database.`
+          );
         return existingModel;
       });
   }
 
   getModelPath(modelType, modelName) {
-    return this.getModelDBInstance(modelType, modelName)
-      .then(model => model.path);
+    return this.getModelDBInstance(modelType, modelName).then(
+      model => model.path
+    );
   }
 
   getModelFullPath(modelType, modelName) {
-    return this.getModelDBInstance(modelType, modelName)
-      .then(model => {
-        const modelAbsPath = model.isCustom ? customModelAbsPath : templateModelAbsPath;
-        return path.join(modelAbsPath, model.type, model.path);
-      });
+    return this.getModelDBInstance(modelType, modelName).then(model => {
+      const modelAbsPath = model.isCustom
+        ? customModelAbsPath
+        : templateModelAbsPath;
+      return path.join(modelAbsPath, model.type, model.path);
+    });
   }
 
   getModelZip(modelType, modelName) {
-    return this.getModelDBInstance(modelType, modelName)
-      .then(model => {
-        const modelAbsPath = model.isCustom ? customModelAbsPath : templateModelAbsPath;
-        return utils.getZipOfFolder(path.join(modelAbsPath, model.type, model.path))
-          .generateAsync({type: 'nodebuffer'});
-      });
+    return this.getModelDBInstance(modelType, modelName).then(model => {
+      const modelAbsPath = model.isCustom
+        ? customModelAbsPath
+        : templateModelAbsPath;
+      return utils
+        .getZipOfFolder(path.join(modelAbsPath, model.type, model.path))
+        .generateAsync({ type: 'nodebuffer' });
+    });
   }
 
   async deleteCustomModel(modelType, modelName, userName): Promise<string> {
-    const modelToDelete: { name: string, ownerId: string, type: string, path: string } | null =
-      await DB.instance.models.findOne({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
+    const modelToDelete: {
+      name: string;
+      ownerId: string;
+      type: string;
+      path: string;
+    } | null = await DB.instance.models.findOne({
+      $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }]
+    });
     // if the model is not in the DB (weird) log the problem. At this point we could try to remove it from the FS
     // but maybe this would be undesired behaviour from the user side
-    if (!modelToDelete) return q.reject(`The model: ${modelName} does not exist in the Models database.`);
+    if (!modelToDelete)
+      return q.reject(
+        `The model: ${modelName} does not exist in the Models database.`
+      );
 
     let deletionResult: number | null;
     try {
       // remove the custom model from the FS
-      await q.denodeify(fs.remove)(path.join(customModelAbsPath, modelToDelete.type, modelToDelete.path));
+      await q.denodeify(fs.remove)(
+        path.join(customModelAbsPath, modelToDelete.type, modelToDelete.path)
+      );
       // remove model from DB
-      deletionResult = await DB.instance.models.remove({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
+      deletionResult = await DB.instance.models.remove({
+        $and: [
+          { name: modelName },
+          { type: modelType },
+          { ownerName: userName }
+        ]
+      });
       if (!deletionResult)
-        return q.reject(`Could not delete the model ${modelName} from the Models database.`);
+        return q.reject(
+          `Could not delete the model ${modelName} from the Models database.`
+        );
     } catch {
       // even if the model is not in the FS (cause it could have been manually removed)
       // still try to remove it from the DB
-      await DB.instance.models.remove({ $and: [{ name: modelName }, { type: modelType }, { ownerName: userName }] });
+      await DB.instance.models.remove({
+        $and: [
+          { name: modelName },
+          { type: modelType },
+          { ownerName: userName }
+        ]
+      });
       // if the FS call failed, we log the problem
-      return q.reject(`Could not find the model ${modelName} to remove in the user storage.`);
+      return q.reject(
+        `Could not find the model ${modelName} to remove in the user storage.`
+      );
     }
-    return q.resolve(`Succesfully deleted model ${modelName} from the user storage.`);
+    return q.resolve(
+      `Succesfully deleted model ${modelName} from the user storage.`
+    );
   }
 
   async createCustomModel(model, zip, override) {
-    const existingModel = await DB.instance.models
-      .findOne({ $and: [{ name: model.name }, { type: model.type }] });
-    if (!existingModel || (existingModel.ownerName === model.ownerName && override)) {
-      const existingPath = await DB.instance.models
-        .findOne({ path: model.path });
+    const existingModel = await DB.instance.models.findOne({
+      $and: [{ name: model.name }, { type: model.type }]
+    });
+    if (
+      !existingModel ||
+      (existingModel.ownerName === model.ownerName && override)
+    ) {
+      const existingPath = await DB.instance.models.findOne({
+        path: model.path
+      });
       if (existingPath !== existingModel) {
-        return q.reject(`One of the models already has the root folder named: ${model.path}`);
+        return q.reject(
+          `One of the models already has the root folder named: ${model.path}`
+        );
       }
       DB.instance.models.insert({
         ownerName: model.ownerName,
@@ -368,27 +433,41 @@ export class Storage extends BaseStorage {
         path: model.path,
         isCustom: true
       });
-      return jszip.loadAsync(zip)
+      return jszip
+        .loadAsync(zip)
         .then(zipContent => {
           const mapFile = async filepath => {
-            if (path.parse(filepath).dir !== '' && filepath.substr(-1) !== path.sep) {
-              const content = await zipContent.file(filepath).async('nodebuffer');
+            if (
+              path.parse(filepath).dir !== '' &&
+              filepath.substr(-1) !== path.sep
+            ) {
+              const content = await zipContent
+                .file(filepath)
+                .async('nodebuffer');
               filepath = filepath.substring(filepath.indexOf('/') + 1); // Removes the largest enclosing folder from the filepath
-              const dest = path.join(customModelAbsPath, model.type, model.path, filepath);
-              if (!await fs.exists(path.dirname(dest))) {
+              const dest = path.join(
+                customModelAbsPath,
+                model.type,
+                model.path,
+                filepath
+              );
+              if (!(await fs.exists(path.dirname(dest)))) {
                 await fs.ensureDir(path.dirname(dest));
               }
               return q.denodeify(fs.writeFile)(dest, content);
             }
           };
           return q.all(Object.keys(zipContent.files).map(mapFile));
-        }).then(() =>
-          q.resolve({path: model.path})
-        );
+        })
+        .then(() => q.resolve({ path: model.path }));
     } else if (existingModel.ownerName === model.ownerName && !override) {
-        return q.reject(`One of your custom models already has the name: ${model.name}`);
+      return q.reject(
+        `One of your custom models already has the name: ${model.name}`
+      );
     } else {
-      return q.reject('The model you tried to upload already exists in the database. Rename it and try uploading it again.');
+      return q.reject(
+        'The model you tried to upload already exists in the database. Rename it and try uploading it again.'
+      );
     }
   }
 
@@ -433,7 +512,13 @@ export class Storage extends BaseStorage {
   }
 
   renameExperiment(experimentPath, newName, token, userId) {
-    return this.getFile(this.experimentConfigName, experimentPath, token, userId, true)
+    return this.getFile(
+      this.experimentConfigName,
+      experimentPath,
+      token,
+      userId,
+      true
+    )
       .then(expConfig => {
         return JSON.parse(expConfig.body);
       })
@@ -446,7 +531,7 @@ export class Storage extends BaseStorage {
           experimentPath,
           token,
           userId
-         );
+        );
       })
       .then(() => undefined);
   }
@@ -472,11 +557,10 @@ export class Storage extends BaseStorage {
       .then(filePath =>
         fsExtra.ensureDir(path.dirname(filePath)).then(() => filePath)
       )
-      .then(
-        filePath =>
-          append
-            ? q.denodeify(fs.appendFile)(filePath, fileContent)
-            : q.denodeify(fs.writeFile)(filePath, fileContent)
+      .then(filePath =>
+        append
+          ? q.denodeify(fs.appendFile)(filePath, fileContent)
+          : q.denodeify(fs.writeFile)(filePath, fileContent)
       );
   }
 
@@ -496,20 +580,37 @@ export class Storage extends BaseStorage {
     );
   }
 
-  async listExperiments(token, userId, contextId, options = { all: false }): Promise<Array<{ uuid: string, name: string }>> {
+  async listExperiments(
+    token,
+    userId,
+    contextId,
+    options = { all: false }
+  ): Promise<{ uuid: string; name: string }[]> {
     if (options.all) {
-      const storageContents: string[] = await q.denodeify(fs.readdir)(utils.storagePath);
-      const fsExperiments = storageContents.map(file => ({ uuid: file, name: file }));
-      const dbExperiments = (await DB.instance.experiments.find()).map(e => ({ uuid: e.experiment, name: e.experiment }));
+      const storageContents: string[] = await q.denodeify(fs.readdir)(
+        utils.storagePath
+      );
+      const fsExperiments = storageContents.map(file => ({
+        uuid: file,
+        name: file
+      }));
+      const dbExperiments = (await DB.instance.experiments.find()).map(e => ({
+        uuid: e.experiment,
+        name: e.experiment
+      }));
       return unionWith(
         fsExperiments,
         dbExperiments,
         (exp1, exp2) => exp1.uuid === exp2.uuid
       );
-
     } else {
-      const userExperiments: Array<{ experiment: string }> = await DB.instance.experiments.find({ token: userId });
-      return userExperiments.map(e => ({ uuid: e.experiment, name: e.experiment }));
+      const userExperiments: {
+        experiment: string;
+      }[] = await DB.instance.experiments.find({ token: userId });
+      return userExperiments.map(e => ({
+        uuid: e.experiment,
+        name: e.experiment
+      }));
     }
   }
 
@@ -555,14 +656,26 @@ export class Storage extends BaseStorage {
     await this.copyFolderContents(experiment, copiedExpName);
 
     // Decorate the experiment configuration with the cloneDate attribute
-    const experimentConfiguration = await this.getFile(this.experimentConfigName, copiedExpName, token, userId, true);
-    const decoratedExpConf = this.updateAttribute('cloneDate', utils.getCurrentTimeAndDate(), experimentConfiguration.body);
-    await this.createOrUpdate(this.experimentConfigName,
+    const experimentConfiguration = await this.getFile(
+      this.experimentConfigName,
+      copiedExpName,
+      token,
+      userId,
+      true
+    );
+    const decoratedExpConf = this.updateAttribute(
+      'cloneDate',
+      utils.getCurrentTimeAndDate(),
+      experimentConfiguration.body
+    );
+    await this.createOrUpdate(
+      this.experimentConfigName,
       decoratedExpConf,
       experimentConfiguration.contentType,
       copiedExpName,
       token,
-      userId);
+      userId
+    );
 
     return {
       clonedExp: copiedExpName,
@@ -573,11 +686,9 @@ export class Storage extends BaseStorage {
   getExperimentSharingMode(experimentID) {
     return DB.instance.experiments
       .findOne({ experiment: experimentID })
-      .then(res => (
-        {
-          data: (res.shared_option ? res.shared_option : 'Private')
-        }
-      ));
+      .then(res => ({
+        data: res.shared_option ? res.shared_option : 'Private'
+      }));
   }
 
   updateSharedExperimentMode(experimentID, sharingOption) {
@@ -613,15 +724,12 @@ export class Storage extends BaseStorage {
               if (element.shared_users)
                 return element.shared_users.find(sharedUser => {
                   return sharedUser === userId;
-              });
-            } else
-              return true;
+                });
+            } else return true;
           });
         }
-      }
-      )
-      .then(res =>
-        res.map(f => ({ uuid: f.experiment, name: f.experiment })));
+      })
+      .then(res => res.map(f => ({ uuid: f.experiment, name: f.experiment })));
   }
 
   deleteSharingUserFromExperiment(experimentId, userId) {
@@ -656,12 +764,19 @@ export class Storage extends BaseStorage {
     const filterFunc = (src, dest) => {
       return !dest.includes('/csv_records') && !dest.includes('/recordings');
     };
-    return fsExtra.copySync(path.join(utils.storagePath, experiment), path.join(utils.storagePath, destFolder), { filter: filterFunc });
+    return fsExtra.copySync(
+      path.join(utils.storagePath, experiment),
+      path.join(utils.storagePath, destFolder),
+      { filter: filterFunc }
+    );
   }
 
   // Inserts the (non-registered) experiment folder <foldername> in the experiments database
   insertExperimentInDB(userId, foldername) {
-    return DB.instance.experiments.insert({ token: userId,  experiment: foldername });
+    return DB.instance.experiments.insert({
+      token: userId,
+      experiment: foldername
+    });
   }
 
   // Scans the user storage and
@@ -669,19 +784,30 @@ export class Storage extends BaseStorage {
   // (2) unregister deleted experiment folders from the database.
   // Returns the added and the deleted entries.
   // Note: only for local usage
-  async scanStorage(userId: string): Promise<{addedFolders: string[], deletedFolders: string[]}> {
+  async scanStorage(
+    userId: string
+  ): Promise<{ addedFolders: string[]; deletedFolders: string[] }> {
     const files = await q.denodeify(fs.readdir)(this.getStoragePath());
-    const experimentFolders = files.filter(fileSystemEntry => this.isDirectory(fileSystemEntry))
-    .filter(folder => INTERNALS.indexOf(folder) === -1);
-    const addedFolders = await this.addNonRegisteredExperiments(userId, experimentFolders);
+    const experimentFolders = files
+      .filter(fileSystemEntry => this.isDirectory(fileSystemEntry))
+      .filter(folder => INTERNALS.indexOf(folder) === -1);
+    const addedFolders = await this.addNonRegisteredExperiments(
+      userId,
+      experimentFolders
+    );
     const experiments = await DB.instance.experiments.find({ token: userId });
-    const deletedExperiments = experiments.filter(entry => experimentFolders.indexOf(entry.experiment) === -1);
+    const deletedExperiments = experiments.filter(
+      entry => experimentFolders.indexOf(entry.experiment) === -1
+    );
     await this.removeExperiments(deletedExperiments);
     const deletedFolders = deletedExperiments.map(entry => entry.experiment);
     return { addedFolders, deletedFolders };
   }
 
-  async addNonRegisteredExperiments(userId: string, folders: string[]): Promise<string[]> {
+  async addNonRegisteredExperiments(
+    userId: string,
+    folders: string[]
+  ): Promise<string[]> {
     const addedFolders: string[] = [];
     const folderInsertions = folders.map(async (e: string) => {
       const found = await DB.instance.experiments.findOne({ experiment: e });
@@ -698,20 +824,25 @@ export class Storage extends BaseStorage {
   }
 
   async removeExperiments(experimentEntries) {
-    const promises = experimentEntries.map(entry => DB.instance.experiments.remove({ token: entry.token, experiment: entry.experiment }));
+    const promises = experimentEntries.map(entry =>
+      DB.instance.experiments.remove({
+        token: entry.token,
+        experiment: entry.experiment
+      })
+    );
     return await q.all(promises);
   }
 
- // Extracts a zip experiment folder to destFolderName
-  async extractZip(zipContent, destFolderName, removeEnclosingFolder= true) {
+  // Extracts a zip experiment folder to destFolderName
+  async extractZip(zipContent, destFolderName, removeEnclosingFolder = true) {
     const mapFile = async filepath => {
       if (path.parse(filepath).dir !== '' && filepath.substr(-1) !== path.sep) {
-        const content = await zipContent.file(  filepath).async('nodebuffer');
+        const content = await zipContent.file(filepath).async('nodebuffer');
         if (removeEnclosingFolder) {
           filepath = filepath.substring(filepath.indexOf('/') + 1); // Removes the largest enclosing folder from the filepath
         }
         const dest = path.join(utils.storagePath, destFolderName, filepath);
-        if (!await fsExtra.exists(path.dirname(dest))) {
+        if (!(await fsExtra.exists(path.dirname(dest)))) {
           await fsExtra.ensureDir(path.dirname(dest));
         }
         return q.denodeify(fsExtra.writeFile)(dest, content);
@@ -742,12 +873,13 @@ export class Storage extends BaseStorage {
   }
 
   getModelConfigFullPath(model) {
-    const modelAbsPath = (model.isCustom) ? customModelAbsPath : templateModelAbsPath;
+    const modelAbsPath = model.isCustom
+      ? customModelAbsPath
+      : templateModelAbsPath;
     return path.join(modelAbsPath, model.type, model.path, 'model.config');
   }
 
   async scanExperiments() {
     return scanExperiments();
   }
-
 }

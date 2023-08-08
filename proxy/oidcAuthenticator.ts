@@ -51,8 +51,8 @@ const getToken = () => {
   if (authConfig.deactivate) return q(false);
 
   if (
-      lastRetrievedToken &&
-      Date.now() - lastRenewalTime < authConfig.renewInternal
+    lastRetrievedToken &&
+    Date.now() - lastRenewalTime < authConfig.renewInternal
   ) {
     // the token is still valid (= under renewal interval)
     return q(lastRetrievedToken);
@@ -93,7 +93,7 @@ const getToken = () => {
   return deferred.promise;
 };
 
-const introspectToken = (token) => {
+const introspectToken = token => {
   if (authConfig.deactivate) return q(false);
 
   const options = {

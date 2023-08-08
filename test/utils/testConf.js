@@ -24,12 +24,11 @@
 var _ = require('lodash');
 var nock = require('nock');
 
-var SIMULATION_STATES = {
+const SIMULATION_STATES = {
   CREATED: 'created',
   STARTED: 'started',
   PAUSED: 'paused',
-  INITIALIZED: 'initialized',
-  HALTED: 'halted',
+  COMPLETED: 'completed',
   FAILED: 'failed',
   STOPPED: 'stopped'
 };
@@ -39,21 +38,22 @@ var CTX_ID = 'ctxId',
   BASE_URL = 'http://localhost',
   BASE_INTERNAL_URL = 'http://10.1.1.96';
 
-var SERVERS = [
-  'geneva1',
-  'geneva2',
-  'geneva3',
-  'geneva4',
-  'geneva5',
-  'geneva6'
-];
+var SERVERS_SIM = ['geneva1', 'geneva2', 'geneva3', 'geneva4'];
+
+const SERVERS_FREE = ['geneva1', 'geneva2', 'geneva5free', 'geneva6free'];
+
+const SERVERS_DOWN = ['geneva7down', 'geneva8down', 'geneva9down'];
+
+const SERVERS_UP = [...new Set(SERVERS_SIM.concat(SERVERS_FREE))];
+
+const SERVERS = [...new Set(SERVERS_SIM.concat(SERVERS_FREE, SERVERS_DOWN))];
 
 var URL = 'http://localhost';
 var CLIENT_ID = 'CLIENT_ID';
 var CLIENT_SECRET = 'CLIENT_SECRET';
 
 var config = {
-  nrpVersion: '3.2.1',
+  nrpVersion: '4.1.0',
   refreshInterval: 5000,
   auth: {
     renewInternal: 0,
@@ -103,29 +103,7 @@ var experimentsConf = {
   experiment3: { experimentId: 'experimentConf3' }
 };
 
-var serverExperiments = {
-  geneva1: { experiment1: experimentsConf.experiment1 },
-  geneva2: {
-    experiment1: experimentsConf.experiment1,
-    experiment2: experimentsConf.experiment2
-  },
-  geneva3: {
-    experiment1: experimentsConf.experiment1,
-    experiment2: experimentsConf.experiment2
-  },
-  geneva4: {
-    experiment1: experimentsConf.experiment1,
-    experiment2: experimentsConf.experiment2,
-    experiment3: experimentsConf.experiment3
-  },
-  genevaInternalIp: { experiment1: experimentsConf.experiment1 }
-};
-
-var serverExperimentsInternalIp = {
-  genevaInternalIp: { experiment1: experimentsConf.experiment1 }
-};
-
-var serveserverSimulations = {
+var serverSimulations = {
   geneva1: [
     _.merge({ state: SIMULATION_STATES.STOPPED }, experimentsConf.experiment1)
   ],
@@ -153,41 +131,19 @@ var serveserverSimulations = {
       },
       experimentsConf.experiment2
     )
-  ]
+  ],
+  geneva5free: [],
+  geneva6free: []
 };
 
-var serveserverSimulationsInternalIp = {
+var serverSimulationsInternalIp = {
   genevaInternalIp: [
     _.merge({ state: SIMULATION_STATES.STARTED }, experimentsConf.experiment1)
   ]
 };
 
-var serversStatusInternalIp = {
-  genevaInternalIp: 'OK'
-};
-
 var experimentList = {
   experiment1: {
-    availableServers: [
-      {
-        'nrp-services': 'http://localhost/geneva1',
-        id: 'geneva1'
-      },
-      {
-        'nrp-services': 'http://localhost/geneva2',
-        id: 'geneva2'
-      }
-    ],
-    downServers: [
-      {
-        'nrp-services': 'http://localhost/geneva5',
-        id: 'geneva5'
-      },
-      {
-        'nrp-services': 'http://localhost/geneva6',
-        id: 'geneva6'
-      }
-    ],
     configuration: {
       experimentId: 'experimentConf1',
       thumbnail: 'test.png',
@@ -208,12 +164,6 @@ var experimentList = {
     ]
   },
   experiment2: {
-    availableServers: [
-      {
-        'nrp-services': 'http://localhost/geneva2',
-        id: 'geneva2'
-      }
-    ],
     configuration: { experimentId: 'experimentConf2' },
     joinableServers: [
       {
@@ -228,7 +178,6 @@ var experimentList = {
     ]
   },
   experiment3: {
-    availableServers: [],
     configuration: { experimentId: 'experimentConf3' },
     joinableServers: []
   }
@@ -236,16 +185,6 @@ var experimentList = {
 
 var experimentListNoCTXID = {
   experiment1: {
-    availableServers: [
-      {
-        'nrp-services': 'http://localhost/geneva1',
-        id: 'geneva1'
-      },
-      {
-        'nrp-services': 'http://localhost/geneva2',
-        id: 'geneva2'
-      }
-    ],
     configuration: { experimentId: 'experimentConf1' },
     joinableServers: [
       {
@@ -259,12 +198,6 @@ var experimentListNoCTXID = {
     ]
   },
   experiment2: {
-    availableServers: [
-      {
-        'nrp-services': 'http://localhost/geneva2',
-        id: 'geneva2'
-      }
-    ],
     configuration: { experimentId: 'experimentConf2' },
     joinableServers: [
       {
@@ -278,74 +211,49 @@ var experimentListNoCTXID = {
     ]
   },
   experiment3: {
-    availableServers: [],
     configuration: { experimentId: 'experimentConf3' },
     joinableServers: []
   }
 };
 
 var mockResponses = function() {
-  _.forOwn(serverExperiments, function(exp, server) {
-    nock(BASE_URL + '/' + server)
-      .get('/experiment')
-      .reply(200, { data: serverExperiments[server] });
-
-    // NRP 4.0 no longer supports /health
-    // nock(BASE_URL + '/' + server)
-    //   .get('/health/errors')
-    //   .reply(200, { state: serversStatus[server] });
-
+  SERVERS_UP.forEach(server => {
     nock(BASE_URL + '/' + server)
       .get('/simulation')
-      .reply(200, serveserverSimulations[server]);
+      .reply(200, serverSimulations[server]);
+  });
+
+  SERVERS_DOWN.forEach(server => {
+    nock(BASE_URL + '/' + server)
+      .get('/simulation')
+      .replyWithError('Server not available');
   });
 };
 
 var mockResponsesInternalIp = function() {
-  _.forOwn(serverExperimentsInternalIp, function(exp, server) {
-    nock(BASE_INTERNAL_URL + '/' + server)
-      .get('/experiment')
-      .reply(200, { data: serverExperimentsInternalIp[server] });
-
-    // NRP 4.0 no longer supports /health
-    // nock(BASE_INTERNAL_URL + '/' + server)
-    //   .get('/health/errors')
-    //   .reply(200, { state: serversStatusInternalIp[server] });
-
+  _.forOwn(serverSimulationsInternalIp, function(exp, server) {
     nock(BASE_INTERNAL_URL + '/' + server)
       .get('/simulation')
-      .reply(200, serveserverSimulationsInternalIp[server]);
+      .reply(200, serverSimulationsInternalIp[server]);
   });
 };
 
 var mockNonJsonResponses = function() {
-  _.forOwn(serverExperiments, function(exp, server) {
-    nock(BASE_URL + '/' + server)
-      .get('/experiment')
-      .reply(200, 'experiments');
-
-    // NRP 4.0 no longer supports /health
-    // nock(BASE_URL + '/' + server)
-    //   .get('/health/errors')
-    //   .reply(200, 'errors');
-
+  SERVERS_UP.forEach(server => {
     nock(BASE_URL + '/' + server)
       .get('/simulation')
       .reply(200, 'simulation');
   });
+
+  SERVERS_DOWN.forEach(server => {
+    nock(BASE_URL + '/' + server)
+      .get('/simulation')
+      .replyWithError('Server not available');
+  });
 };
 
 var mockFailedResponses = function() {
-  _.forOwn(serverExperiments, function(exp, server) {
-    nock(BASE_URL + '/' + server)
-      .get('/experiment')
-      .reply(500, {});
-
-    // NRP 4.0 no longer supports /health
-    // nock(BASE_URL + '/' + server)
-    //   .get('/health/errors')
-    //   .reply(500, {});
-
+  SERVERS.forEach(server => {
     nock(BASE_URL + '/' + server)
       .get('/simulation')
       .reply(500, {});
@@ -354,7 +262,7 @@ var mockFailedResponses = function() {
 
 var mockImageResponses = function() {
   _.forOwn(experimentList, function(expDetails, exp) {
-    expDetails['availableServers'].forEach(function(server) {
+    expDetails.availableServers.forEach(function(server) {
       nock(BASE_URL + '/' + server.id)
         .get('/experiment/' + exp + '/preview')
         .reply(200, { image_as_base64: 'image' });
@@ -364,7 +272,7 @@ var mockImageResponses = function() {
 
 var mockFailedImageResponse = function() {
   _.forOwn(experimentList, function(expDetails, exp) {
-    expDetails['availableServers'].forEach(function(server) {
+    expDetails.availableServers.forEach(function(server) {
       nock(BASE_URL + '/' + server.id)
         .get('/experiment/' + exp + '/preview')
         .replyWithError('An Error occurred');
@@ -375,7 +283,9 @@ var mockFailedImageResponse = function() {
 var consoleMock = {
   log: function() {},
   error: function() {},
-  warn: function() {}
+  warn: function() {},
+  info: function() {},
+  debug: function() {}
 };
 
 var mockSuccessfulOidcResponse = function() {
@@ -401,10 +311,13 @@ module.exports = {
   configInternalIp: configInternalIp,
   EXPERIMENT_ID: EXPERIMENT_ID,
   SERVERS: SERVERS,
+  SERVERS_DOWN,
+  SERVERS_UP,
+  SERVERS_FREE,
   experimentsConf: experimentsConf,
   experimentList: experimentList,
   experimentListNoCTXID: experimentListNoCTXID,
-  serveserverSimulations: serveserverSimulations,
+  serverSimulations: serverSimulations,
   mockImageResponses: mockImageResponses,
   consoleMock: consoleMock,
   mockSuccessfulOidcResponse: mockSuccessfulOidcResponse,

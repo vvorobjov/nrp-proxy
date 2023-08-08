@@ -48,13 +48,13 @@ configurationManager.watch();
 
 proxyRequestHandler.initialize(config);
 
-const storageRequestHandler = new StorageRequestHandler(config),
-  adminService = new AdminService(config, proxyRequestHandler),
-  experimentServiceFactory = new ExperimentServiceFactory(
-    storageRequestHandler,
-    config,
-    proxyRequestHandler
-  );
+const storageRequestHandler = new StorageRequestHandler(config);
+const adminService = new AdminService(config, proxyRequestHandler);
+const experimentServiceFactory = new ExperimentServiceFactory(
+  storageRequestHandler,
+  config,
+  proxyRequestHandler
+);
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -100,7 +100,9 @@ const handleError = (res, err) => {
     const errMsg =
       err.code === 403
         ? 'Authentication error'
-        : err.msg ? err.msg : `code: ${err.code}`;
+        : err.msg
+        ? err.msg
+        : `code: ${err.code}`;
 
     if (err.code !== 204) {
       // 204= file not found
@@ -245,20 +247,20 @@ app.get('/storage/experiments', async (req, res) => {
         exp.joinableServers = joinableServers;
       })
     );
-    const configurationPromises = experiments.map(
-      exp =>
-        experimentServiceFactory
-          .createExperimentService(exp.uuid, getAuthToken(req))
-          .getConfig()
-          .then(configuration => {
-            exp.configuration = {
-              maturity: 'production',
-              experimentId: path.join(exp.uuid, storageConsts.defaultConfigName),
-              path: exp.uuid,
-              configFile: storageConsts.defaultConfigName,
-              ...configuration
-            };
-          }).catch(_.partial(handleError, res))
+    const configurationPromises = experiments.map(exp =>
+      experimentServiceFactory
+        .createExperimentService(exp.uuid, getAuthToken(req))
+        .getConfig()
+        .then(configuration => {
+          exp.configuration = {
+            maturity: 'production',
+            experimentId: path.join(exp.uuid, storageConsts.defaultConfigName),
+            path: exp.uuid,
+            configFile: storageConsts.defaultConfigName,
+            ...configuration
+          };
+        })
+        .catch(_.partial(handleError, res))
     );
     await Promise.all([...joinableServerPromises, ...configurationPromises]);
     const decoratedExperiments = experiments
@@ -285,7 +287,8 @@ app.post('/storage/clone', (req, res) => {
 app.post('/storage/models/:type/:modelId/sharing/:userId', (req, res) => {
   storageRequestHandler
     .addUsertoSharingUserListinModel(
-      req.params.type, req.params.modelId,
+      req.params.type,
+      req.params.modelId,
       req.params.userId,
       getAuthToken(req)
     )
@@ -295,47 +298,59 @@ app.post('/storage/models/:type/:modelId/sharing/:userId', (req, res) => {
 
 app.get('/storage/models/:type/:modelId/sharingusers', (req, res) => {
   storageRequestHandler
-    .listSharingUsersbyModel(req.params.type, req.params.modelId, getAuthToken(req))
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
-});
-
-app.post('/storage/models/:modelType/:modelId/sharingmode/:sharingMode', (req, res) => {
-  storageRequestHandler
-    .updateSharedModelMode(
-      req.params.modelType, req.params.modelId,
-      req.params.sharingMode,
+    .listSharingUsersbyModel(
+      req.params.type,
+      req.params.modelId,
       getAuthToken(req)
     )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
+app.post(
+  '/storage/models/:modelType/:modelId/sharingmode/:sharingMode',
+  (req, res) => {
+    storageRequestHandler
+      .updateSharedModelMode(
+        req.params.modelType,
+        req.params.modelId,
+        req.params.sharingMode,
+        getAuthToken(req)
+      )
+      .then(r => res.send(r))
+      .catch(_.partial(handleError, res));
+  }
+);
+
 app.get('/storage/models/:modelType/:modelId/sharingmode', (req, res) => {
   storageRequestHandler
-    .getModelSharingMode(req.params.modelType, req.params.modelId, getAuthToken(req))
+    .getModelSharingMode(
+      req.params.modelType,
+      req.params.modelId,
+      getAuthToken(req)
+    )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.delete('/storage/models/:modelType/:modelId/sharingusers/:userId', (req, res) => {
-  storageRequestHandler
-    .deleteSharingUserFromModel(
-      req.params.modelType,
-      req.params.modelId,
-      req.params.userId,
-      getAuthToken(req),
-    )
-    .then(r => res.send(r || ''))
-    .catch(_.partial(handleError, res));
-});
+app.delete(
+  '/storage/models/:modelType/:modelId/sharingusers/:userId',
+  (req, res) => {
+    storageRequestHandler
+      .deleteSharingUserFromModel(
+        req.params.modelType,
+        req.params.modelId,
+        req.params.userId,
+        getAuthToken(req)
+      )
+      .then(r => res.send(r || ''))
+      .catch(_.partial(handleError, res));
+  }
+);
 
 app.get('/storage/models/shared/:modelType', (req, res) => {
   storageRequestHandler
-    .listSharedModels(
-      req.params.modelType,
-      getAuthToken(req),
-    )
+    .listSharedModels(req.params.modelType, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -343,10 +358,7 @@ app.get('/storage/models/shared/:modelType', (req, res) => {
 app.get('/storage/models/all/:modelType', (req, res) => {
   // it returns all the models of the users: the ones he owns and the ones are sharing with him.
   storageRequestHandler
-    .listAllModels(
-      req.params.modelType,
-      getAuthToken(req),
-    )
+    .listAllModels(req.params.modelType, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -361,10 +373,7 @@ app.get('/storage/knowledgeGraphBrains/:query', (req, res) => {
 
 app.get('/storage/models/:modelType', (req, res) => {
   storageRequestHandler
-    .listModelsbyType(
-      req.params.modelType,
-      getAuthToken(req)
-    )
+    .listModelsbyType(req.params.modelType, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -376,16 +385,19 @@ app.get('/storage/experiments/:experimentId/sharingusers', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/experiments/:experimentId/sharingmode/:sharingMode', (req, res) => {
-  storageRequestHandler
-    .updateSharedExperimentMode(
-      req.params.experimentId,
-      req.params.sharingMode,
-      getAuthToken(req)
-    )
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
-});
+app.post(
+  '/storage/experiments/:experimentId/sharingmode/:sharingMode',
+  (req, res) => {
+    storageRequestHandler
+      .updateSharedExperimentMode(
+        req.params.experimentId,
+        req.params.sharingMode,
+        getAuthToken(req)
+      )
+      .then(r => res.send(r))
+      .catch(_.partial(handleError, res));
+  }
+);
 
 app.get('/storage/experiments/shared', (req, res) => {
   proxyRequestHandler
@@ -394,27 +406,33 @@ app.get('/storage/experiments/shared', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.delete('/storage/experiments/:experimentId/sharingusers/:userId', (req, res) => {
-  storageRequestHandler
-    .deleteSharingUserFromExperiment(
-      req.params.experimentId,
-      req.params.userId,
-      getAuthToken(req)
-    )
-    .then(r => res.send(r || ''))
-    .catch(_.partial(handleError, res));
-});
+app.delete(
+  '/storage/experiments/:experimentId/sharingusers/:userId',
+  (req, res) => {
+    storageRequestHandler
+      .deleteSharingUserFromExperiment(
+        req.params.experimentId,
+        req.params.userId,
+        getAuthToken(req)
+      )
+      .then(r => res.send(r || ''))
+      .catch(_.partial(handleError, res));
+  }
+);
 
-app.post('/storage/experiments/:experimentId/sharingusers/:userId', (req, res) => {
-  storageRequestHandler
-    .addUsertoSharingUserListinExperiment(
-      req.params.experimentId,
-      req.params.userId,
-      getAuthToken(req)
-    )
-    .then(r => res.send(r))
-    .catch(_.partial(handleError, res));
-});
+app.post(
+  '/storage/experiments/:experimentId/sharingusers/:userId',
+  (req, res) => {
+    storageRequestHandler
+      .addUsertoSharingUserListinExperiment(
+        req.params.experimentId,
+        req.params.userId,
+        getAuthToken(req)
+      )
+      .then(r => res.send(r))
+      .catch(_.partial(handleError, res));
+  }
+);
 
 app.get('/storage/experiments/:experimentId/sharingmode', (req, res) => {
   storageRequestHandler
@@ -450,17 +468,18 @@ app.post('/storage/clonenew', (req, res) => {
 
 app.get('/storage/models/user/:modelType', (req, res) => {
   storageRequestHandler
-    .listUserModelsbyType(
-      req.params.modelType,
-      getAuthToken(req)
-    )
+    .listUserModelsbyType(req.params.modelType, getAuthToken(req))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
 app.delete('/storage/models/:modelType/:modelName', (req, res) => {
   storageRequestHandler
-    .deleteCustomModel(req.params.modelType, req.params.modelName, getAuthToken(req))
+    .deleteCustomModel(
+      req.params.modelType,
+      req.params.modelName,
+      getAuthToken(req)
+    )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -494,7 +513,11 @@ app.get('/storage/models/path/:modelType/:modelName', (req, res) => {
 
 app.get('/storage/models/:modelType/:modelName/config', (req, res, next) => {
   storageRequestHandler
-    .getModelConfigFullPath(req.params.modelType, req.params.modelName, getAuthToken(req))
+    .getModelConfigFullPath(
+      req.params.modelType,
+      req.params.modelName,
+      getAuthToken(req)
+    )
     .then(config => res.sendFile(config))
     .catch(next);
 });
@@ -505,7 +528,7 @@ app.post('/storage/importExperiment', async (req, res) => {
     .registerZippedExperiment(
       token,
       req.get('context-id'),
-      req.body, // zip file
+      req.body // zip file
     )
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
@@ -514,13 +537,9 @@ app.post('/storage/importExperiment', async (req, res) => {
 app.post('/storage/scanStorage', async (req, res) => {
   const token = getAuthToken(req);
   storageRequestHandler
-    .scanStorage(
-      token,
-      req.get('context-id'),
-    )
+    .scanStorage(token, req.get('context-id'))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
-
 });
 
 app.get('/storage/:experiment/:filename', (req, res) => {
@@ -532,7 +551,9 @@ app.get('/storage/:experiment/:filename', (req, res) => {
       req.query.byname === 'true'
     )
     .then(r => {
-      r.uuid && res.header('uuid', r.uuid);
+      if (r.uuid) {
+        res.header('uuid', r.uuid);
+      }
       res.header('content-type', r.contentType);
       res.header('content-disposition', r.contentDisposition);
       res.send(r.body);
@@ -543,10 +564,7 @@ app.get('/storage/:experiment/:filename', (req, res) => {
 // TODO: [NRRPLT-8725] add zipping of the experiment for 4.0
 app.get('/storage/experiments/:experiment/zip', async (req, res) => {
   storageRequestHandler
-    .getExperimentZips(
-      req.params.experiment,
-      getAuthToken(req)
-    )
+    .getExperimentZips(req.params.experiment, getAuthToken(req))
     .then(r => res.download(r.experimentZip.path, r.experimentZip.name))
     .catch(_.partial(handleError, res));
 });
@@ -621,8 +639,7 @@ app.post('/storage/:experiment/*', (req, res) => {
     );
   }
 
-  promise.then(r => res.send(r || ''))
-      .catch(_.partial(handleError, res));
+  promise.then(r => res.send(r || '')).catch(_.partial(handleError, res));
 });
 
 app.get('/storage/:experiment', (req, res) => {
@@ -652,10 +669,7 @@ app.get('/storage/knowledgeGraph/data/:filename', (req, res) => {
 
 app.put('/storage/knowledgeGraph/data/:filename', (req, res) => {
   storageRequestHandler
-    .createOrUpdateKgAttachment(
-      req.params.filename,
-      req.body
-    )
+    .createOrUpdateKgAttachment(req.params.filename, req.body)
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
@@ -804,9 +818,9 @@ app.get('/health', (req, res, next) => {
     .getAvailableServers()
     .then(servers => {
       if (servers.length > 0) {
-        res.send({service: 'healthy'});
+        res.send({ service: 'healthy' });
       } else {
-        res.send({service: 'unavailable'});
+        res.send({ service: 'unavailable' });
       }
     })
     .catch(next);

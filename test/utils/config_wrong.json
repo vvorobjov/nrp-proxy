@@ -1,6 +1,8 @@
 {
   "nrpVersion": "4.1.0",
   "refreshInterval": 5000,
+  "bucketUrlApi": "https://data-proxy-int.ebrains.eu/api/v1/buckets",
+  "searchTagUrl": "https://wiki-int.ebrains.eu/rest/wikis/xwiki/tags/",
   "auth": {
     "renewInternal": 600000,
     "clientId": "some-client-id",
@@ -10,7 +12,6 @@
   },
   "port": 8000,
   "modelsPath": "$HBP/Models",
-  "templatesPath": "$HBP/Experiments",
   "servers": {
     "localhost": {
       "nrp-services": "http://localhost:8080",
@@ -18,5 +19,6 @@
     }
   },
   "storage": "FS",
+  "authentication": "FS",
   "restart-backend-cmd": "inexisting-script"
 }

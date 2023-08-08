@@ -1,23 +1,23 @@
 'use strict';
 
-const { response } = require('express');
-const {
-  default: configurationManager
-} = require('../../utils/configurationManager');
+const fs = require('fs-extra');
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+const chaiSubset = require('chai-subset');
+const rewire = require('rewire');
+const expect = chai.expect;
+const path = require('path');
+const assert = chai.assert;
+const q = require('q');
+const sinon = require('sinon');
+const jszip = require('jszip');
 
-const fs = require('fs-extra'),
-  chai = require('chai'),
-  chaiAsPromised = require('chai-as-promised'),
-  chaiSubset = require('chai-subset'),
-  rewire = require('rewire'),
-  expect = chai.expect,
-  path = require('path'),
-  assert = chai.assert,
-  q = require('q'),
-  sinon = require('sinon'),
-  jszip = require('jszip'),
-  faketemplateModelAbsPath = path.join(__dirname, 'dbMock', 'TEMPLATE_MODELS'),
-  fakecustomModelAbsPath = path.join(__dirname, 'dbMock', 'USER_DATA');
+const faketemplateModelAbsPath = path.join(
+  __dirname,
+  'dbMock',
+  'TEMPLATE_MODELS'
+);
+const fakecustomModelAbsPath = path.join(__dirname, 'dbMock', 'USER_DATA');
 
 chai.use(chaiAsPromised);
 chai.use(chaiSubset);
@@ -405,9 +405,10 @@ describe('FSStorage', () => {
       .stub()
       .returns(Promise.resolve(null));
 
-    return fsStorage
-      .createCustomModel(fakeModel, 'zip')
-      .then(res => expect(res).should.be.resolved);
+    return fsStorage.createCustomModel(fakeModel, 'zip').then(res => {
+      jszip.loadAsync.restore();
+      expect(res).should.be.resolved;
+    });
   });
 
   it(`should return an entry when we check an existing token`, () => {
@@ -819,23 +820,23 @@ describe('FSStorage', () => {
       .returns(
         Promise.resolve({ token: fakeUserId, experiment: fakeExperiment })
       );
-    jszip.loadAsync.restore();
+
+    // clean old mock if present
+    // if ('restore' in jszip.loadAsync && typeof jszip.loadAsync['restore'] === 'function'){
+    //   jszip.loadAsync.restore();
+    // }
     sinon.stub(jszip, 'loadAsync').returns('zipFileContent');
     sinon
       .stub(fsStorage, 'extractZip')
       .returns(q.resolve(['undefined', 'undefined', 'undefined']));
     return expect(
-      fsStorage.unzip(
-        'filename.zip',
-        'binary content',
-        fakeExperiment,
-        fakeUserId
-      )
+      fsStorage
+        .unzip('filename.zip', 'binary content', fakeExperiment, fakeUserId)
+        .then(res => {
+          jszip.loadAsync.restore();
+          return res;
+        })
     ).to.eventually.deep.equal(['undefined', 'undefined', 'undefined']);
-  });
-
-  after(() => {
-    jszip.loadAsync.restore();
   });
 });
 
@@ -859,7 +860,7 @@ describe('FS Storage (not mocking the mkdir)', () => {
       fs.unlinkSync(path.join(__dirname, 'dbMock2/FS_db/experiments'));
       fs.rmdirSync(path.join(__dirname, 'dbMock2/FS_db/'));
       fs.rmdirSync(path.join(__dirname, 'dbMock2/'));
-      return res['uuid'].should.contain('-');
+      return res.uuid.should.contain('-');
     });
   });
 });
@@ -1662,6 +1663,13 @@ describe('Utils', () => {
     return expect(
       utils.generateUniqueExperimentId('test', 0, ['test_0', 'test_1'])
     ).to.equal('test_2');
+  });
+
+  it(`should check if the file is an image`, () => {
+    utils.IMG_EXT.forEach(ext => {
+      expect(utils.isImage('image' + ext)).to.equal(true);
+    });
+    expect(utils.isImage('image.doc')).to.equal(false);
   });
 
   it('should return a JSZip instance filled with contents of dir', () => {

@@ -23,11 +23,10 @@
  * ---LICENSE-END**/
 'use strict';
 
-const xml2js = require('xml2js').parseString,
-  q = require('q'),
-  path = require('path'),
-  fs = require('fs-extra'),
-  base64 = require('file-base64');
+const xml2js = require('xml2js').parseString;
+const q = require('q');
+const path = require('path');
+const base64 = require('file-base64');
 
 // mocked in tests
 // tslint:disable-next-line: prefer-const
@@ -71,7 +70,8 @@ export default class ModelsService {
       try {
         const basename = this.getZipBasename(zip);
         if (!basename || basename === 'model.config') return exception;
-        const defaultThumbnail = await q.denodeify(base64.encode)(path.resolve(__dirname, '../img/brain.png'))
+        const defaultThumbnail = await q
+          .denodeify(base64.encode)(path.resolve(__dirname, '../img/brain.png'))
           .then(b64 => 'data:image;base64,' + b64);
 
         return q
@@ -94,7 +94,12 @@ export default class ModelsService {
               description: config.description,
               thumbnail: thumbnail ? thumbnail : defaultThumbnail,
               path: basename,
-              script: config.brain ? await zip.file(path.join(basename, config.brain)).async('text').then(data => data) : undefined,
+              script: config.brain
+                ? await zip
+                    .file(path.join(basename, config.brain))
+                    .async('text')
+                    .then(data => data)
+                : undefined,
               scriptPath: config.brain ? config.brain : undefined,
               sdf: !config.brain ? config.sdf : undefined,
               configPath: path.join(basename, 'model.config')
@@ -106,14 +111,15 @@ export default class ModelsService {
       } catch (err) {
         return exception;
       }
-    }
-    );
+    });
   }
 
   getZipBasename(zip) {
-    console.log(zip
-      .filter((relativePath, file) => file.name.includes('model.config'))[0]
-      .name.split(path.sep)[0]);
+    console.log(
+      zip
+        .filter((relativePath, file) => file.name.includes('model.config'))[0]
+        .name.split(path.sep)[0]
+    );
     return zip
       .filter((relativePath, file) => file.name.includes('model.config'))[0]
       .name.split(path.sep)[0];

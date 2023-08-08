@@ -27,10 +27,8 @@ import { URL } from 'url';
 import configurationManager from '../../utils/configurationManager';
 // import { FileType } from '../BaseStorage';
 
-const q = require('q'),
-  _ = require('lodash'),
-  path = require('path'),
-  https = require('https');
+const _ = require('lodash');
+const https = require('https');
 
 // mocked in the tests
 // tslint:disable-next-line: prefer-const
@@ -42,7 +40,6 @@ const SINGLETON_ENFORCER = Symbol();
 
 // wraps the collab connection
 export default class CollabConnector {
-
   static get REQUEST_TIMEOUT() {
     return 30 * 1000;
   } // ms
@@ -51,7 +48,9 @@ export default class CollabConnector {
     if (config.bucketUrlApi) {
       return config.bucketUrlApi;
     } else {
-      console.info('No bucket api url found in the configuration file, you may have an outdated configuration file');
+      console.info(
+        'No bucket api url found in the configuration file, you may have an outdated configuration file'
+      );
       return '';
     }
   }
@@ -60,7 +59,9 @@ export default class CollabConnector {
     if (config.searchTagUrl) {
       return config.searchTagUrl;
     } else {
-      console.info('No search tag url found in the configuration file, you may have an outdated configuration file');
+      console.info(
+        'No search tag url found in the configuration file, you may have an outdated configuration file'
+      );
       return '';
     }
   }
@@ -121,7 +122,7 @@ export default class CollabConnector {
               data += chunk;
             })
             .on('end', () => {
-              const json =  {headers: response.headers, body: data };
+              const json = { headers: response.headers, body: data };
               resolve(json);
             })
             .on('error', e => {
@@ -143,7 +144,8 @@ export default class CollabConnector {
   postHTTPS(url, data, token, options, jsonType = false) {
     console.info('new post method : ', url);
     const operation = () =>
-      this.requestHTTPS(url,
+      this.requestHTTPS(
+        url,
         {
           method: 'POST',
           uri: url,
@@ -169,15 +171,12 @@ export default class CollabConnector {
       body: data,
       json: !!jsonType
     });
-    return  await this.requestHTTPS(url,
-        options,
-        token
-      ).catch(e => {
-        console.info(e);
-        if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
-          console.info('Error: ESOCKETTIMEDOUT');
-        throw e;
-      });
+    return await this.requestHTTPS(url, options, token).catch(e => {
+      console.info(e);
+      if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
+        console.info('Error: ESOCKETTIMEDOUT');
+      throw e;
+    });
   }
 
   async getHTTPS(url, token, options) {
@@ -203,9 +202,15 @@ export default class CollabConnector {
   async getJSON(url, token) {
     // console.info(['getJSON() - url', url]);
     try {
-      const response: any = await this.getHTTPS(url, token, { headers: { Accept: 'application/json' }});
+      const response: any = await this.getHTTPS(url, token, {
+        headers: { Accept: 'application/json' }
+      });
       // console.info(response);
-      if (response.headers['content-type'].startsWith('application/xml;charset=UTF-8')) {
+      if (
+        response.headers['content-type'].startsWith(
+          'application/xml;charset=UTF-8'
+        )
+      ) {
         // console.info(response);
         return JSON.parse(response.body);
       }
@@ -226,32 +231,32 @@ export default class CollabConnector {
   }
 
   async getBucketFile(fileUUID, token, options) {
-
     return new Promise(async (resolve, reject) => {
       try {
-      const downloadResponse: any = await this.getHTTPS(
-        `${CollabConnector.URL_BUCKET_API}/${fileUUID}?inline=false&redirect=false`,
-        token,
-        undefined
-      );
-      const downloadUrl = JSON.parse(downloadResponse.body);
-      // console.info(['getBucketFile() - downloadResponse.body', downloadUrl.body]);
-      const fileResponse: any = await this.getHTTPS(
-        downloadUrl.url,
-        undefined,
-        options
-      ); // passing auth token here leads to access denied ... ?
-      // console.info(['getBucketFile() - fileResponse', fileResponse]);
+        const downloadResponse: any = await this.getHTTPS(
+          `${CollabConnector.URL_BUCKET_API}/${fileUUID}?inline=false&redirect=false`,
+          token,
+          undefined
+        );
+        const downloadUrl = JSON.parse(downloadResponse.body);
+        // console.info(['getBucketFile() - downloadResponse.body', downloadUrl.body]);
+        const fileResponse: any = await this.getHTTPS(
+          downloadUrl.url,
+          undefined,
+          options
+        ); // passing auth token here leads to access denied ... ?
+        // console.info(['getBucketFile() - fileResponse', fileResponse]);
 
-      if (options && options.encoding === null) {
-        resolve({ headers: fileResponse.headers, body: fileResponse.body });
-      } else {
+        if (options && options.encoding === null) {
+          resolve({ headers: fileResponse.headers, body: fileResponse.body });
+        } else {
+          resolve(fileResponse.body);
+        }
         resolve(fileResponse.body);
-      }
-      resolve(fileResponse.body);
       } catch (error) {
-      reject(error);
-    }});
+        reject(error);
+      }
+    });
   }
 
   createFile(token, parent, name, contentType) {
@@ -288,7 +293,6 @@ export default class CollabConnector {
   }
 
   copyFolder(token, parent, newExpName, experiment) {
-
     const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${experiment}%2F/copy?to=${parent}&name=${newExpName}%2F`;
     console.info('copying folder ', BUCKET_FILE_URL);
     return this.putHTTPS(
@@ -375,7 +379,6 @@ export default class CollabConnector {
     // console.info(['bucketFolderContent() - urlBucketGET:', urlBucketGET]);
 
     return this.getJSON(urlBucketGET, token).then(bucketContent => {
-
       folderContent =
         bucketContent &&
         bucketContent.objects &&
@@ -409,7 +412,11 @@ export default class CollabConnector {
       this._getMemoizedCollab = _.memoize(
         async (token, contextId) => {
           const COLLAB_URL = `https://services.humanbrainproject.eu/collab/v0/collab/context/${contextId}/`;
-          const response: any = await this.getHTTPS(COLLAB_URL, token, undefined);
+          const response: any = await this.getHTTPS(
+            COLLAB_URL,
+            token,
+            undefined
+          );
           return JSON.parse(response.body).collab.id;
         },
         (token, contextId) => token + contextId

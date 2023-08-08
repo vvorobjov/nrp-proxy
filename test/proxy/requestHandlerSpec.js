@@ -79,12 +79,12 @@ describe('requestHandler', function() {
   it('should return joinable servers for a given experimentID', function() {
     revert = requestHandlerRewired.__set__(
       'simulationList',
-      testConf.serveserverSimulations
+      testConf.serverSimulations
     );
     var myobj = [
       {
         server: 'geneva4',
-        runningSimulation: testConf.serveserverSimulations['geneva4'][0]
+        runningSimulation: testConf.serverSimulations.geneva4[0]
       }
     ];
     return requestHandler
@@ -92,17 +92,17 @@ describe('requestHandler', function() {
       .should.eventually.deep.equal(myobj);
   });
 
-  it('should return servers with no running simulation', async () => {
+  it('should return down servers', async () => {
     let noBackendServers = await requestHandler.getServersWithNoBackend();
     expect(noBackendServers).to.have.deep.members(
-      testConf.experimentList['experiment1'].downServers
+      testConf.SERVERS_DOWN.map(serverKey => testConf.config.servers[serverKey])
     );
   });
 
-  it('should return available servers for a given experiment', async () => {
+  it('should return available servers', async () => {
     let availableServers = await requestHandler.getAvailableServers();
     expect(availableServers).to.have.deep.members(
-      testConf.experimentList['experiment1'].availableServers
+      testConf.SERVERS_FREE.map(serverKey => testConf.config.servers[serverKey])
     );
   });
 

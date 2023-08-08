@@ -1228,7 +1228,7 @@ describe('Request handler (not mocking the mkdir)', () => {
         fs.unlinkSync(path.join(__dirname, 'dbMock2/FS_db/experiments'));
         fs.rmdirSync(path.join(__dirname, 'dbMock2/FS_db/'));
         fs.rmdirSync(path.join(__dirname, 'dbMock2/'));
-        return res['uuid'].should.contain('-');
+        return res.uuid.should.contain('-');
       })
       .catch(() => console.log(''));
   });

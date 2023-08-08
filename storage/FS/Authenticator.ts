@@ -25,12 +25,12 @@
 
 import BaseAuthenticator from '../BaseAuthenticator';
 
-const q = require('q'),
-  path = require('path');
+const q = require('q');
+const path = require('path');
 
 // mocked in the tests thus non const
 // tslint:disable-next-line: prefer-const
-let DB  = require('./DB').default;
+let DB = require('./DB').default;
 
 export class Authenticator extends BaseAuthenticator {
   login(usr, pwd) {
@@ -49,11 +49,14 @@ export class Authenticator extends BaseAuthenticator {
     const user = await DB.instance.users.findOne({ token });
     return (
       user ||
-      q.reject({ code: 477, msg: JSON.stringify({
-        mode: 'local',
-        url: '/authentication/loginpage?origin=FS',
-        clientId: 'nrp'
-      }) })
+      q.reject({
+        code: 477,
+        msg: JSON.stringify({
+          mode: 'local',
+          url: '/authentication/loginpage?origin=FS',
+          clientId: 'nrp'
+        })
+      })
     );
   }
 }

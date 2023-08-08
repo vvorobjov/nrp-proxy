@@ -31,7 +31,7 @@ describe('serversProxy', function() {
       expect(x[0].experimentConf1[0].runningSimulation.experimentId).to.equal(
         testConf.experimentList.experiment1.configuration.experimentId
       );
-      expect(_.isEqual(x[1], testConf.serveserverSimulations)).to.equal(true);
+      expect(_.isEqual(x[1], testConf.serverSimulations)).to.equal(true);
     });
   });
 
@@ -44,28 +44,21 @@ describe('serversProxy', function() {
       expect(x[0].experimentConf1[0].runningSimulation.experimentId).to.equal(
         testConf.experimentList.experiment1.configuration.experimentId
       );
-      expect(_.isEqual(x[1], testConf.serveserverSimulations)).to.equal(false);
+      expect(_.isEqual(x[1], testConf.serverSimulations)).to.equal(false);
     });
   });
 
   it('should NOT fail to return experiments due a non-JSON response', function() {
     testConf.mockNonJsonResponses();
-    var exp = serversProxy.getExperimentsAndSimulations(testConf.config);
-
     return serversProxy
       .getExperimentsAndSimulations(testConf.config)
       .then(function(exp) {
         expect(exp[0]).to.deep.equal({});
         expect(exp[1]).to.deep.equal({});
         expect(exp[2]).to.deep.equal([]);
-        expect(exp[3]).to.have.members([
-          testConf.config.servers['geneva1'],
-          testConf.config.servers['geneva2'],
-          testConf.config.servers['geneva3'],
-          testConf.config.servers['geneva4'],
-          testConf.config.servers['geneva5'],
-          testConf.config.servers['geneva6']
-        ]);
+        expect(exp[3]).to.have.members(
+          testConf.SERVERS.map(serverKey => testConf.config.servers[serverKey])
+        );
       });
   });
 
@@ -77,14 +70,9 @@ describe('serversProxy', function() {
         expect(exp[0]).to.deep.equal({});
         expect(exp[1]).to.deep.equal({});
         expect(exp[2]).to.deep.equal([]);
-        expect(exp[3]).to.have.members([
-          testConf.config.servers['geneva1'],
-          testConf.config.servers['geneva2'],
-          testConf.config.servers['geneva3'],
-          testConf.config.servers['geneva4'],
-          testConf.config.servers['geneva5'],
-          testConf.config.servers['geneva6']
-        ]);
+        expect(exp[3]).to.have.members(
+          testConf.SERVERS.map(serverKey => testConf.config.servers[serverKey])
+        );
       });
   });
 });

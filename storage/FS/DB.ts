@@ -31,8 +31,8 @@ const tingodb = Tingodb();
 
 // test mocked
 // tslint:disable: prefer-const variable-name
-let utils = require('./utils').default,
-  DBCollection = require('./Collection').default;
+let utils = require('./utils').default;
+let DBCollection = require('./Collection').default;
 // tslint:enable: prefer-const variable-name
 
 // wraps tingo db
@@ -53,6 +53,7 @@ export default class DB {
   constructor() {
     const dbDirectory = path.join(utils.storagePath, DB.DB_FOLDER);
 
+    // tslint:disable-next-line:no-unused-expression
     fs.existsSync(dbDirectory) || fs.mkdirSync(dbDirectory);
 
     const db = new tingodb.Db(dbDirectory, {});
