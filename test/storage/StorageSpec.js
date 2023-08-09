@@ -948,40 +948,26 @@ describe('Collab Storage', () => {
     //collabConnector = new CollabConnector();
   });
 
-  it('should fail to create a new file', async () => {
-    nock(CollabConnector.URL_BUCKET_API)
-      .post('/fakeFolder/fakeName/copy?to=fakeFolder&name=fakeName')
-      .replyWithError({ message: 'fail ??', code: 404 });
-    collabConnector = CollabConnector.instance;
-    return await collabConnector.createFile(
-      'fakeToken',
-      'fakeFolder',
-      'fakeName',
-      'text/plain'
-    ).should.be.rejected;
-    //expect(result).to.eventually.be.rejected;
-  });
-
   //Collab connector
   it('should succesfully get the correct request timeout', () => {
     return CollabConnector.REQUEST_TIMEOUT.should.equal(30 * 1000);
   });
 
-  it('should successfully post a new file', () => {
+  it('upload file should succeed with the file uuid', () => {
+    const fakeUuid = 'fakeFolder/fakeName/';
+    const fakeUrl = 'https://fake.url.upload/test/';
     nock(CollabConnector.URL_BUCKET_API)
-      .post('/fakeFolder/fakeName/copy?to=fakeFolder&name=fakeName')
+      .put('/' + fakeUuid)
+      .reply(200, JSON.stringify({ url: fakeUrl }));
+
+    nock('https://fake.url.upload')
+      .log(console.log)
+      .put('/test/')
       .reply(200, 'success');
 
     return CollabConnector.instance
-      .createFile('fakeToken', 'fakeFolder', 'fakeName', 'text/plain')
-      .then(response => response.body)
-      .should.eventually.equal('success');
-  });
-
-  it('upload file should not be implemented', () => {
-    return CollabConnector.instance
-      .uploadContent('fakeToken', 'fakeFolder/fakeName/', '')
-      .should.eventually.equal('not implemented');
+      .uploadContent('fakeToken', fakeUuid, '')
+      .should.eventually.equal(fakeUuid);
   });
 
   it('should copy a folder with succes', () => {
@@ -1012,20 +998,6 @@ describe('Collab Storage', () => {
     return CollabConnector.instance
       .getContextIdCollab('fakeToken', 'fakeContextId')
       .should.eventually.equal('collabId');
-  });
-
-  it('should fail to post a new file', () => {
-    nock(CollabConnector.URL_BUCKET_API)
-      .post('/fakeFolder/fakeName/copy?to=fakeFolder&name=fakeName')
-      .replyWithError({ message: 'fail', code: 404 });
-    collabConnector = CollabConnector.instance;
-    let result = collabConnector.createFile(
-      'fakeToken',
-      'fakeFolder',
-      'fakeName',
-      'text/plain'
-    );
-    expect(result).to.eventually.be.rejected;
   });
 
   it('should throw when we have a response with a wrong status code', () => {

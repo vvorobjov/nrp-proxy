@@ -279,22 +279,6 @@ export default class CollabConnector {
     }});
   }
 
-  createFile(token, parent, name, contentType) {
-    console.info('creating ' + parent + '/' + name);
-    const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${name}/copy?to=${parent}&name=${name}`;
-
-    return this.postHTTPS(
-      BUCKET_FILE_URL,
-      {
-        name,
-        parent,
-        content_type: contentType
-      },
-      token,
-      true
-    );
-  }
-
   copyFile(token, filepath, destination, name, contentType) {
     console.info('copying ' + filepath + name);
     const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${filepath}/copy?to=${destination}&name=${name}`;
@@ -343,13 +327,13 @@ export default class CollabConnector {
 
     return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, undefined)
       .then((response: any) => {
-        console.info(response.body);
         const uploadUrl = JSON.parse(response.body).url;
+        console.info(uploadUrl);
         return uploadUrl;
       }).then(uploadUrl => this.putHTTPS(uploadUrl, content, undefined, options, true))
       .then((response) => {
         console.info('Upload response : ', response);
-        return {uuid : entityUuid}; })
+        return entityUuid; })
       .catch(error => console.error('Upload error : ', error));
   }
 

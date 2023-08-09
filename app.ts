@@ -508,7 +508,7 @@ app.put('/storage/importExperiment', async (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/scanStorage', async (req, res) => {
+app.post('/storage/scanStorage', async (req, res) => {
   const token = getAuthToken(req);
   storageRequestHandler
     .scanStorage(
