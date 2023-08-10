@@ -1383,14 +1383,26 @@ describe('Collab Storage', () => {
   });
 
   //create folder
-  it.skip('should create a folder', () => {
+  it('should create a folder', () => {
+    try {
+      expect(
+        collabStorage.createFolder('fakeFile', fakeExperiment, fakeToken)
+      ).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('should retrieve the context collab id', () => {
+    const response = { collab: { id: 'collabId' } };
+
     nock('https://services.humanbrainproject.eu')
-      .post('/storage/v1/api/folder/')
-      .reply(200, 'Success');
+      .get('/collab/v0/collab/context/fakeContextId/')
+      .reply(200, response);
 
     return collabStorage
-      .createFolder('fakeFile', fakeExperiment, fakeToken)
-      .should.eventually.equal('Success');
+      .getCollabId('fakeToken', 'fakeContextId')
+      .should.eventually.equal('collabId');
   });
 
   //create or update file
@@ -1497,14 +1509,14 @@ describe('Collab Storage', () => {
   });
 
   //create experiment
-  it.skip('should create a new experiment ', () => {
-    nock('https://services.humanbrainproject.eu')
-      .post('/storage/v1/api/folder/')
-      .reply(200, 'Success');
-
-    return collabStorage
-      .createExperiment(fakeExperiment, fakeToken)
-      .should.eventually.equal('Success');
+  it('should create a new experiment ', () => {
+    try {
+      expect(
+        collabStorage.createExperiment('fakeFile', fakeExperiment, fakeToken)
+      ).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
   });
 
   it.skip('should redirect if there is an authentication error (403)', () => {

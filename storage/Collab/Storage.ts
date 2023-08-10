@@ -237,7 +237,6 @@ export class Storage extends BaseStorage {
   }
 
   getCollabId(token, contextId) {
-    console.info(this.config.collabId);
     return contextId
       ? CollabConnector.instance.getContextIdCollab(token, contextId)
       : q.when(this.config.collabId);
