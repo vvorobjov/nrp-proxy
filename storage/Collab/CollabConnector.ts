@@ -229,7 +229,6 @@ export default class CollabConnector {
     // console.info(['getJSON() - url', url]);
     try {
       const response: any = await this.getHTTPS(url, token, { headers: { Accept: 'application/json' }});
-      // console.info(response);
       if (response.headers['content-type'].startsWith('application/xml;charset=UTF-8')) {
         // console.info(response);
         return JSON.parse(response.body);
@@ -251,7 +250,7 @@ export default class CollabConnector {
   }
 
   async getBucketFile(fileUUID, token, options) {
-
+    // console.info(`${CollabConnector.URL_BUCKET_API}/${fileUUID}?inline=false&redirect=false`);
     return new Promise(async (resolve, reject) => {
       try {
       const downloadResponse: any = await this.getHTTPS(
@@ -275,8 +274,9 @@ export default class CollabConnector {
       }
       resolve(fileResponse.body);
       } catch (error) {
-      reject(error);
-    }});
+        console.info(error);
+        reject(error);
+      }});
   }
 
   copyFile(token, filepath, destination, name, contentType) {
@@ -429,7 +429,6 @@ export default class CollabConnector {
   }
 
   async getContextIdCollab(token, contextId) {
-    console.info('checking memoized...');
     if (!this._getMemoizedCollab) {
       this._getMemoizedCollab = _.memoize(
         async (token, contextId) => {

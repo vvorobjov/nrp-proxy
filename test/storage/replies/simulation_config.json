@@ -1,0 +1,35 @@
+{
+  "maturity": "production",
+  "experimentId": "husky_braitenberg_unfilled_namedirectory%2Fsimulation_config.json",
+  "SimulationName": "husky_simulation_0",
+  "SimulationDescription": "Launches a Gazebo simulation with a Husky robot and a Nest sim with a Braitenberg model which controls the robot",
+  "thumbnail": "/",
+  "EngineConfigs": [
+    {
+      "EngineType": "gazebo_grpc",
+      "EngineName": "gazebo",
+      "GazeboWorldFile": "husky_world.sdf",
+      "EngineProcStartParams": ["--verbose"]
+    },
+    {
+      "EngineType": "nest_json",
+      "EngineName": "nest",
+      "NestInitFileName": "braitenberg.py",
+      "EngineEnvParams": ["PYNEST_QUIET=1"]
+    }
+  ],
+  "DataPackProcessingFunctions": [
+    {
+      "Name": "cam_pf",
+      "FileName": "cam_pf.py"
+    },
+    {
+      "Name": "mot_tf",
+      "FileName": "mot_tf.py"
+    },
+    {
+      "Name": "brain_stimulation_tf",
+      "FileName": "brain_stimulation_tf.py"
+    }
+  ]
+}

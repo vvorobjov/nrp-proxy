@@ -1261,15 +1261,36 @@ describe('Collab Storage', () => {
       });
   });
 
-  it('should modify an experiment name successfully', async () => {
+  it('should rename an experiment successfully', async () => {
     const fakeExperiment = 'fakeFolder/fakeExperiment';
+    const fakeDownloadURL = 'https://fakedownload.url';
+
     nock(CollabConnector.URL_BUCKET_API)
-      .get('/' + fakeExperiment + '?limit=9999&delimiter=%2F')
-      .replyWithFile(200, path.join(__dirname, 'replies/contents.json'));
+      .get('/fakeFolder?limit=9999&delimiter=%2F&prefix=fakeExperiment/')
+      .replyWithFile(200, path.join(__dirname, 'replies/foldercontents.json'), {
+        'content-type': 'application/json'
+      });
+
+    nock(CollabConnector.URL_BUCKET_API)
+      .patch('/' + fakeExperiment + '/')
+      .reply(200);
+
+    nock(CollabConnector.URL_BUCKET_API)
+      .get(
+        `/${fakeExperiment}/simulation_config.json?inline=false&redirect=false`
+      )
+      .reply(200, { url: fakeDownloadURL });
+
+    nock(fakeDownloadURL)
+      .get()
+      .replyWithFile(
+        200,
+        path.join(__dirname, 'replies/simulation_config.json')
+      );
 
     collabStorage
       .renameExperiment(
-        'fakeFolder/fakeExperiment',
+        fakeExperiment,
         'fakeNewName',
         'fakeToken',
         'fakeUserID'
@@ -1536,27 +1557,49 @@ describe('Collab Storage', () => {
       });
   });
 
-  it.skip('should delete an folder correctly', () => {
-    sinon.stub(CollabConnector.prototype, 'deleteEntity').returns(
-      new Promise(function(resolve) {
-        resolve('resultMock');
-      })
-    );
+  it('should delete a folder correctly', () => {
+    const fakeFolder = 'fakeFolder';
+    nock(CollabConnector.URL_BUCKET_API)
+      .log(console.log)
+      .delete(`/${fakeFolder}/`)
+      .reply(200, 'Success');
 
     var storage = new CollabStorage();
     return storage
-      .deleteFolder('robots', fakeExperiment, fakeToken, fakeUserId, false)
-      .then(res => {
-        return expect(res).to.equal('resultMock');
-      });
+      .deleteFolder(fakeFolder, fakeExperiment, fakeToken, fakeUserId, false)
+      .then(response => response.body)
+      .should.eventually.equal('Success');
   });
 
-  it.skip('should delete an experiment correctly', () => {
+  it('should delete a experiment correctly', () => {
     var storage = new CollabStorage();
+    const fakeExperiment = 'fakeFolder/fakeExperiment';
+    const fakeDownloadURL = 'https://fakeDownload.url';
+    nock(CollabConnector.URL_BUCKET_API)
+      .delete(`/${fakeExperiment}/`)
+      .reply(200, { msg: 'Success!' });
+
+    nock(CollabConnector.URL_BUCKET_API)
+      .get('/fakeFolder/nrp-experiments.json?inline=false&redirect=false')
+      .reply(200, { url: fakeDownloadURL });
+
+    nock(fakeDownloadURL)
+      .get('/')
+      .replyWithFile(
+        200,
+        path.join(__dirname, 'replies/nrp-experiments.json'),
+        { 'content-type': 'application/json' }
+      );
+
+    sinon.stub(CollabStorage.prototype, 'createOrUpdate').returns(
+      new Promise(function(resolve) {
+        resolve();
+      })
+    );
     return storage
       .deleteExperiment(fakeExperiment, fakeExperiment, fakeToken, fakeUserId)
       .then(res => {
-        return expect(res).to.equal('resultMock');
+        return expect(res).to.equal(fakeExperiment + ' deleted');
       });
   });
 

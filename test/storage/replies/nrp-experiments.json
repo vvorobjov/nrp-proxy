@@ -1,0 +1,12 @@
+{
+  "experiments": [
+    {
+      "type": "folder",
+      "path": "fakeExperiment"
+    },
+    {
+      "type": "folder",
+      "path": "otherExperiment"
+    }
+  ]
+}

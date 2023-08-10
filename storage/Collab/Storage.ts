@@ -171,6 +171,8 @@ export class Storage extends BaseStorage {
       String,
       bucket,
       token);
+
+    return experimentPath + ' deleted';
   }
 
   deleteFolder(foldername, experiment, token, userId, byname = false) {
@@ -421,7 +423,7 @@ export class Storage extends BaseStorage {
 
     console.info(newExperiments);
 
-    this.createOrUpdate(NRP_EXPERIMENTS_CONFIG_FILENAME,
+    return await this.createOrUpdate(NRP_EXPERIMENTS_CONFIG_FILENAME,
       JSON.stringify({experiments : newExperiments}),
       experimentConfiguration.contentType,
       parent + '/',
