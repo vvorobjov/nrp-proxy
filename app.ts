@@ -212,7 +212,7 @@ app.use(bodyParser.json({ limit: '2000mb' }));
 app.use(bodyParser.raw({ limit: '2000mb' }));
 app.use(bodyParser.text({ type: () => true, limit: '2000mb' }));
 
-app.put('/authentication/authenticate', (req, res) => {
+app.post('/authentication/authenticate', (req, res) => {
   storageRequestHandler
     .authenticate(req.body.user, req.body.password)
     .then(auth => loggerManager.log(req.body.user) && auth)
@@ -281,14 +281,14 @@ app.get('/storage/experiments', async (req, res) => {
   }
 });
 
-app.put('/storage/clone', (req, res) => {
+app.post('/storage/clone', (req, res) => {
   return storageRequestHandler
     .cloneExperiment(getAuthToken(req), req.body.expPath, req.get('context-id'))
     .then(r => res.send(r))
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/models/:type/:modelId/sharing/:userId', (req, res) => {
+app.post('/storage/models/:type/:modelId/sharing/:userId', (req, res) => {
   storageRequestHandler
     .addUsertoSharingUserListinModel(
       req.params.type,
@@ -457,7 +457,7 @@ app.put('/storage/experiments/:experimentId/rename', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/clonenew', (req, res) => {
+app.post('/storage/clonenew', (req, res) => {
   return storageRequestHandler
     .cloneNewExperiment(
       getAuthToken(req),
@@ -488,7 +488,7 @@ app.delete('/storage/models/:modelType/:modelName', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/models/:modelType/:modelName', (req, res) => {
+app.post('/storage/models/:modelType/:modelName', (req, res) => {
   storageRequestHandler
     .createZip(
       getAuthToken(req),
@@ -526,7 +526,7 @@ app.get('/storage/models/:modelType/:modelName/config', (req, res, next) => {
     .catch(next);
 });
 
-app.put('/storage/importExperiment', async (req, res) => {
+app.post('/storage/importExperiment', async (req, res) => {
   const token = getAuthToken(req);
   storageRequestHandler
     .registerZippedExperiment(
@@ -601,7 +601,7 @@ app.delete('/storage/:experiment', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/clone/:experiment', (req, res) => {
+app.post('/storage/clone/:experiment', (req, res) => {
   if (!req.params.experiment)
     return handleError(res, 'Experiment name is required');
 
@@ -654,7 +654,7 @@ app.get('/storage/:experiment', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/:experiment', (req, res) => {
+app.post('/storage/:experiment', (req, res) => {
   storageRequestHandler
     .createExperiment(
       req.params.experiment,
@@ -771,7 +771,7 @@ app.get('/identity/gdpr', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.put('/identity/gdpr', (req, res) => {
+app.post('/identity/gdpr', (req, res) => {
   storageRequestHandler
     .acceptGDPRStatus(getAuthToken(req))
     .then(r => res.send(r))
@@ -803,7 +803,7 @@ const getReqIp = req =>
 
 const ANONYMOUS_ACTIVITIES = new Set(['install', 'update']);
 
-app.put('/checkupdate', async (req, res) => {
+app.post('/checkupdate', async (req, res) => {
   const packagePath = require('path').resolve('./package.json');
   const version = require(packagePath).version;
   const clientIP = getReqIp(req);
