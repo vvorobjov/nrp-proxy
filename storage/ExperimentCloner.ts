@@ -49,7 +49,7 @@ let tmp = require('tmp');
 abstract class ExperimentCloner {
   protected tmpFolder = tmp.dirSync({ unsafeCleanup: true });
   protected templateFolder?;
-  private downloadedFiles: Array<Promise<string>> = [];
+  private downloadedFiles: Promise<string>[] = [];
 
   constructor(protected storage, protected config) {}
 
