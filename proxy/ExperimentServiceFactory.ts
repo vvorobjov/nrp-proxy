@@ -23,20 +23,15 @@
  * ---LICENSE-END**/
 'use strict';
 
-import e from 'express';
 import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
-import { pd } from 'pretty-data';
 import q from 'q';
-import X2JS from 'x2js';
 import { File } from '../storage/BaseStorage';
 import StorageRequestHandler from '../storage/requestHandler';
 import * as storageConsts from '../storage/StorageConsts';
-import ConfigurationManager from '../utils/configurationManager';
 
-const glob = q.denodeify(require('glob')),
-  xmlFormat = xml => pd.xml(xml);
+const glob = q.denodeify(require('glob'));
 
 export default class ExperimentServiceFactory {
   constructor(
@@ -70,7 +65,6 @@ const FILE_TYPE = {
   TF: 'TF'
 };
 
-const V4_SIM_CONFIG_FILENAME = '*.json';
 const V4_FILE_TYPE = {
   JSON: 'JSON'
 };
@@ -78,7 +72,7 @@ const V4_FILE_TYPE = {
 abstract class BaseExperimentService {
   constructor(protected experimentId, protected contextId, protected config) {}
 
-  async getSimConfigV4() {
+  async getSimConfig() {
     try {
       const configFile = await this.getFile(
         storageConsts.defaultConfigName,
@@ -90,7 +84,10 @@ abstract class BaseExperimentService {
       }
       return config;
     } catch {
-      return { SimulationName: 'Experiment with corrupted ' + storageConsts.defaultConfigName };
+      return {
+        SimulationName:
+          'Experiment with corrupted ' + storageConsts.defaultConfigName
+      };
     }
   }
 
@@ -100,14 +97,15 @@ abstract class BaseExperimentService {
 
   async getConfig() {
     if (this.config.nrpVersion.startsWith('4.')) {
-      return await this.getSimConfigV4();
+      return await this.getSimConfig();
     } else {
       console.error('Unsupported NRP version.');
     }
   }
 
   async getFiles(type = '') {
-    let FOLDER, FOLDER_PREFIX;
+    let FOLDER;
+    let FOLDER_PREFIX;
     if (type === 'csv') {
       FOLDER = 'csv_records';
       FOLDER_PREFIX = 'csv_records_';
@@ -143,11 +141,11 @@ abstract class BaseExperimentService {
     return collectedFiles;
   }
 
-  protected abstract async getFile(filename, type);
+  protected abstract getFile(filename, type): Promise<any>;
 
-  protected abstract async listFiles(dirname?: string): Promise<File[]>;
+  protected abstract listFiles(dirname?: string): Promise<File[]>;
 
-  protected abstract async saveFile(
+  protected abstract saveFile(
     filename,
     fileContent,
     contentType?
@@ -195,12 +193,7 @@ class TemplateExperimentService extends BaseExperimentService {
   private experimentFolder?: string;
   private experimentDirectory?: string;
 
-  constructor(
-    experimentId,
-    contextId,
-    config,
-    private proxyRequestHandler
-  ) {
+  constructor(experimentId, contextId, config, private proxyRequestHandler) {
     super(experimentId, contextId, config);
   }
 

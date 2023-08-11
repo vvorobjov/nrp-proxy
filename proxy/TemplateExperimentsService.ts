@@ -23,19 +23,18 @@
  * ---LICENSE-END**/
 'use strict';
 
-import X2JS from 'x2js';
 import ConfigurationManager from '../utils/configurationManager';
 
 // mocked modules
 // tslint:disable: prefer-const variable-name
-let utils = require('../storage/FS/utils').default,
-  StorageRequestHandler = require('../storage/requestHandler').default;
+let utils = require('../storage/FS/utils').default;
+let StorageRequestHandler = require('../storage/requestHandler').default;
 // tslint:enable: prefer-const variable-name
 
-const fs = require('fs'),
-  q = require('q'),
-  path = require('path'),
-  readFile = q.denodeify(fs.readFile);
+const fs = require('fs');
+const q = require('q');
+const path = require('path');
+const readFile = q.denodeify(fs.readFile);
 
 ConfigurationManager.initialize();
 let storageRequestHandler;
@@ -59,25 +58,42 @@ export default class TemplatesExperimentsService {
 
   async loadExperiments() {
     let expConfigFilepath;
-    expConfigFilepath = await glob(path.join(this.templatesPath, TemplatesExperimentsService.JSON_FILE_PATTERN));
+    expConfigFilepath = await glob(
+      path.join(
+        this.templatesPath,
+        TemplatesExperimentsService.JSON_FILE_PATTERN
+      )
+    );
 
-    return glob(path.join(this.templatesPath, TemplatesExperimentsService.JSON_FILE_PATTERN)).then(experimentConfigFiles =>
-      q.all(experimentConfigFiles.map(expConfigFile => this.buildExperiment(expConfigFile)))
+    return glob(
+      path.join(
+        this.templatesPath,
+        TemplatesExperimentsService.JSON_FILE_PATTERN
+      )
+    ).then(experimentConfigFiles =>
+      q.all(
+        experimentConfigFiles.map(expConfigFile =>
+          this.buildExperiment(expConfigFile)
+        )
+      )
     );
   }
 
   loadSharedExperiments(req) {
     return q.all(
-      storageRequestHandler
-        .listExperimentsSharedByUsers(req)
-        .then(exps =>
-          exps.map(exp => {
-            let expConfigFilepath;
-            expConfigFilepath = path.join(utils.storagePath, exp.name + '*/*.json');
+      storageRequestHandler.listExperimentsSharedByUsers(req).then(exps =>
+        exps.map(exp => {
+          let expConfigFilepath;
+          expConfigFilepath = path.join(
+            utils.storagePath,
+            exp.name + '*/*.json'
+          );
 
-            return glob(expConfigFilepath).then(pathFile => this.buildExperiment(pathFile[0], exp.name, true));
-          })
-        )
+          return glob(expConfigFilepath).then(pathFile =>
+            this.buildExperiment(pathFile[0], exp.name, true)
+          );
+        })
+      )
     );
   }
 
@@ -92,24 +108,21 @@ export default class TemplatesExperimentsService {
   getJsonProperty(prop, defaultValue?: string | undefined | number) {
     const exists: boolean = Boolean(prop);
     const isNamespaced: boolean = exists && Boolean(prop.__text);
-    if (isNamespaced)
-      prop = prop.__text;
+    if (isNamespaced) prop = prop.__text;
     return exists ? prop : defaultValue ? defaultValue : undefined;
   }
 
   async buildExperiment(fileName, expName = '', isExperimentshared = false) {
-
     let experimentContent;
 
     try {
-
       experimentContent = await readFile(fileName, 'utf8');
 
       const experimentConfig = JSON.parse(experimentContent);
       const fileConfigPath = isExperimentshared
         ? path.relative(utils.storagePath, fileName)
-        : path.relative(this.templatesPath, fileName),
-      expPath = path.dirname(fileConfigPath);
+        : path.relative(this.templatesPath, fileName);
+      const expPath = path.dirname(fileConfigPath);
 
       return {
         path: expPath,
@@ -117,27 +130,53 @@ export default class TemplatesExperimentsService {
         experimentId: fileConfigPath,
         thumbnail: '/',
         SimulationName: this.getJsonProperty(experimentConfig.SimulationName),
-        SimulationDescription: this.getJsonProperty(experimentConfig.SimulationDescription , 'No description available for this experiment.'),
-        SimulationTimeout: this.getJsonProperty(experimentConfig.SimulationTimeout, 0),
-        DataPackProcessor: this.getJsonProperty(experimentConfig.DataPackProcessor, 'tf'),
-        SimulationLoop: this.getJsonProperty(experimentConfig.SimulationLoop, 'FTILoop'),
-        ComputationalGraph: this.getJsonProperty(experimentConfig.ComputationalGraph),
+        SimulationDescription: this.getJsonProperty(
+          experimentConfig.SimulationDescription,
+          'No description available for this experiment.'
+        ),
+        SimulationTimeout: this.getJsonProperty(
+          experimentConfig.SimulationTimeout,
+          0
+        ),
+        DataPackProcessor: this.getJsonProperty(
+          experimentConfig.DataPackProcessor,
+          'tf'
+        ),
+        SimulationLoop: this.getJsonProperty(
+          experimentConfig.SimulationLoop,
+          'FTILoop'
+        ),
+        ComputationalGraph: this.getJsonProperty(
+          experimentConfig.ComputationalGraph
+        ),
         ConnectMQTT: this.getJsonProperty(experimentConfig.ConnectMQTT),
-        SimulationTimestep: this.getJsonProperty(experimentConfig.SimulationTimestep, 0.01),
-        ProcessLauncherType: this.getJsonProperty(experimentConfig.ProcessLauncherType, 'Basic'),
+        SimulationTimestep: this.getJsonProperty(
+          experimentConfig.SimulationTimestep,
+          0.01
+        ),
+        ProcessLauncherType: this.getJsonProperty(
+          experimentConfig.ProcessLauncherType,
+          'Basic'
+        ),
         EngineConfigs: this.getJsonProperty(experimentConfig.EngineConfigs),
-        ExternalProcesses: this.getJsonProperty(experimentConfig.ExternalProcesses),
-        DataPackProcessingFunctions: this.getJsonProperty(experimentConfig.DataPackProcessingFunctions),
-        EventLoopTimeout: this.getJsonProperty(experimentConfig.EventLoopTimeout),
-        EventLoopTimestep: this.getJsonProperty(experimentConfig.EventLoopTimestep),
-        ConnectROS: this.getJsonProperty(experimentConfig.ConnectROS),
+        ExternalProcesses: this.getJsonProperty(
+          experimentConfig.ExternalProcesses
+        ),
+        DataPackProcessingFunctions: this.getJsonProperty(
+          experimentConfig.DataPackProcessingFunctions
+        ),
+        EventLoopTimeout: this.getJsonProperty(
+          experimentConfig.EventLoopTimeout
+        ),
+        EventLoopTimestep: this.getJsonProperty(
+          experimentConfig.EventLoopTimestep
+        ),
+        ConnectROS: this.getJsonProperty(experimentConfig.ConnectROS)
       };
-  } catch (err) {
+    } catch (err) {
+      console.error(err);
 
-        console.error(err);
-
-        return;
-
-      }
+      return;
+    }
   }
 }

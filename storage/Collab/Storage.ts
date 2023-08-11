@@ -23,18 +23,17 @@
  * ---LICENSE-END**/
 'use strict';
 
-import { response } from 'express';
 import X2JS from 'x2js';
 import BaseStorage from '../BaseStorage';
 import utils from '../FS/utils';
 import CollabConnector from './CollabConnector';
 
-const q = require('q'),
-  pd = require('pretty-data').pd,
-  _ = require('lodash');
+const q = require('q');
+const _ = require('lodash');
 
 const NRP_EXPERIMENTS_CONFIG_FILENAME = 'nrp-experiments.json';
-const COLLAB_DESCRIPTION_NRP_INDICATOR = 'CONTAINS NRP EXPERIMENTS (do not remove this line!)';
+const COLLAB_DESCRIPTION_NRP_INDICATOR =
+  'CONTAINS NRP EXPERIMENTS (do not remove this line!)';
 const COLLAB_TAG_NRP_EXPERIMENTS = 'NRP-Experiments';
 
 export class Storage extends BaseStorage {
@@ -85,13 +84,7 @@ export class Storage extends BaseStorage {
       );
   }
 
-  deleteEntity(
-    filename,
-    experiment,
-    token,
-    byname = false,
-    isFolder = false
-  ) {
+  deleteEntity(filename, experiment, token, byname = false, isFolder = false) {
     return (byname
       ? this.getFileUuid(filename, experiment, token)
       : q.when(filename)
@@ -102,23 +95,19 @@ export class Storage extends BaseStorage {
           token,
           experiment,
           uuid,
-          isFolder ? 'folder' : 'file')
+          isFolder ? 'folder' : 'file'
+        )
     );
   }
 
   deleteFile(filename, experiment, token, userId, byname = false) {
-    return this.deleteEntity(
-      filename,
-      experiment,
-      token,
-      byname,
-      false
-    );
+    return this.deleteEntity(filename, experiment, token, byname, false);
   }
 
   async getModelZip(modelType, modelName, userId, token) {
     return this.getFile(modelType + '/' + modelName, null, token, userId).then(
-      res => res.body);
+      res => res.body
+    );
   }
 
   createCustomModel(modelType, modelData, userId, modelName, token, contextId) {
@@ -146,16 +135,17 @@ export class Storage extends BaseStorage {
   }
 
   async deleteExperiment(experimentPath, exp, token, userID) {
-
     await this.deleteEntity(experimentPath, exp, token, false, true);
     // remove the experiment from the bucket configuration file
     const bucket = experimentPath.split('/')[0];
     const expName = experimentPath.split('/')[1];
 
-    const bucketExperimentConfig = await this.getBucketNrpExperimentsConfig(bucket, token)
-      .then(response => {
-        return response.experiments;
-        });
+    const bucketExperimentConfig = await this.getBucketNrpExperimentsConfig(
+      bucket,
+      token
+    ).then(response => {
+      return response.experiments;
+    });
 
     const newExperiments: string[] = [];
 
@@ -164,25 +154,22 @@ export class Storage extends BaseStorage {
         newExperiments.push(exp);
       } else {
         console.info(exp.path);
-      }});
+      }
+    });
 
-    await this.createOrUpdate(NRP_EXPERIMENTS_CONFIG_FILENAME,
-      JSON.stringify({experiments: newExperiments}),
+    await this.createOrUpdate(
+      NRP_EXPERIMENTS_CONFIG_FILENAME,
+      JSON.stringify({ experiments: newExperiments }),
       String,
       bucket,
-      token);
+      token
+    );
 
     return experimentPath + ' deleted';
   }
 
   deleteFolder(foldername, experiment, token, userId, byname = false) {
-    return this.deleteEntity(
-      foldername,
-      experiment,
-      token,
-      byname,
-      true
-    );
+    return this.deleteEntity(foldername, experiment, token, byname, true);
   }
 
   ensurePath(pathparts, parent, contentType, token) {
@@ -196,7 +183,7 @@ export class Storage extends BaseStorage {
         );
         // console.info('ensurePath foundentity : ', foundEntity);
         if (foundEntity) return foundEntity;
-        return { uuid : parent + pathparts };
+        return { uuid: parent + pathparts };
         return fileType === 'file'
           ? CollabConnector.instance.copyFile(
               token,
@@ -205,7 +192,12 @@ export class Storage extends BaseStorage {
               pathparts[0],
               contentType
             )
-          : CollabConnector.instance.createFolder(token, parent, pathparts[0], pathparts[0]);
+          : CollabConnector.instance.createFolder(
+              token,
+              parent,
+              pathparts[0],
+              pathparts[0]
+            );
       })
       .then(foundEntity => {
         if (fileType === 'file') return foundEntity;
@@ -216,24 +208,26 @@ export class Storage extends BaseStorage {
           token
         );
       })
-      .catch((error) => console.error());
+      .catch(error => console.error());
   }
 
   createOrUpdate(filepath, fileContent, contentType, experiment, token) {
     const pathparts = filepath.split('/');
-    return this.ensurePath(
-      pathparts,
-      experiment,
-      contentType,
-      token
-    ).then(file =>
-      CollabConnector.instance.uploadContent(token, file.uuid, fileContent)
-    )
-    .catch((error) => console.error('createOrUpdate error : ', error));
+    console.info('createOrUpdate : ', typeof fileContent + ' | ' + experiment);
+    return this.ensurePath(pathparts, experiment, contentType, token)
+      .then(file =>
+        CollabConnector.instance.uploadContent(token, file.uuid, fileContent)
+      )
+      .catch(error => console.error());
   }
 
   createFolder(foldername, experiment, token) {
-    return CollabConnector.instance.createFolder(token, experiment, foldername, experiment);
+    return CollabConnector.instance.createFolder(
+      token,
+      experiment,
+      foldername,
+      experiment
+    );
   }
 
   getCollabId(token, contextId) {
@@ -243,7 +237,10 @@ export class Storage extends BaseStorage {
   }
 
   async listExperiments(token, userId, contextId) {
-    return await this.listExperimentsWithFilterOptions(token, {public: 'true', admin: 'true'});
+    return await this.listExperimentsWithFilterOptions(token, {
+      public: 'true',
+      admin: 'true'
+    });
     // the filter options can be found at
     // https://wiki.ebrains.eu/bin/view/Collabs/the-collaboratory/Documentation%20Wiki/API/
     // for the v1/collabs request
@@ -256,7 +253,6 @@ export class Storage extends BaseStorage {
    * @returns List of experiments
    */
   async listExperimentsWithFilterOptions(token, collabFilterOptions) {
-
     const collabs = await this.getNrpCollabsViaTag(token);
     const result: any[] = [];
     for (const collab of collabs) {
@@ -265,9 +261,11 @@ export class Storage extends BaseStorage {
           collab,
           token
         );
-        experimentsConfig.experiments &&
-          experimentsConfig.experiments.filter(experiment => experiment)
-            .forEach(experiment => {
+        if (experimentsConfig.experiments) {
+          const filteredExperiments = experimentsConfig.experiments.filter(
+            experiment => experiment
+          );
+          filteredExperiments.forEach(experiment => {
             if (experiment.type === 'folder') {
               // TODO: exclude zipped for now, viable later?
               result.push({
@@ -276,6 +274,7 @@ export class Storage extends BaseStorage {
               });
             }
           });
+        }
       } catch (error) {
         /*console.warn(
           'Can not access collab data proxy for "' + collab.name + '"'
@@ -287,9 +286,10 @@ export class Storage extends BaseStorage {
   }
 
   async getNrpCollabsViaTag(token) {
-    const tagsResponse = await CollabConnector.instance
-                                                      .getJSON(CollabConnector.SEARCH_TAG_URL
-                                                        + COLLAB_TAG_NRP_EXPERIMENTS, token);
+    const tagsResponse = await CollabConnector.instance.getJSON(
+      CollabConnector.SEARCH_TAG_URL + COLLAB_TAG_NRP_EXPERIMENTS,
+      token
+    );
     const collabs: string[] = [];
     for (const pageSummary of tagsResponse.pageSummaries) {
       const collabName = pageSummary.space.split('.')[1];
@@ -299,7 +299,6 @@ export class Storage extends BaseStorage {
   }
 
   async getBucketNrpExperimentsConfig(bucketName, token) {
-
     const fileUUID = bucketName + '/' + NRP_EXPERIMENTS_CONFIG_FILENAME;
 
     const experimentConfigFile: any = await CollabConnector.instance.getBucketFile(
@@ -314,8 +313,12 @@ export class Storage extends BaseStorage {
     console.info(token);
     const parent = newExperiment.split('/')[0];
     const expName = newExperiment.split('/')[1];
-    return CollabConnector.instance.createFolder(token, parent, expName, experiment);
-
+    return CollabConnector.instance.createFolder(
+      token,
+      parent,
+      expName,
+      experiment
+    );
   }
 
   decorateExpConfigurationWithAttribute(attribute, value, expConf) {
@@ -323,7 +326,7 @@ export class Storage extends BaseStorage {
       const expConfigJson = JSON.parse(expConf);
       expConfigJson[attribute] = value;
       const expConfString: string = new X2JS().xml2js(expConf);
-      return  JSON.stringify(expConfigJson);
+      return JSON.stringify(expConfigJson);
     } catch (error) {
       console.info('Not able to decorate the configuration');
       return expConf;
@@ -343,73 +346,121 @@ export class Storage extends BaseStorage {
     const parent = copiedExpName.split('/')[0];
     const expName = copiedExpName.split('/')[1];
 
-    await CollabConnector.instance.copyFolder(token, parent, expName, experiment);
+    await CollabConnector.instance.copyFolder(
+      token,
+      parent,
+      expName,
+      experiment
+    );
 
     // Decorate the experiment configuration with the cloneDate attribute, with a timeout to make sure that the
     // new configuration is available.
     setTimeout(async () => {
-    const experimentConfiguration = await this.getFile('simulation_config.json', copiedExpName, token, null, true);
-    // console.info('configuration of the created exp : ', experimentConfiguration);
-    let decoratedExpConf = this.decorateExpConfigurationWithAttribute('cloneDate', utils.getCurrentTimeAndDate(), experimentConfiguration.body);
-    decoratedExpConf = this.decorateExpConfigurationWithAttribute('SimulationName', expName, decoratedExpConf);
-    console.info('decoratedExpCOnf type : ' , typeof(decoratedExpConf));
-    await this.createOrUpdate('simulation_config.json',
-      decoratedExpConf,
-      experimentConfiguration.contentType,
-      copiedExpName,
-      token);
-      }, 1000);
+      const experimentConfiguration = await this.getFile(
+        'simulation_config.json',
+        copiedExpName,
+        token,
+        null,
+        true
+      );
+      // console.info('configuration of the created exp : ', experimentConfiguration);
+      let decoratedExpConf = this.decorateExpConfigurationWithAttribute(
+        'cloneDate',
+        utils.getCurrentTimeAndDate(),
+        experimentConfiguration.body
+      );
+      decoratedExpConf = this.decorateExpConfigurationWithAttribute(
+        'SimulationName',
+        expName,
+        decoratedExpConf
+      );
+      console.info('decoratedExpCOnf type : ', typeof decoratedExpConf);
+      await this.createOrUpdate(
+        'simulation_config.json',
+        decoratedExpConf,
+        experimentConfiguration.contentType,
+        copiedExpName,
+        token
+      );
+    }, 1000);
 
     // Update the nrp_experiments.json file of the bucket listing the available experiments;
-    const bucketExperimentConfig = await this.getBucketNrpExperimentsConfig(parent, token)
-      .then(response => {
-        response.experiments.push({type : 'folder', path : expName});
-        return response;
-        });
+    const bucketExperimentConfig = await this.getBucketNrpExperimentsConfig(
+      parent,
+      token
+    ).then(response => {
+      response.experiments.push({ type: 'folder', path: expName });
+      return response;
+    });
 
-    const updatedbucketExperimentConfig = JSON.stringify(bucketExperimentConfig);
-    console.info(typeof(updatedbucketExperimentConfig));
-    await this.createOrUpdate(NRP_EXPERIMENTS_CONFIG_FILENAME,
+    const updatedbucketExperimentConfig = JSON.stringify(
+      bucketExperimentConfig
+    );
+    console.info(typeof updatedbucketExperimentConfig);
+    await this.createOrUpdate(
+      NRP_EXPERIMENTS_CONFIG_FILENAME,
       updatedbucketExperimentConfig,
       String,
       parent,
-      token);
+      token
+    );
 
     return {
       clonedExp: copiedExpName,
       originalExp: experiment
     };
-
   }
 
   async renameExperiment(experimentPath, newName, token, userId) {
-
     console.info(experimentPath);
     const parent = experimentPath.split('/')[0];
     const expName = experimentPath.split('/')[1];
 
     console.info('renaming the experiment folder...');
-    await (q.when(experimentPath))
-      .then(uuid => {
-        console.info(uuid);
-        uuid && CollabConnector.instance.renameBucketEntity(token, parent, uuid, newName, 'folder'); });
+    await q.when(experimentPath).then(uuid => {
+      console.info(uuid);
+      return (
+        uuid &&
+        CollabConnector.instance.renameBucketEntity(
+          token,
+          parent,
+          uuid,
+          newName,
+          'folder'
+        )
+      );
+    });
 
     console.info('rewritting the simulation_config.json...');
 
-    const experimentConfiguration = await this.getFile('simulation_config.json', experimentPath, token, null, true);
-    const decoratedExpConf = this.decorateExpConfigurationWithAttribute('SimulationName', newName, experimentConfiguration.body);
-    console.info('decoratedExpCOnf type : ' , typeof(decoratedExpConf));
-    await this.createOrUpdate('simulation_config.json',
+    const experimentConfiguration = await this.getFile(
+      'simulation_config.json',
+      experimentPath,
+      token,
+      null,
+      true
+    );
+    const decoratedExpConf = this.decorateExpConfigurationWithAttribute(
+      'SimulationName',
+      newName,
+      experimentConfiguration.body
+    );
+    console.info('decoratedExpCOnf type : ', typeof decoratedExpConf);
+    await this.createOrUpdate(
+      'simulation_config.json',
       decoratedExpConf,
       experimentConfiguration.contentType,
       experimentPath,
-      token);
+      token
+    );
 
     console.info('rewritting the nrp-experiments.json...');
 
     const newExperiments: string[] = [];
-    const bucketExperimentConfig = await this.getBucketNrpExperimentsConfig(parent, token)
-        .then(response => response.experiments);
+    const bucketExperimentConfig = await this.getBucketNrpExperimentsConfig(
+      parent,
+      token
+    ).then(response => response.experiments);
 
     bucketExperimentConfig.map(exp => {
       if (!(exp.path === expName)) {
@@ -418,15 +469,18 @@ export class Storage extends BaseStorage {
         console.info(exp.path);
         exp.path = newName;
         newExperiments.push(exp);
-      }});
+      }
+    });
 
     console.info(newExperiments);
 
-    return await this.createOrUpdate(NRP_EXPERIMENTS_CONFIG_FILENAME,
-      JSON.stringify({experiments : newExperiments}),
+    return await this.createOrUpdate(
+      NRP_EXPERIMENTS_CONFIG_FILENAME,
+      JSON.stringify({ experiments: newExperiments }),
       experimentConfiguration.contentType,
       parent + '/',
-      token);
+      token
+    );
   }
 
   listAllModels(modelType, userId) {

@@ -26,9 +26,10 @@
 // path.resolve is required because the current directory is recreated regularly by puppet
 // and when that happens fs.readFileSync fails if using a relative path
 
-const path = require('path'),
-  fs = require('fs'),
-  q = require('q');
+const path = require('path');
+// tslint:disable-next-line: prefer-const
+let fs = require('fs');
+const q = require('q');
 
 let CONFIG_FILE;
 const configuration = q.defer();
@@ -38,10 +39,7 @@ const initialize = () => {
   CONFIG_FILE = path.resolve('./config.json');
 };
 
-const PATH_CONFIG_PROPERTIES = [
-  'modelsPath',
-  'templatesPath'
-];
+const PATH_CONFIG_PROPERTIES = ['modelsPath', 'templatesPath'];
 
 const resolveReplaceEnvVariables = (str: string) => {
   return str.replace(/\$([A-Za-z]*)/g, (_m, v) => process.env[v] || '');
@@ -58,7 +56,8 @@ const loadConfigFile = (path = CONFIG_FILE) => {
 
     configuration.resolve(configFile);
     return configFile;
-  } catch (err) {
+  } catch (e) {
+    const err = e as any;
     if (err.code === 'ENOENT' && !configFile) {
       console.log(
         'config.json not found! Please create a config.json from config.json.sample and run again!'

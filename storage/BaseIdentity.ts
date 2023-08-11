@@ -24,10 +24,9 @@
 'use strict';
 
 export default abstract class BaseIdentity {
-
   abstract getUniqueIdentifier(token);
 
-  abstract  getUserInfo(userId, token);
+  abstract getUserInfo(userId, token);
 
   abstract getUsersList(token);
 

@@ -34,16 +34,7 @@ require('log-prefix')(() => dateFormat(new Date(), 'yyyy-mm-dd HH:MM:ss Z'));
 const REQUEST_TIMEOUT = 20 * 1000; // ms
 
 const SERVER_URLS = {
-  // NRP 4.0 no longer supports this endpoint
-  // HEALTH: '/health/errors',
   SIMULATION: '/simulation'
-};
-
-const HEALTH_STATUS_PRIORITY = {
-  OK: 1,
-  WARNING: 2,
-  CRITICAL: 3,
-  DOWN: 9
 };
 
 const SIMULATION_STATES = {
@@ -99,7 +90,7 @@ const executeServerRequest = (url: string): Promise<any> => {
         const bodyObj = JSON.parse(body);
         deferred.resolve(bodyObj);
       } catch (e) {
-        requestFailed(new Error(e));
+        requestFailed(new Error(String(e)));
       }
     }
   });
@@ -137,9 +128,7 @@ async function getExperimentsAndSimulations(configuration) {
 
   // map to dictionary<server, simulationStatus>
   simulations = _.fromPairs(
-    simulations.filter(
-      ([host, info]) => info && !(info.data instanceof Error)
-    )
+    simulations.filter(([host, info]) => info && !(info.data instanceof Error))
   );
 
   // set runningSimulation per simulation server
@@ -157,9 +146,10 @@ async function getExperimentsAndSimulations(configuration) {
       serverSimulations.stoppedSimulation = !simRunning;
     }
 
-    serverSimulations.runningSimulation =
-      _.find(serverSimulations,
-              sim => !STOPPED_SIMULATION_STATES.includes(sim.state));
+    serverSimulations.runningSimulation = _.find(
+      serverSimulations,
+      sim => !STOPPED_SIMULATION_STATES.includes(sim.state)
+    );
   });
 
   // get servers that are not running a simulation, sorted by health status
@@ -169,20 +159,17 @@ async function getExperimentsAndSimulations(configuration) {
         simulations[serverId] && simulations[serverId].stoppedSimulation
     )
     .shuffle()
-// The following sort function is commented since it ruins the balance between backends
-//    .sortBy(
-//      ({ id }) =>
-//        HEALTH_STATUS_PRIORITY[health[id] && health[id].state] ||
-//        HEALTH_STATUS_PRIORITY.DOWN
-//    )
+    // The following sort function is commented since it ruins the balance between backends
+    //    .sortBy(
+    //      ({ id }) =>
+    //        HEALTH_STATUS_PRIORITY[health[id] && health[id].state] ||
+    //        HEALTH_STATUS_PRIORITY.DOWN
+    //    )
     .value();
 
   // get servers that have no backend running on them
   const downServers = _(configuration.servers)
-    .filter(
-      (config, serverId) =>
-      !simulations[serverId]
-    )
+    .filter((config, serverId) => !simulations[serverId])
     .shuffle()
     .value();
 

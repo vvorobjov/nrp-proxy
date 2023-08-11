@@ -1,5 +1,5 @@
 {
-  "nrpVersion": "3.2.1",
+  "nrpVersion": "4.1.0",
   "refreshInterval": 5000,
   "bucketUrlApi": "https://data-proxy-int.ebrains.eu/api/v1/buckets",
   "searchTagUrl": "https://wiki-int.ebrains.eu/rest/wikis/xwiki/tags/",
@@ -15,15 +15,7 @@
   "templatesPath": "$HBP/Experiments",
   "servers": {
     "localhost": {
-      "gzweb": {
-        "assets": "http://localhost:8080/assets",
-        "nrp-services": "http://localhost:8080",
-        "videoStreaming": "http://localhost:8080/webstream/",
-        "websocket": "ws://localhost:8080/gzbridge"
-      },
-      "rosbridge": {
-        "websocket": "ws://localhost:8080/rosbridge"
-      },
+      "nrp-services": "http://localhost:8080",
       "serverJobLocation": "local"
     }
   },

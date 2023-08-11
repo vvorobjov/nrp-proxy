@@ -1,9 +1,10 @@
 'use strict';
 
-const chai = require('chai'),
-  chaiAsPromised = require('chai-as-promised'),
-  rewire = require('rewire'),
-  path = require('path');
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+const rewire = require('rewire');
+const path = require('path');
+const { expect } = chai;
 
 chai.use(chaiAsPromised);
 
@@ -77,105 +78,89 @@ describe('Collabidentity', () => {
   const nock = require('nock');
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24';
   const IdentityRewire = rewire('../../storage/Collab/Identity');
+  const userInfoEndpoint = '/protocol/openid-connect/userinfo';
+
+  const userInfoResponse = {
+    name: 'test-name',
+    preferred_username: 'test-username',
+    roles: {
+      group: ['group1', 'group2']
+    }
+  };
+  const userInfoExpect = {
+    displayName: 'test-name',
+    username: 'test-username',
+    id: 'test-username',
+    roles: {
+      group: ['group1', 'group2']
+    }
+  };
 
   let identity;
 
   beforeEach(() => {
     identity = new IdentityRewire.Identity();
-  });
-
-  it(`should return self user info`, () => {
-    const response = {
-      id: 'default-owner',
-      displayName: 'nrpuser'
-    };
-
     nock('https://localhost')
-      .get('/protocol/openid-connect/userinfo')
-      .reply(200, response);
-
-    return identity
-      .getUserInfo('me', fakeToken)
-      .should.eventually.deep.equal(response);
+      .get(userInfoEndpoint)
+      .reply(200, userInfoResponse);
   });
 
-  it(`should return id on getUniqueIdentifier`, () => {
-    const response = {
-      id: 'default-owner',
-      displayName: 'nrpuser'
-    };
+  afterEach(() => {
+    nock.cleanAll();
+  });
 
+  it(`should return self user info`, async () => {
+    const userInfo = await identity.getUserInfo('me', fakeToken);
+    expect(userInfo).to.deep.equal(userInfoExpect);
+  });
+
+  it(`should return id on getUniqueIdentifier`, async () => {
+    const uniqueId = await identity.getUniqueIdentifier('sometoken');
+    expect(uniqueId).to.equal(userInfoExpect.id);
+  });
+
+  it(`should handle error from the server`, async () => {
+    nock.cleanAll();
     nock('https://localhost')
-      .get('/protocol/openid-connect/userinfo')
-      .reply(200, response);
+      .get(userInfoEndpoint)
+      .reply(500, 'Internal Server Error');
 
-    return identity
-      .getUniqueIdentifier('sometoken')
-      .should.eventually.equal(response.id);
+    await expect(identity.getUserInfo('me', fakeToken)).to.be.rejected;
   });
 
-  // it(`should return default groups`, () => {
-  //   const groups = [{ name: 'hbp-sp10-user-edit-rights' }],
-  //     response = {
-  //       _embedded: { groups: groups }
-  //     };
+  it(`should return user groups`, async () => {
+    const userGroups = await identity.getUserGroups(fakeToken);
+    expect(userGroups).to.deep.equal(userInfoExpect.roles.group);
+  });
 
-  //   nock('http://localhost')
-  //     .get('/idm/v1/api/user/me/member-groups?page=0&pageSize=1000')
-  //     .reply(200, response);
+  it(`should return users list`, async () => {
+    const expectedUsersList = [
+      {
+        displayName: 'test-name',
+        id: 'test-username',
+        username: 'test-username'
+      }
+    ];
 
-  //   return identity.getUserGroups().should.eventually.deep.equal(groups);
-  // });
+    const usersList = await identity.getUsersList(fakeToken);
+    expect(usersList).to.deep.equal(expectedUsersList);
+  });
 
-  // it(`should return users list`, () => {
-  //   var expectedResult = [
-  //     {
-  //       displayName: 'nrpuser',
-  //       id: 'nrpuser',
-  //       username: 'nrpuser'
-  //     },
-  //     {
-  //       displayName: 'admin',
-  //       id: 'admin',
-  //       username: 'admin'
-  //     }
-  //   ];
+  it(`should cache users list`, async () => {
+    const expectedUsersList = [
+      {
+        displayName: 'test-name',
+        id: 'test-username',
+        username: 'test-username'
+      }
+    ];
 
-  //   nock('http://localhost')
-  //     .get(/\/idm\/v1\/api\/user/)
-  //     .reply(200, {
-  //       _embedded: {
-  //         users: [
-  //           {
-  //             displayName: 'nrpuser',
-  //             id: 'nrpuser',
-  //             username: 'nrpuser'
-  //           }
-  //         ]
-  //       },
-  //       page: {
-  //         number: 0,
-  //         totalPages: 2
-  //       }
-  //     });
-  //   nock('http://localhost')
-  //     .get(/\/idm\/v1\/api\/user/)
-  //     .reply(200, {
-  //       _embedded: {
-  //         users: [
-  //           {
-  //             displayName: 'admin',
-  //             id: 'admin',
-  //             username: 'admin'
-  //           }
-  //         ]
-  //       },
-  //       page: {
-  //         number: 1,
-  //         totalPages: 2
-  //       }
-  //     });
+    let usersList = await identity.getUsersList(fakeToken);
+    expect(usersList).to.deep.equal(expectedUsersList);
 
-  //   return identity.getUsersList().should.eventually.deep.equal(expectedResult);
-  // });
+    // The second time we call getUsersList, the list is served from the cache and the HTTP request is not performed.
+    nock.cleanAll();
+    usersList = await identity.getUsersList(fakeToken);
+    expect(usersList).to.deep.equal(expectedUsersList);
+  });
 });

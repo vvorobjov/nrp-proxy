@@ -31,8 +31,10 @@ import BaseAuthenticator from '../BaseAuthenticator';
 const CACHE_CLEANUP_INTEVAL_MS = 1000 * 60 * 60;
 
 export class Authenticator extends BaseAuthenticator {
-
-  private authCache: Map<string, { time_ms: number; response: any }> = new Map();
+  private authCache: Map<
+    string,
+    { time_ms: number; response: any }
+  > = new Map();
 
   constructor(private config) {
     super();

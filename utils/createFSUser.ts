@@ -38,12 +38,15 @@ Example: node createFSUser.js --user nrpuser --password password`
   );
   process.exit(-1);
 }
-const STORAGE_PATH_ENV = 'STORAGE_PATH', // STORAGE_PATH variable
-  DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
+const STORAGE_PATH_ENV = 'STORAGE_PATH'; // STORAGE_PATH variable
+const DEFAULT_STORAGE_PATH = '$HOME/.opt/nrpStorage';
 
 const storagePath =
   process.env[STORAGE_PATH_ENV] ||
-  DEFAULT_STORAGE_PATH.replace(/\$([A-Z_a-z]*)/g, (m, v) => process.env[v] as string);
+  DEFAULT_STORAGE_PATH.replace(
+    /\$([A-Z_a-z]*)/g,
+    (m, v) => process.env[v] as string
+  );
 
 ['robots', 'environments', 'brains'].forEach(folder =>
   shell.mkdir('-p', path.join(storagePath, 'USER_DATA', folder))

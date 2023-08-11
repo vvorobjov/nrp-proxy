@@ -30,31 +30,35 @@ import utils from './FS/utils';
 
 // mocked in unit tests
 // tslint:disable: prefer-const
-let tmp = require('tmp'),
-    fs = require('fs-extra'),
-    zip = require('zip-a-folder'),
-    mkdir = q.denodeify(fs.mkdir);
+let tmp = require('tmp');
+let fs = require('fs-extra');
+let zip = require('zip-a-folder');
+let mkdir = q.denodeify(fs.mkdir);
 // tslint:enable: prefer-const
 
 export class ExperimentZipper {
+  constructor(protected storage, protected token, protected userId) {}
 
-    constructor(protected storage, protected token, protected userId) { }
+  async zipExperiment(experimentId) {
+    const experiments = await this.storage.listExperiments(
+      this.token,
+      this.userId
+    );
+    if (experiments.find(exp => exp.name === experimentId)) {
+      // in order to create a zip with a root folder as is the convention
+      // the easiest way is to copy the entire experiment directory to tmp
+      // inside a folder and zip the entire folder.
+      const tmpFolder = tmp.dirSync();
+      const experimentDirectoryCopy = path.join(tmpFolder.name, experimentId);
+      await mkdir(experimentDirectoryCopy);
+      fs.copySync(
+        path.join(utils.storagePath, experimentId),
+        experimentDirectoryCopy
+      );
 
-    async zipExperiment(experimentId) {
-        const experiments = await this.storage.listExperiments(this.token, this.userId);
-        if (experiments.find(exp => exp.name === experimentId)) {
-
-            // in order to create a zip with a root folder as is the convention
-            // the easiest way is to copy the entire experiment directory to tmp
-            // inside a folder and zip the entire folder.
-            const tmpFolder = tmp.dirSync();
-            const experimentDirectoryCopy = path.join(tmpFolder.name, experimentId);
-            await mkdir(experimentDirectoryCopy);
-            fs.copySync(path.join(utils.storagePath, experimentId), experimentDirectoryCopy);
-
-            const zipPath = tmp.fileSync();
-            await zip.zip(tmpFolder.name, zipPath.name);
-            return zipPath.name;
-        }
+      const zipPath = tmp.fileSync();
+      await zip.zip(tmpFolder.name, zipPath.name);
+      return zipPath.name;
     }
+  }
 }

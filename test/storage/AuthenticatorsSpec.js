@@ -1,11 +1,12 @@
 'use strict';
 
-const chai = require('chai'),
-  chaiAsPromised = require('chai-as-promised'),
-  rewire = require('rewire'),
-  expect = chai.expect,
-  path = require('path'),
-  assert = chai.assert;
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+const rewire = require('rewire');
+const expect = chai.expect;
+const path = require('path');
+const sinon = require('sinon');
+const assert = chai.assert;
 chai.use(chaiAsPromised);
 
 describe('FSAuthenticator', () => {
@@ -60,9 +61,9 @@ describe('FSAuthenticator', () => {
 
 describe('CollabAuthenticator', () => {
   const {
-      Authenticator: CollabAuthenticator
-    } = require('../../storage/Collab/Authenticator'),
-    nock = require('nock');
+    Authenticator: CollabAuthenticator
+  } = require('../../storage/Collab/Authenticator');
+  const nock = require('nock');
   const INTROSPECT_TOKEN_URL = '/protocol/openid-connect/token/introspect';
 
   it('should return the introspection endpoint response when token is active', () => {
@@ -81,6 +82,29 @@ describe('CollabAuthenticator', () => {
       .should.eventually.deep.equal(response);
   });
 
+  it('should use the cache when the token is not expired', async () => {
+    const collabAuth = new CollabAuthenticator({ storage: 'FS' });
+    // Set up a Sinon clock to control the current time
+    const clock = sinon.useFakeTimers();
+
+    // Add a token to the cache that is set to expire in 10000 ms
+    const testToken = 'testToken';
+    const testResponse = 'testResponse';
+    collabAuth.authCache.set(testToken, {
+      time_ms: Date.now() + 10000,
+      response: testResponse
+    });
+
+    // Call the checkToken method
+    const response = await collabAuth.checkToken(testToken);
+
+    // Assert that the response from checkToken is equal to the cached response
+    expect(response).to.equal(testResponse);
+
+    // Restore the Sinon clock after the test
+    clock.restore();
+  });
+
   it('should retrun proper error, when token is not active', () => {
     const response = { active: false, other: 'someData' };
     let collabAuth = new CollabAuthenticator({ storage: 'FS' });
@@ -95,6 +119,28 @@ describe('CollabAuthenticator', () => {
     return collabAuth
       .checkToken('emptyToken')
       .should.be.rejectedWith('Token is not active.');
+  });
+
+  it('should clean the token cache', () => {
+    let collabAuth = new CollabAuthenticator({ storage: 'FS' });
+    let clock = sinon.useFakeTimers();
+    // Add a token to the cache that is set to expire in 10000 ms
+    collabAuth.authCache.set('testToken', {
+      time_ms: Date.now() + 10000,
+      response: 'testResponse'
+    });
+
+    // Fast forward the Sinon clock by 20000 ms, which will cause the token to expire
+    clock.tick(20000);
+
+    // Manually call the cleanCache method
+    collabAuth.cleanCache();
+
+    // Assert that the expired token has been removed from the cache
+    expect(collabAuth.authCache.has('testToken')).to.be.false;
+
+    // Restore the Sinon clock after the test
+    clock.restore();
   });
 
   it('should retrun proper error, when introspection response is not successful', () => {
