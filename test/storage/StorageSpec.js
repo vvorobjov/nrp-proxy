@@ -1376,7 +1376,6 @@ describe('Collab Storage', () => {
     nock(CollabConnector.URL_BUCKET_API)
       .delete('/fakeFolder/fakeExperiment/fakeFile')
       .reply(200, 'Success');
-    console.info(CollabConnector.URL_BUCKET_API);
     return await collabStorage
       .deleteFile('fakeFile', 'fakeFolder/fakeExperiment', fakeToken)
       .then(response => response.body)
@@ -1584,7 +1583,7 @@ describe('Collab Storage', () => {
       .should.eventually.equal('Success');
   });
 
-  it('should delete a experiment correctly', () => {
+  it('should delete an experiment correctly', () => {
     var storage = new CollabStorage();
     const fakeExperiment = 'fakeFolder/fakeExperiment';
     const fakeDownloadURL = 'https://fakeDownload.url';

@@ -335,7 +335,6 @@ export class Storage extends BaseStorage {
 
   async copyExperiment(experiment, token, contextId) {
     const experimentsList = await this.listExperiments(token, contextId, null);
-    console.info(experiment);
 
     const copiedExpName = utils.generateUniqueExperimentId(
       experiment,
@@ -396,7 +395,6 @@ export class Storage extends BaseStorage {
     const updatedbucketExperimentConfig = JSON.stringify(
       bucketExperimentConfig
     );
-    console.info(typeof updatedbucketExperimentConfig);
     await this.createOrUpdate(
       NRP_EXPERIMENTS_CONFIG_FILENAME,
       updatedbucketExperimentConfig,
