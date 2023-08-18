@@ -654,7 +654,7 @@ app.get('/storage/:experiment', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/:experiment', (req, res) => {
+app.put('/storage/:experiment', (req, res) => {
   storageRequestHandler
     .createExperiment(
       req.params.experiment,
