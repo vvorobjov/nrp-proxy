@@ -174,14 +174,12 @@ export class Storage extends BaseStorage {
 
   ensurePath(pathparts, parent, contentType, token) {
     const fileType = pathparts.length > 1 ? 'folder' : 'file';
-    // console.info('ensurePath : ', pathparts);
     return CollabConnector.instance
       .bucketFolderContent(token, parent)
       .then(contents => {
         const foundEntity = contents.find(
           f => f.name === pathparts[0] && f.type === fileType
         );
-        // console.info('ensurePath foundentity : ', foundEntity);
         if (foundEntity) return foundEntity;
         return { uuid: parent + pathparts };
         return fileType === 'file'

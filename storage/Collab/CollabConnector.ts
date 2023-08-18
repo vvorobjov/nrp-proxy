@@ -23,8 +23,6 @@
  * ---LICENSE-END**/
 'use strict';
 
-import { response } from 'express';
-import { type } from 'os';
 import { URL } from 'url';
 import configurationManager from '../../utils/configurationManager';
 // import { FileType } from '../BaseStorage';
@@ -97,9 +95,6 @@ export default class CollabConnector {
   requestHTTPS(url, options, authToken) {
     return new Promise((resolve, reject) => {
       const urlObject = new URL(url);
-      /* if (options.method == 'PUT') {
-        console.info("URL object : ", urlObject);
-      } */
       _.extend(options, {
         hostname: urlObject.hostname,
         path: urlObject.pathname + urlObject.search,
@@ -179,7 +174,6 @@ export default class CollabConnector {
       json: data
     });
     return await this.requestHTTPS(url, options, token).catch(e => {
-      console.info(e);
       if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
         console.info('Error: ESOCKETTIMEDOUT');
       throw e;
@@ -336,7 +330,7 @@ export default class CollabConnector {
       Origin: 'https://localhost'
     };
 
-    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, undefined)
+    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, options)
       .then((response: any) => {
         console.info(response);
         const uploadUrl = JSON.parse(response.body).url;

@@ -617,7 +617,7 @@ app.post('/storage/clone/:experiment', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.put('/storage/:experiment/*', (req, res) => {
+app.post('/storage/:experiment/*', (req, res) => {
   if (!req.params['0']) return handleError(res, 'File name is required');
   let promise: Promise<unknown>;
   if (req.query.type === 'folder') {
