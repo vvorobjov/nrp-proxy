@@ -58,11 +58,15 @@ const experimentServiceFactory = new ExperimentServiceFactory(
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET, PUT, POST, DELETE, OPTIONS'
+  );
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'accept, Authorization, Context-Id, Content-Type'
+    'Accept, Authorization, Context-Id, Content-Type, Origin, X-Requested-With'
   );
+
   res.setHeader('Access-Control-Expose-Headers', 'uuid, content-disposition');
   next();
 });
@@ -441,7 +445,7 @@ app.get('/storage/experiments/:experimentId/sharingmode', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-app.post('/storage/experiments/:experimentId/rename', (req, res) => {
+app.put('/storage/experiments/:experimentId/rename', (req, res) => {
   storageRequestHandler
     .renameExperiment(
       req.params.experimentId,
@@ -607,14 +611,15 @@ app.post('/storage/clone/:experiment', (req, res) => {
       getAuthToken(req),
       req.get('context-id')
     )
-    .then(r => res.send(r || ''))
+    .then(r => {
+      res.send(r || '');
+    })
     .catch(_.partial(handleError, res));
 });
 
 app.post('/storage/:experiment/*', (req, res) => {
   if (!req.params['0']) return handleError(res, 'File name is required');
   let promise: Promise<unknown>;
-
   if (req.query.type === 'folder') {
     promise = storageRequestHandler.createFolder(
       req.params['0'],

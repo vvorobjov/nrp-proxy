@@ -134,6 +134,10 @@ export default class CollabConnector {
           console.info('error start request');
           reject(e);
         });
+
+      if (options.body) {
+        request.write(options.body);
+      }
       request.on('error', e => {
         console.error(e);
       });
@@ -142,7 +146,6 @@ export default class CollabConnector {
   }
 
   postHTTPS(url, data, token, options, jsonType = false) {
-    console.info('new post method : ', url);
     const operation = () =>
       this.requestHTTPS(
         url,
@@ -162,14 +165,28 @@ export default class CollabConnector {
     });
   }
 
-  async putHTTPS(url, data, token, options, jsonType = false) {
-    console.info('new put method : ', url);
+  async putHTTPS(url, data, token, options, jsonType = true) {
     options = options ? options : {};
     _.extend(options, {
       method: 'PUT',
       uri: url,
       body: data,
-      json: !!jsonType
+      json: data
+    });
+    return await this.requestHTTPS(url, options, token).catch(e => {
+      if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
+        console.info('Error: ESOCKETTIMEDOUT');
+      throw e;
+    });
+  }
+
+  async patchHTTPS(url, data, token, options, jsonType = true) {
+    options = options ? options : {};
+    _.extend(options, {
+      method: 'PATCH',
+      uri: url,
+      body: data,
+      json: true
     });
     return await this.requestHTTPS(url, options, token).catch(e => {
       console.info(e);
@@ -194,7 +211,6 @@ export default class CollabConnector {
       method: 'DELETE'
     });
     return await this.requestHTTPS(url, options, token).then(response => {
-      console.info(response);
       return response;
     });
   }
@@ -295,16 +311,7 @@ export default class CollabConnector {
   copyFolder(token, parent, newExpName, experiment) {
     const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${experiment}%2F/copy?to=${parent}&name=${newExpName}%2F`;
     console.info('copying folder ', BUCKET_FILE_URL);
-    return this.putHTTPS(
-      BUCKET_FILE_URL,
-      {
-        newExpName,
-        parent
-      },
-      token,
-      undefined,
-      true
-    );
+    return this.putHTTPS(BUCKET_FILE_URL, undefined, token, undefined, true);
   }
 
   createFolder(token, parent, newExpName, experiment) {
@@ -312,20 +319,32 @@ export default class CollabConnector {
   }
 
   async uploadContent(token, entityUuid, content) {
-    return 'not implemented';
-    /* console.info('uploading : ', typeof(content));
     const COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}`;
+    const options = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'cross-site',
+      Origin: 'https://localhost'
+    };
 
-    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, {headers: { accept: 'application/json' }})
+    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, options)
       .then((response: any) => {
         console.info(response);
         const uploadUrl = JSON.parse(response.body).url;
-        this.putHTTPS(uploadUrl, content, undefined, undefined, true);
-        return response;
+        console.info(uploadUrl);
+        return uploadUrl;
       })
-      .then(() => ({uuid : entityUuid}))
-      .catch(error => console.error());
-     */
+      .then(uploadUrl =>
+        this.putHTTPS(uploadUrl, content, undefined, options, true)
+      )
+      .then(response => {
+        console.info('Upload response : ', response);
+        return entityUuid;
+      })
+      .catch(error => console.error('Upload error : ', error));
   }
 
   async deleteBucketEntity(token, parent, entityUuid, type = 'file') {
@@ -334,10 +353,37 @@ export default class CollabConnector {
       COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${entityUuid}`;
     } else if (type === 'folder') {
       COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}/`;
-      console.info(token);
     }
-    console.info(COLLAB_FILE_URL);
     return await this.deleteHTTPS(COLLAB_FILE_URL, token, undefined);
+  }
+
+  async renameBucketEntity(
+    token,
+    parent,
+    entityUuid,
+    targetName,
+    type = 'file'
+  ) {
+    let RENAME_BUCKET_URL;
+    if (type === 'file') {
+      RENAME_BUCKET_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${entityUuid}`;
+    } else if (type === 'folder') {
+      RENAME_BUCKET_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}/`;
+    }
+
+    const newName = { rename: { target_name: targetName + '/' } };
+    return await this.patchHTTPS(
+      RENAME_BUCKET_URL,
+      JSON.stringify(newName),
+      token,
+      {
+        headers: {
+          'content-type': 'application/json',
+          'accept-encodings': 'gzip, deflate, br'
+        }
+      },
+      true
+    ).then(response => console.info(response));
   }
 
   createBucketFile(token, parent, name, contentType) {
@@ -407,7 +453,6 @@ export default class CollabConnector {
   }
 
   async getContextIdCollab(token, contextId) {
-    console.info('checking memoized...');
     if (!this._getMemoizedCollab) {
       this._getMemoizedCollab = _.memoize(
         async (token, contextId) => {

@@ -949,40 +949,26 @@ describe('Collab Storage', () => {
     //collabConnector = new CollabConnector();
   });
 
-  it('should fail to create a new file', async () => {
-    nock(CollabConnector.URL_BUCKET_API)
-      .post('/fakeFolder/fakeName/copy?to=fakeFolder&name=fakeName')
-      .replyWithError({ message: 'fail ??', code: 404 });
-    collabConnector = CollabConnector.instance;
-    return await collabConnector.createFile(
-      'fakeToken',
-      'fakeFolder',
-      'fakeName',
-      'text/plain'
-    ).should.be.rejected;
-    //expect(result).to.eventually.be.rejected;
-  });
-
   //Collab connector
   it('should succesfully get the correct request timeout', () => {
     return CollabConnector.REQUEST_TIMEOUT.should.equal(30 * 1000);
   });
 
-  it('should successfully post a new file', () => {
+  it('upload file should succeed with the file uuid', () => {
+    const fakeUuid = 'fakeFolder/fakeName/';
+    const fakeUrl = 'https://fake.url.upload/test/';
     nock(CollabConnector.URL_BUCKET_API)
-      .post('/fakeFolder/fakeName/copy?to=fakeFolder&name=fakeName')
+      .put('/' + fakeUuid)
+      .reply(200, JSON.stringify({ url: fakeUrl }));
+
+    nock('https://fake.url.upload')
+      .log(console.log)
+      .put('/test/')
       .reply(200, 'success');
 
     return CollabConnector.instance
-      .createFile('fakeToken', 'fakeFolder', 'fakeName', 'text/plain')
-      .then(response => response.body)
-      .should.eventually.equal('success');
-  });
-
-  it('upload file should not be implemented', () => {
-    return CollabConnector.instance
-      .uploadContent('fakeToken', 'fakeFolder/fakeName/', '')
-      .should.eventually.equal('not implemented');
+      .uploadContent('fakeToken', fakeUuid, '')
+      .should.eventually.equal(fakeUuid);
   });
 
   it('should copy a folder with succes', () => {
@@ -1013,20 +999,6 @@ describe('Collab Storage', () => {
     return CollabConnector.instance
       .getContextIdCollab('fakeToken', 'fakeContextId')
       .should.eventually.equal('collabId');
-  });
-
-  it('should fail to post a new file', () => {
-    nock(CollabConnector.URL_BUCKET_API)
-      .post('/fakeFolder/fakeName/copy?to=fakeFolder&name=fakeName')
-      .replyWithError({ message: 'fail', code: 404 });
-    collabConnector = CollabConnector.instance;
-    let result = collabConnector.createFile(
-      'fakeToken',
-      'fakeFolder',
-      'fakeName',
-      'text/plain'
-    );
-    expect(result).to.eventually.be.rejected;
   });
 
   it('should throw when we have a response with a wrong status code', () => {
@@ -1290,15 +1262,36 @@ describe('Collab Storage', () => {
       });
   });
 
-  it('should modify an experiment name successfully', async () => {
+  it('should rename an experiment successfully', async () => {
     const fakeExperiment = 'fakeFolder/fakeExperiment';
+    const fakeDownloadURL = 'https://fakedownload.url';
+
     nock(CollabConnector.URL_BUCKET_API)
-      .get('/' + fakeExperiment + '?limit=9999&delimiter=%2F')
-      .replyWithFile(200, path.join(__dirname, 'replies/contents.json'));
+      .get('/fakeFolder?limit=9999&delimiter=%2F&prefix=fakeExperiment/')
+      .replyWithFile(200, path.join(__dirname, 'replies/foldercontents.json'), {
+        'content-type': 'application/json'
+      });
+
+    nock(CollabConnector.URL_BUCKET_API)
+      .patch('/' + fakeExperiment + '/')
+      .reply(200);
+
+    nock(CollabConnector.URL_BUCKET_API)
+      .get(
+        `/${fakeExperiment}/simulation_config.json?inline=false&redirect=false`
+      )
+      .reply(200, { url: fakeDownloadURL });
+
+    nock(fakeDownloadURL)
+      .get()
+      .replyWithFile(
+        200,
+        path.join(__dirname, 'replies/simulation_config.json')
+      );
 
     collabStorage
       .renameExperiment(
-        'fakeFolder/fakeExperiment',
+        fakeExperiment,
         'fakeNewName',
         'fakeToken',
         'fakeUserID'
@@ -1383,7 +1376,6 @@ describe('Collab Storage', () => {
     nock(CollabConnector.URL_BUCKET_API)
       .delete('/fakeFolder/fakeExperiment/fakeFile')
       .reply(200, 'Success');
-    console.info(CollabConnector.URL_BUCKET_API);
     return await collabStorage
       .deleteFile('fakeFile', 'fakeFolder/fakeExperiment', fakeToken)
       .then(response => response.body)
@@ -1391,14 +1383,26 @@ describe('Collab Storage', () => {
   });
 
   //create folder
-  it.skip('should create a folder', () => {
+  it('should create a folder', () => {
+    try {
+      expect(
+        collabStorage.createFolder('fakeFile', fakeExperiment, fakeToken)
+      ).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('should retrieve the context collab id', () => {
+    const response = { collab: { id: 'collabId' } };
+
     nock('https://services.humanbrainproject.eu')
-      .post('/storage/v1/api/folder/')
-      .reply(200, 'Success');
+      .get('/collab/v0/collab/context/fakeContextId/')
+      .reply(200, response);
 
     return collabStorage
-      .createFolder('fakeFile', fakeExperiment, fakeToken)
-      .should.eventually.equal('Success');
+      .getCollabId('fakeToken', 'fakeContextId')
+      .should.eventually.equal('collabId');
   });
 
   //create or update file
@@ -1505,14 +1509,14 @@ describe('Collab Storage', () => {
   });
 
   //create experiment
-  it.skip('should create a new experiment ', () => {
-    nock('https://services.humanbrainproject.eu')
-      .post('/storage/v1/api/folder/')
-      .reply(200, 'Success');
-
-    return collabStorage
-      .createExperiment(fakeExperiment, fakeToken)
-      .should.eventually.equal('Success');
+  it('should create a new experiment ', () => {
+    try {
+      expect(
+        collabStorage.createExperiment('fakeFile', fakeExperiment, fakeToken)
+      ).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
   });
 
   it.skip('should redirect if there is an authentication error (403)', () => {
@@ -1565,27 +1569,49 @@ describe('Collab Storage', () => {
       });
   });
 
-  it.skip('should delete an folder correctly', () => {
-    sinon.stub(CollabConnector.prototype, 'deleteEntity').returns(
-      new Promise(function(resolve) {
-        resolve('resultMock');
-      })
-    );
+  it('should delete a folder correctly', () => {
+    const fakeFolder = 'fakeFolder';
+    nock(CollabConnector.URL_BUCKET_API)
+      .log(console.log)
+      .delete(`/${fakeFolder}/`)
+      .reply(200, 'Success');
 
     var storage = new CollabStorage();
     return storage
-      .deleteFolder('robots', fakeExperiment, fakeToken, fakeUserId, false)
-      .then(res => {
-        return expect(res).to.equal('resultMock');
-      });
+      .deleteFolder(fakeFolder, fakeExperiment, fakeToken, fakeUserId, false)
+      .then(response => response.body)
+      .should.eventually.equal('Success');
   });
 
-  it.skip('should delete an experiment correctly', () => {
+  it('should delete an experiment correctly', () => {
     var storage = new CollabStorage();
+    const fakeExperiment = 'fakeFolder/fakeExperiment';
+    const fakeDownloadURL = 'https://fakeDownload.url';
+    nock(CollabConnector.URL_BUCKET_API)
+      .delete(`/${fakeExperiment}/`)
+      .reply(200, { msg: 'Success!' });
+
+    nock(CollabConnector.URL_BUCKET_API)
+      .get('/fakeFolder/nrp-experiments.json?inline=false&redirect=false')
+      .reply(200, { url: fakeDownloadURL });
+
+    nock(fakeDownloadURL)
+      .get('/')
+      .replyWithFile(
+        200,
+        path.join(__dirname, 'replies/nrp-experiments.json'),
+        { 'content-type': 'application/json' }
+      );
+
+    sinon.stub(CollabStorage.prototype, 'createOrUpdate').returns(
+      new Promise(function(resolve) {
+        resolve();
+      })
+    );
     return storage
       .deleteExperiment(fakeExperiment, fakeExperiment, fakeToken, fakeUserId)
       .then(res => {
-        return expect(res).to.equal('resultMock');
+        return expect(res).to.equal(fakeExperiment + ' deleted');
       });
   });
 

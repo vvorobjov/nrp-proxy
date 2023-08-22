@@ -1,0 +1,58 @@
+{
+  "objects": [
+    {
+      "hash": "04db2ed47f758d7924bf25549e41f362",
+      "last_modified": "2023-08-08T11:04:02.857790",
+      "bytes": 231,
+      "name": "nrp-experiments.json",
+      "content_type": "application/json"
+    },
+    {
+      "hash": "d41d8cd98f00b204e9800998ecf8427e",
+      "last_modified": "2023-06-29T11:32:43.005370",
+      "bytes": 0,
+      "name": "nrp-experiments.json_testnew",
+      "content_type": "application/octet-stream"
+    },
+    {
+      "hash": "ea3a005d03ffa8047365cf1c521e86eb",
+      "last_modified": "2023-07-06T11:38:28.555600",
+      "bytes": 761,
+      "name": "fakeExperiment/simulation_config.json",
+      "content_type": "text/x-python"
+    },
+    {
+      "hash": "60451c3095a0cd44749560099de23d1d",
+      "last_modified": "2023-07-06T11:38:28.578210",
+      "bytes": 716,
+      "name": "openAI_nest_py/from_nest.py",
+      "content_type": "text/x-python"
+    },
+    {
+      "hash": "911547bced4559440fd0e9b859934431",
+      "last_modified": "2023-07-06T11:38:28.569340",
+      "bytes": 1436,
+      "name": "openAI_nest_py/gym_simulator.py",
+      "content_type": "text/x-python"
+    },
+    {
+      "hash": "158c3eacbe4616a7e6a9bb96e115430e",
+      "last_modified": "2023-07-06T11:38:28.600960",
+      "bytes": 877,
+      "name": "openAI_nest_py/nest_controller.py",
+      "content_type": "text/x-python"
+    },
+    {
+      "hash": "d41d8cd98f00b204e9800998ecf8427e",
+      "last_modified": "2023-07-06T11:38:28.574060",
+      "bytes": 0,
+      "name": "openAI_nest_py/nrp-experiments(1).json",
+      "content_type": "application/json"
+    }
+  ],
+  "container": "test-nrp-access",
+  "prefix": null,
+  "delimiter": null,
+  "marker": null,
+  "limit": 50
+}
