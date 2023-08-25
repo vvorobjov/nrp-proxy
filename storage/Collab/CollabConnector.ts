@@ -205,7 +205,7 @@ export default class CollabConnector {
   }
 
   async deleteHTTPS(url, token, options) {
-    console.info('deleting exp : ', url);
+    console.info('deleting : ', url);
     options = options ? options : {};
     _.extend(options, {
       method: 'DELETE'
@@ -338,7 +338,7 @@ export default class CollabConnector {
         return uploadUrl;
       })
       .then(uploadUrl =>
-        this.putHTTPS(uploadUrl, content, undefined, options, true)
+        this.putHTTPS(uploadUrl, content, token, options, true)
       )
       .then(response => {
         console.info('Upload response : ', response);

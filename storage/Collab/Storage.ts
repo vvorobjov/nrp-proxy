@@ -27,6 +27,8 @@ import X2JS from 'x2js';
 import BaseStorage from '../BaseStorage';
 import utils from '../FS/utils';
 import CollabConnector from './CollabConnector';
+import * as storageConsts from '../StorageConsts';
+import TemplatesExperimentsService from '../../proxy/TemplateExperimentsService';
 
 const q = require('q');
 const _ = require('lodash');
@@ -37,11 +39,12 @@ const COLLAB_DESCRIPTION_NRP_INDICATOR =
 const COLLAB_TAG_NRP_EXPERIMENTS = 'NRP-Experiments';
 
 export class Storage extends BaseStorage {
+
   downloadingExperiment: boolean; // for testing
 
   constructor(private config) {
     super();
-
+    this.config = config;
     this.downloadingExperiment = false; // for testing
   }
 
@@ -304,7 +307,11 @@ export class Storage extends BaseStorage {
       token,
       undefined
     );
-    return JSON.parse(experimentConfigFile);
+    try {
+      return JSON.parse(experimentConfigFile);
+    } catch (error) {
+      return;
+    }
   }
 
   createExperiment(newExperiment, experiment, token, contextId) {
@@ -354,7 +361,7 @@ export class Storage extends BaseStorage {
     // new configuration is available.
     setTimeout(async () => {
       const experimentConfiguration = await this.getFile(
-        'simulation_config.json',
+        storageConsts.defaultConfigName,
         copiedExpName,
         token,
         null,
@@ -373,7 +380,7 @@ export class Storage extends BaseStorage {
       );
       console.info('decoratedExpCOnf type : ', typeof decoratedExpConf);
       await this.createOrUpdate(
-        'simulation_config.json',
+        storageConsts.defaultConfigName,
         decoratedExpConf,
         experimentConfiguration.contentType,
         copiedExpName,
@@ -430,7 +437,7 @@ export class Storage extends BaseStorage {
     console.info('rewritting the simulation_config.json...');
 
     const experimentConfiguration = await this.getFile(
-      'simulation_config.json',
+      storageConsts.defaultConfigName,
       experimentPath,
       token,
       null,
@@ -443,7 +450,7 @@ export class Storage extends BaseStorage {
     );
     console.info('decoratedExpCOnf type : ', typeof decoratedExpConf);
     await this.createOrUpdate(
-      'simulation_config.json',
+      storageConsts.defaultConfigName,
       decoratedExpConf,
       experimentConfiguration.contentType,
       experimentPath,
@@ -477,6 +484,88 @@ export class Storage extends BaseStorage {
       parent + '/',
       token
     );
+  }
+  
+  async scanStorage(userId: string, token) {
+    console.info("scanStorage");
+    const collabs = await this.getNrpCollabsViaTag(token);
+    const registeredExperiments: any[] = [];
+    for (const collab of collabs) {
+      try {
+        console.info('Scanning bucket ', collab);
+        const experimentsConfig = await this.getBucketNrpExperimentsConfig(
+          collab,
+          token
+        );
+        console.info('Checking the registered experiments...');
+        if (experimentsConfig.experiments) {
+          const filteredExperiments = experimentsConfig.experiments.filter(
+            experiment => experiment
+          );
+          filteredExperiments.forEach(async experiment => {
+            if (experiment.type === 'folder') {
+              const expName = experiment.path;
+              registeredExperiments.push(experiment.path);
+              const expPath = collab + '/' + expName;
+              await this.getFile(
+                storageConsts.defaultConfigName,
+                expPath,
+                token,
+                null,
+                true
+              ).then(unregisteredConfig => {
+                return testExperimentsService.parseConfig(unregisteredConfig.body, false, expName)}).then(config => {
+                if (!(config)) {
+                  console.info("Corrupted experiment found, deleting...");
+                  this.deleteExperiment(expPath, expName, token, userId).then(response => console.info(response));
+                }});
+            }
+          });
+        } 
+
+        const testExperimentsService = new TemplatesExperimentsService(this.config, '');
+
+        console.info('Looking for unregistered experiments...');
+        await CollabConnector.instance.bucketFolderContent(token, collab).then(content => {
+          content.map(async (f) => {
+            const entityName = f.uuid;
+            if (f.type === 'folder' && !(registeredExperiments.includes(f.name))) {
+                console.info('entity : ', f);
+                await this.getFile(
+                storageConsts.defaultConfigName,
+                f.uuid,
+                token,
+                null,
+                true
+              ).then(unregisteredConfig => {
+                return testExperimentsService.parseConfig(unregisteredConfig.body, false, f.name)}).then(config => {
+                if (config) {
+                  console.info('New experiment found!');
+                  const newExperiment = { type: "folder", "path" : f.name}
+                  experimentsConfig.experiments.push(newExperiment);
+                  console.info(experimentsConfig);
+                } else {
+                  console.info("Corrupted experiment found, deleting...");
+                  this.deleteFolder(f.name, collab, token, userId).then(response => console.info(response));
+                };
+              });
+            }
+            else if (f.type === 'file' && f.name!==NRP_EXPERIMENTS_CONFIG_FILENAME) {
+              // Deleting all files in the root folder that are not the configuration file
+                await this.deleteFile(entityName, collab, token, userId).then(response => console.info(response));
+            }
+          })});
+      return await this.createOrUpdate(
+        NRP_EXPERIMENTS_CONFIG_FILENAME,
+        JSON.stringify(experimentsConfig),
+        experimentsConfig.contentType,
+        collab + '/',
+        token
+      );
+      } catch (error) {
+        console.info("Scan Storage error: ", error);
+      };
+    }
   }
 
   listAllModels(modelType, userId) {

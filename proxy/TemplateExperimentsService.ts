@@ -23,6 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
+import { parse } from 'path';
 import ConfigurationManager from '../utils/configurationManager';
 
 // mocked modules
@@ -112,18 +113,15 @@ export default class TemplatesExperimentsService {
     return exists ? prop : defaultValue ? defaultValue : undefined;
   }
 
-  async buildExperiment(fileName, expName = '', isExperimentshared = false) {
-    let experimentContent;
+  parseConfig(experimentContent, isExperimentshared, fileName) {
 
     try {
-      experimentContent = await readFile(fileName, 'utf8');
-
       const experimentConfig = JSON.parse(experimentContent);
       const fileConfigPath = isExperimentshared
         ? path.relative(utils.storagePath, fileName)
         : path.relative(this.templatesPath, fileName);
       const expPath = path.dirname(fileConfigPath);
-
+      
       return {
         path: expPath,
         configFile: path.basename(fileConfigPath),
@@ -174,8 +172,19 @@ export default class TemplatesExperimentsService {
         ConnectROS: this.getJsonProperty(experimentConfig.ConnectROS)
       };
     } catch (err) {
-      console.error(err);
+      throw err;
+    };
+  }
 
+  async buildExperiment(fileName, expName = '', isExperimentshared = false) {
+    let experimentContent;
+
+    try {
+      experimentContent = await readFile(fileName, 'utf8');
+
+      return this.parseConfig(experimentContent, isExperimentshared, fileName)
+    } catch (err) {
+      console.info('buildExperiment error: ', err);
       return;
     }
   }

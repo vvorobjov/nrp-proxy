@@ -66,7 +66,7 @@ export class ExperimentImporter {
     });
   }
 
-  async scanStorage() {
-    return await this.storage.scanStorage(this.userId);
+  async scanStorage(token) {
+    return await this.storage.scanStorage(this.userId, this.token);
   }
 }

@@ -589,7 +589,7 @@ export default class RequestHandler {
       token,
       userId,
       contextId
-    ).scanStorage();
+    ).scanStorage(token);
   }
 
   getStoragePath() {

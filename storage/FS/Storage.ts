@@ -785,7 +785,7 @@ export class Storage extends BaseStorage {
   // Returns the added and the deleted entries.
   // Note: only for local usage
   async scanStorage(
-    userId: string
+    userId: string, token=null
   ): Promise<{ addedFolders: string[]; deletedFolders: string[] }> {
     const files = await q.denodeify(fs.readdir)(this.getStoragePath());
     const experimentFolders = files
@@ -876,7 +876,7 @@ export class Storage extends BaseStorage {
     const modelAbsPath = model.isCustom
       ? customModelAbsPath
       : templateModelAbsPath;
-    return path.join(modelAbsPath, model.type, model.path, 'model.config');
+    return path.join(modelAbsPath, model.type, model.path, 'model.fs');
   }
 
   async scanExperiments() {
