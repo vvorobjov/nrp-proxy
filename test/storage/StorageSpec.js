@@ -935,6 +935,7 @@ describe('Collab Storage', () => {
   let collabConnector, collabStorage;
 
   //helper variables
+  const defaultConfigName = 'simulation_config.json';
   const fakeToken = 'a1fdb0e8-04bb-4a32-9a26-e20dba8a2a24',
     fakeUserId = fakeToken,
     fakeExperiment = '21f0f4e0-9753-42f3-bd29-611d20fc1168';
@@ -1278,7 +1279,7 @@ describe('Collab Storage', () => {
 
     nock(CollabConnector.URL_BUCKET_API)
       .get(
-        `/${fakeExperiment}/simulation_config.json?inline=false&redirect=false`
+        `/${fakeExperiment}/${defaultConfigName}?inline=false&redirect=false`
       )
       .reply(200, { url: fakeDownloadURL });
 
@@ -1286,7 +1287,7 @@ describe('Collab Storage', () => {
       .get()
       .replyWithFile(
         200,
-        path.join(__dirname, 'replies/simulation_config.json')
+        path.join(__dirname, `replies/${defaultConfigName}`)
       );
 
     collabStorage
@@ -1297,6 +1298,77 @@ describe('Collab Storage', () => {
         'fakeUserID'
       )
       .should.eventually.equal('success');
+  });
+
+  it('should scan the collab storage successfully', async () => {
+    const fakeBucket = 'fakeBucket';
+    const fakeCorruptedExperiment = `${fakeBucket}/corruptedExperiment`;
+         
+    sinon.stub(CollabStorage.prototype, 'getNrpCollabsViaTag').returns(
+      new Promise(function(resolve) {
+        resolve([fakeBucket]);
+      })
+    );
+
+    sinon.stub(CollabStorage.prototype, 'getBucketNrpExperimentsConfig').returns(
+      new Promise(function(resolve) {
+        resolve({ experiments : [
+        {
+          type: 'folder',
+          path: 'corruptedExperiment'
+        }
+      ]})})
+    );
+
+    nock(CollabConnector.URL_BUCKET_API)
+    .get(
+      `/${fakeBucket}?limit=9999&delimiter=%2F`
+    )
+    .replyWithFile(200, path.join(__dirname, 'replies/scanstoragecontent.json'), {'content-type' : 'application/json'});
+
+    sinon.stub(CollabStorage.prototype, 'getFile')
+    .withArgs(defaultConfigName, `${fakeBucket}/corrupted_folder`,'fakeToken')
+    .returns(
+      new Promise(function(resolve) {
+        fs.readFile(path.join(__dirname, 'replies/file.json'), 'utf8')
+        .then(content => resolve({body : content}))}))
+    .withArgs(defaultConfigName, fakeCorruptedExperiment, 'fakeToken')
+    .returns(
+      new Promise(function(resolve) {
+        fs.readFile(path.join(__dirname, 'replies/file.json'), 'utf8')
+        .then(content => resolve({body : content}))}))
+    .withArgs(defaultConfigName, `${fakeBucket}/unregistered_experiment`, 'fakeToken')
+    .returns(
+      new Promise(function(resolve) {
+        fs.readFile(path.join(__dirname, `replies/${defaultConfigName}`), 'utf8')
+        .then(content => resolve({body : content}))}));
+
+    sinon.stub(CollabStorage.prototype, 'createOrUpdate').returns(
+      new Promise(function(resolve) {resolve("success")})
+    );
+
+    // test that scanStorage remove folder that are not experiments
+    nock(CollabConnector.URL_BUCKET_API)
+      .delete(`/${fakeBucket}/corrupted_folder/`)
+      .reply(200, { msg: 'Success!' });
+
+    // test that scanStorage remove corrupted experiments
+    nock(CollabConnector.URL_BUCKET_API)
+      .delete(`/${fakeCorruptedExperiment}/`)
+      .reply(200, { msg: 'Success!' });
+
+    // test that scanStorage remove files unrelated to experiments
+    nock(CollabConnector.URL_BUCKET_API)
+      .delete(`/${fakeBucket}/unregistered_file`)
+      .reply(200, { msg: 'Success!' });
+
+    await collabStorage
+      .scanStorage('fakeUserId','fakeToken'
+      )
+      .should.eventually.equal('success');
+
+      CollabStorage.prototype.createOrUpdate.restore();
+      CollabStorage.prototype.getFile.restore();
   });
   //get files
   it.skip('should get the files under a specific experiment', async () => {

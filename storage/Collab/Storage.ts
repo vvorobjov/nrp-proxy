@@ -485,9 +485,8 @@ export class Storage extends BaseStorage {
       token
     );
   }
-  
+
   async scanStorage(userId: string, token) {
-    console.info("scanStorage");
     const collabs = await this.getNrpCollabsViaTag(token);
     const registeredExperiments: any[] = [];
     for (const collab of collabs) {
@@ -515,13 +514,13 @@ export class Storage extends BaseStorage {
                 true
               ).then(unregisteredConfig => {
                 return testExperimentsService.parseConfig(unregisteredConfig.body, false, expName)}).then(config => {
-                if (!(config)) {
-                  console.info("Corrupted experiment found, deleting...");
-                  this.deleteExperiment(expPath, expName, token, userId).then(response => console.info(response));
-                }});
+                  if (!(config.SimulationName)) {
+                    console.info('Corrupted experiment found, deleting...');
+                    this.deleteExperiment(expPath, expName, token, userId).then(response => console.info(response));
+                  }});
             }
           });
-        } 
+        }
 
         const testExperimentsService = new TemplatesExperimentsService(this.config, '');
 
@@ -530,7 +529,6 @@ export class Storage extends BaseStorage {
           content.map(async (f) => {
             const entityName = f.uuid;
             if (f.type === 'folder' && !(registeredExperiments.includes(f.name))) {
-                console.info('entity : ', f);
                 await this.getFile(
                 storageConsts.defaultConfigName,
                 f.uuid,
@@ -539,20 +537,19 @@ export class Storage extends BaseStorage {
                 true
               ).then(unregisteredConfig => {
                 return testExperimentsService.parseConfig(unregisteredConfig.body, false, f.name)}).then(config => {
-                if (config) {
-                  console.info('New experiment found!');
-                  const newExperiment = { type: "folder", "path" : f.name}
+                if (config.SimulationName) {
+                  console.info('New experiment found: ',config.SimulationName );
+                  const newExperiment = { type: 'folder', path : f.name}
                   experimentsConfig.experiments.push(newExperiment);
-                  console.info(experimentsConfig);
                 } else {
-                  console.info("Corrupted experiment found, deleting...");
-                  this.deleteFolder(f.name, collab, token, userId).then(response => console.info(response));
+                  console.info('folder that is not an experiment found, deleting...');
+                  this.deleteFolder(f.uuid, collab, token, userId).then(response => console.info(response));
                 };
               });
             }
             else if (f.type === 'file' && f.name!==NRP_EXPERIMENTS_CONFIG_FILENAME) {
               // Deleting all files in the root folder that are not the configuration file
-                await this.deleteFile(entityName, collab, token, userId).then(response => console.info(response));
+                await this.deleteFile(f.name, collab, token, userId).then(response => console.info(response));
             }
           })});
       return await this.createOrUpdate(
@@ -563,7 +560,8 @@ export class Storage extends BaseStorage {
         token
       );
       } catch (error) {
-        console.info("Scan Storage error: ", error);
+        // console.info('scanStorage error: ', error);
+        return;
       };
     }
   }

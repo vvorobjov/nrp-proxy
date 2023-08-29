@@ -1,0 +1,39 @@
+{
+    "objects": [
+      {
+        "hash": "04db2ed47f758d7924bf25549e41f362",
+        "last_modified": "2023-08-08T11:04:02.857790",
+        "bytes": 231,
+        "name": "nrp-experiments.json",
+        "content_type": "application/json"
+      },
+      {
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "last_modified": "2023-06-29T11:32:43.005370",
+        "bytes": 0,
+        "name": "unregistered_file",
+        "content_type": "application/octet-stream"
+      },
+      {
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "last_modified": "2023-06-29T11:32:43.005370",
+        "bytes": 0,
+        "name": "unregistered_experiment",
+        "subdir":"fakeBucket",
+        "content_type": "application/octet-stream"
+      },
+      {
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "last_modified": "2023-06-29T11:32:43.005370",
+        "bytes": 0,
+        "name": "corrupted_folder",
+        "subdir":"fakeBucket",
+        "content_type": "application/octet-stream"
+      }
+    ],
+    "container": "fakeBucket",
+    "prefix": null,
+    "delimiter": null,
+    "marker": null,
+    "limit": 50
+  }

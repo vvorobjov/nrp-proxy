@@ -121,7 +121,7 @@ export default class TemplatesExperimentsService {
         ? path.relative(utils.storagePath, fileName)
         : path.relative(this.templatesPath, fileName);
       const expPath = path.dirname(fileConfigPath);
-      
+
       return {
         path: expPath,
         configFile: path.basename(fileConfigPath),
