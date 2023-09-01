@@ -276,7 +276,8 @@ export default class CollabConnector {
   }
 
   createFile(token, parent, name, contentType) {
-    console.info('creating ' + parent + '/' + name);
+    throw 'not implemented';
+    /* console.info('creating ' + parent + '/' + name);
     const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${name}/copy?to=${parent}&name=${name}`;
 
     return this.postHTTPS(
@@ -288,11 +289,12 @@ export default class CollabConnector {
       },
       token,
       true
-    );
+    ); */
   }
 
   copyFile(token, filepath, destination, name, contentType) {
-    console.info('copying ' + filepath + name);
+    throw 'not implemented';
+    /* console.info('copying ' + filepath + name);
     const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${filepath}/copy?to=${destination}&name=${name}`;
 
     return this.putHTTPS(
@@ -305,7 +307,7 @@ export default class CollabConnector {
       token,
       undefined,
       true
-    );
+    ); */
   }
 
   copyFolder(token, parent, newExpName, experiment) {
@@ -371,21 +373,6 @@ export default class CollabConnector {
       },
       true
     ).then(response => console.info(response));
-  }
-
-  createBucketFile(token, parent, name, contentType) {
-    const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${name}/copy`;
-
-    return this.postHTTPS(
-      BUCKET_FILE_URL,
-      {
-        name,
-        parent,
-        content_type: contentType
-      },
-      token,
-      true
-    );
   }
 
   bucketFolderContent(token, folder) {

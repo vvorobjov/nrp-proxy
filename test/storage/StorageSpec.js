@@ -1021,9 +1021,44 @@ describe('Collab Storage', () => {
       .should.be.rejected;
   });
 
+  it('createFile should not be implemented', () => {
+    try {
+      expect(CollabConnector.instance.createFile()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('listUserModelsbyType should not be implemented', () => {
+    try {
+      expect(CollabConnector.instance.copyFile()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
   //Collab storage
 
   //unimplemented functions
+  it('getModelZip should not be implemented', async () => {
+    collabStorage.getModelZip().should.eventually.equal('not implemented');
+  });
+
+  it('listCustomModels should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.listCustomModels()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('createCustomModel should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.createCustomModel()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
 
   it('getStoragePath should not be implemented', () => {
     try {
@@ -1174,7 +1209,7 @@ describe('Collab Storage', () => {
   it('createUniqueExperimentId should not be implemented', async () => {
     collabStorage
       .createUniqueExperimentId()
-      .should.eventually.deep.equal('not implemented');
+      .should.eventually.equal('not implemented');
   });
 
   it('insertExperimentInDB should not be implemented', () => {
@@ -1257,7 +1292,7 @@ describe('Collab Storage', () => {
       });
     await storage
       .copyExperiment('fakeFolder/Experiment', 'fakeToken', 'fakeContextId')
-      .should.eventually.to.deep.equal({
+      .should.eventually.deep.equal({
         clonedExp: 'fakeFolder/Experiment_0',
         originalExp: 'fakeFolder/Experiment'
       });
@@ -1303,7 +1338,7 @@ describe('Collab Storage', () => {
 
     sinon.stub(CollabStorage.prototype, 'getNrpCollabsViaTag').returns(
       new Promise(function(resolve) {
-        resolve([fakeBucket]);
+        resolve([fakeBucket, 'emptyBucket']);
       })
     );
 

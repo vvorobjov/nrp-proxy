@@ -108,13 +108,15 @@ export class Storage extends BaseStorage {
   }
 
   async getModelZip(modelType, modelName, userId, token) {
-    return this.getFile(modelType + '/' + modelName, null, token, userId).then(
+    throw 'not implemented';
+    /* return this.getFile(modelType + '/' + modelName, null, token, userId).then(
       res => res.body
-    );
+    ); */
   }
 
   createCustomModel(modelType, modelData, userId, modelName, token, contextId) {
-    return this.listExperiments(token, userId, contextId).then(folders => {
+    throw 'not implemented';
+    /* return this.listExperiments(token, userId, contextId).then(folders => {
       const folder = _.find(folders, f => f.name === modelType);
       if (!folder) return q.reject(`Folder ${modelType} not found`);
       return this.createOrUpdate(
@@ -124,17 +126,18 @@ export class Storage extends BaseStorage {
         folder.uuid,
         token
       );
-    });
+    }); */
   }
 
   listCustomModels(customFolder, token, userId, contextId) {
-    return this.listExperiments(token, userId, contextId)
+    throw 'not implemented';
+    /* return this.listExperiments(token, userId, contextId)
       .then(folders => {
         const folder = _.find(folders, f => f.name === customFolder);
         if (!folder) return [];
         return CollabConnector.instance.bucketFolderContent(token, folder.uuid);
       })
-      .then(files => files.map(f => ({ uuid: f.uuid, fileName: f.name })));
+      .then(files => files.map(f => ({ uuid: f.uuid, fileName: f.name }))); */
   }
 
   async deleteExperiment(experimentPath, exp, token, userID) {
