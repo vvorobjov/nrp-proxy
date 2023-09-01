@@ -1388,10 +1388,12 @@ describe('Collab Storage', () => {
     nock(CollabConnector.URL_BUCKET_API)
       .delete(`/${fakeBucket}/unregistered_file`)
       .reply(200, { msg: 'Success!' });
-
+    
+    const addedFolders = ['husky_simulation_0'];
+    const deletedFolders = ['corrupted_folder', 'corruptedExperiment'];
     await collabStorage
       .scanStorage('fakeUserId', 'fakeToken')
-      .should.eventually.equal('success');
+      .should.eventually.deep.equal({addedFolders,deletedFolders});
 
     CollabStorage.prototype.createOrUpdate.restore();
     CollabStorage.prototype.getFile.restore();

@@ -320,28 +320,15 @@ export default class CollabConnector {
 
   async uploadContent(token, entityUuid, content) {
     const COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}`;
-    const options = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Sec-Fetch-Dest': 'empty',
-      'Sec-Fetch-Mode': 'cors',
-      'Sec-Fetch-Site': 'cross-site',
-      Origin: 'https://localhost'
-    };
-
-    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, options)
+    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, {headers : {'content-type': 'application/json'}})
       .then((response: any) => {
-        console.info(response);
         const uploadUrl = JSON.parse(response.body).url;
-        console.info(uploadUrl);
         return uploadUrl;
       })
       .then(uploadUrl =>
-        this.putHTTPS(uploadUrl, content, token, options, true)
+        this.putHTTPS(uploadUrl, content, undefined, undefined, true)
       )
       .then(response => {
-        console.info('Upload response : ', response);
         return entityUuid;
       })
       .catch(error => console.error('Upload error : ', error));

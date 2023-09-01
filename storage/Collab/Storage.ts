@@ -489,13 +489,17 @@ export class Storage extends BaseStorage {
   async scanStorage(userId: string, token) {
     const collabs = await this.getNrpCollabsViaTag(token);
     const registeredExperiments: any[] = [];
+    const addedFolders: any[] = [];
+    const deletedFolders: any[] = [];
     for (const collab of collabs) {
       try {
         console.info('Scanning bucket ', collab);
         const experimentsConfig = await this.getBucketNrpExperimentsConfig(
           collab,
           token
-        );
+        ).catch(error => {
+          console.info('Failed to get nrp-experiments.json for bucket: ', collab);
+          throw error});
         console.info('Checking the registered experiments...');
         if (experimentsConfig.experiments) {
           const filteredExperiments = experimentsConfig.experiments.filter(
@@ -504,7 +508,7 @@ export class Storage extends BaseStorage {
           filteredExperiments.forEach(async experiment => {
             if (experiment.type === 'folder') {
               const expName = experiment.path;
-              registeredExperiments.push(experiment.path);
+              registeredExperiments.push(expName);
               const expPath = collab + '/' + expName;
               await this.getFile(
                 storageConsts.defaultConfigName,
@@ -517,53 +521,55 @@ export class Storage extends BaseStorage {
                   if (!(config.SimulationName)) {
                     console.info('Corrupted experiment found, deleting...');
                     this.deleteExperiment(expPath, expName, token, userId).then(response => console.info(response));
-                  }});
-            }
-          });
-        }
+                    deletedFolders.push(expName);                  }
+                  });
+              }});
+          };
 
         const testExperimentsService = new TemplatesExperimentsService(this.config, '');
 
         console.info('Looking for unregistered experiments...');
-        await CollabConnector.instance.bucketFolderContent(token, collab).then(content => {
-          content.map(async (f) => {
+        await CollabConnector.instance.bucketFolderContent(token, collab).then(async content => {
+          const folderHandlers = content.map(async (f) => {
             const entityName = f.uuid;
             if (f.type === 'folder' && !(registeredExperiments.includes(f.name))) {
-                await this.getFile(
+                return this.getFile(
                 storageConsts.defaultConfigName,
-                f.uuid,
+                entityName,
                 token,
                 null,
                 true
               ).then(unregisteredConfig => {
-                return testExperimentsService.parseConfig(unregisteredConfig.body, false, f.name)}).then(config => {
+                const config = testExperimentsService.parseConfig(unregisteredConfig.body, false, f.name);
                 if (config.SimulationName) {
                   console.info('New experiment found: ',config.SimulationName );
                   const newExperiment = { type: 'folder', path : f.name}
                   experimentsConfig.experiments.push(newExperiment);
+                  addedFolders.push(config.SimulationName);
                 } else {
                   console.info('folder that is not an experiment found, deleting...');
-                  this.deleteFolder(f.uuid, collab, token, userId).then(response => console.info(response));
+                  deletedFolders.push(f.name);
+                  return this.deleteFolder(entityName, collab, token, userId).then(response => console.info(response));
                 };
               });
             }
             else if (f.type === 'file' && f.name!==NRP_EXPERIMENTS_CONFIG_FILENAME) {
               // Deleting all files in the root folder that are not the configuration file
-                await this.deleteFile(f.name, collab, token, userId).then(response => console.info(response));
+                return this.deleteFile(f.name, collab, token, userId).then(response => console.info(response));
             }
-          })});
-      return await this.createOrUpdate(
-        NRP_EXPERIMENTS_CONFIG_FILENAME,
-        JSON.stringify(experimentsConfig),
-        experimentsConfig.contentType,
-        collab + '/',
-        token
-      );
+          });
+          return q.all(folderHandlers)})
+          .then(async ()=> {
+            return await this.createOrUpdate(NRP_EXPERIMENTS_CONFIG_FILENAME,
+              JSON.stringify(experimentsConfig),
+              experimentsConfig.contentType,
+              collab + '/',
+              token)});
       } catch (error) {
         // console.info('scanStorage error: ', error);
-        return;
       };
     }
+    return { addedFolders, deletedFolders };
   }
 
   listAllModels(modelType, userId) {
