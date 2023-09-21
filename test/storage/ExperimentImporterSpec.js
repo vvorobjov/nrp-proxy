@@ -22,6 +22,9 @@ class StorageMock {
   extractZip(userId, zipContent) {
     return Promise.resolve();
   }
+  renameExperiment(experimentPath, newName, token, userId) {
+    return 'newName';
+  }
 }
 
 describe('Experiment importer', () => {
@@ -75,7 +78,8 @@ describe('Experiment importer', () => {
       .should.eventually.deep.equal({
         message: `The experiment folder has been succesfully imported`,
         zipBaseFolderName: folderName,
-        destFolderName: `${folderName}_0`
+        destFolderName: `${folderName}_0`,
+        newName: 'newName'
       });
   });
 

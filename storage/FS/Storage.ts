@@ -512,6 +512,7 @@ export class Storage extends BaseStorage {
   }
 
   renameExperiment(experimentPath, newName, token, userId) {
+    let returnName;
     return this.getFile(
       this.experimentConfigName,
       experimentPath,
@@ -523,7 +524,14 @@ export class Storage extends BaseStorage {
         return JSON.parse(expConfig.body);
       })
       .then(expConfig => {
-        expConfig.SimulationName = newName;
+        if (newName) {
+          expConfig.SimulationName = newName;
+        } else {
+          expConfig.SimulationName = utils.updateTimeAndDate(
+            expConfig.SimulationName
+          );
+        }
+        returnName = expConfig.SimulationName;
         this.createOrUpdate(
           this.experimentConfigName,
           JSON.stringify(expConfig, null, 4),
@@ -533,7 +541,11 @@ export class Storage extends BaseStorage {
           userId
         );
       })
-      .then(() => undefined);
+      .then(() => returnName)
+      .catch(err => {
+        console.error('Error renaming experiment:', err);
+        throw err;
+      });
   }
 
   deleteFolder(foldername, experiment, token, userId) {

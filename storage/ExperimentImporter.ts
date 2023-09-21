@@ -59,10 +59,17 @@ export class ExperimentImporter {
     );
     await this.storage.extractZip(zipContent, destFolderName);
     await this.storage.insertExperimentInDB(this.userId, destFolderName);
+    const newName = await this.storage.renameExperiment(
+      destFolderName,
+      undefined,
+      this.token,
+      this.userId
+    );
     return Promise.resolve({
       message: `The experiment folder has been succesfully imported`,
       zipBaseFolderName,
-      destFolderName
+      destFolderName,
+      newName
     });
   }
 
