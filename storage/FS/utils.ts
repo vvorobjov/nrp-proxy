@@ -67,6 +67,19 @@ const getCurrentTimeAndDate = () => {
   return dayWithYear + 'T' + time;
 };
 
+const updateTimeAndDate = str => {
+  const timestampRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g;
+  const newTimestamp = getCurrentTimeAndDate();
+
+  if (str.match(timestampRegex)) {
+    // If the string contains a timestamp, replace it
+    return str.replace(timestampRegex, newTimestamp);
+  } else {
+    // If the string does not contain a timestamp, append one
+    return newTimestamp + ' ' + str;
+  }
+};
+
 /**
  * Checks if a given filepath represents an image file based on its file extension.
  * @param {string} filepath - The filepath to check.
@@ -130,6 +143,7 @@ export default {
   IMG_EXT,
   generateUniqueExperimentId,
   getCurrentTimeAndDate,
+  updateTimeAndDate,
   isImage,
   getFilePathsRecursively,
   getZipOfFolder

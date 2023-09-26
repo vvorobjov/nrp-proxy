@@ -565,7 +565,6 @@ app.get('/storage/:experiment/:filename', (req, res) => {
     .catch(_.partial(handleError, res));
 });
 
-// TODO: [NRRPLT-8725] add zipping of the experiment for 4.0
 app.get('/storage/experiments/:experiment/zip', async (req, res) => {
   storageRequestHandler
     .getExperimentZips(req.params.experiment, getAuthToken(req))

@@ -60,6 +60,7 @@ describe('FSStorage', () => {
     const mockUtils = {
       storagePath: path.join(__dirname, 'dbMock'),
       generateUniqueExperimentId: realUtils.generateUniqueExperimentId,
+      updateTimeAndDate: () => '2019-05-03T12:05:17 New Name',
       getCurrentTimeAndDate: () => '2019-05-03T12:05:17'
     };
     RewiredDB = rewire('../../storage/FS/DB');
@@ -598,6 +599,52 @@ describe('FSStorage', () => {
               .that.not.include('tmp');
           });
       });
+  });
+
+  describe('renameExperiment', () => {
+    it('should rename the experiment and return new generated name with timestamp', async () => {
+      fsStorage.getFile = () =>
+        q.resolve({ body: JSON.stringify({ SimulationName: 'Old Name' }) });
+
+      const newName = await fsStorage.renameExperiment(
+        'experimentPath',
+        null,
+        'token',
+        'userId'
+      );
+
+      assert.equal(newName, '2019-05-03T12:05:17 New Name');
+    });
+
+    it('should rename the experiment with the provided new name', async () => {
+      fsStorage.getFile = () =>
+        q.resolve({ body: JSON.stringify({ SimulationName: 'Old Name' }) });
+
+      const newName = await fsStorage.renameExperiment(
+        'experimentPath',
+        'New Name',
+        'token',
+        'userId'
+      );
+
+      assert.equal(newName, 'New Name');
+    });
+
+    it('should throw an error if there is a problem', async () => {
+      fsStorage.getFile = () => q.reject(new Error('Some error'));
+
+      try {
+        await fsStorage.renameExperiment(
+          'experimentPath',
+          null,
+          'token',
+          'userId'
+        );
+        assert.fail('Expected error was not thrown');
+      } catch (err) {
+        assert.equal(err.message, 'Some error');
+      }
+    });
   });
 
   //createOrUpdate
