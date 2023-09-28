@@ -51,7 +51,12 @@ const loadConfigFile = (path = CONFIG_FILE) => {
     for (const pathProp of PATH_CONFIG_PROPERTIES) {
       if (!configFile[pathProp])
         throw `${pathProp} is missing from the config file`;
-      configFile[pathProp] = resolveReplaceEnvVariables(configFile[pathProp]);
+      if (pathProp === 'modelsPath') {
+        configFile[pathProp] = resolveReplaceEnvVariables(configFile[pathProp]);
+      } else {
+        if (configFile[pathProp].FS) configFile[pathProp].FS = resolveReplaceEnvVariables(configFile[pathProp].FS);
+        if (configFile[pathProp].Collab) configFile[pathProp].Collab = resolveReplaceEnvVariables(configFile[pathProp].Collab);
+      }
     }
 
     configuration.resolve(configFile);

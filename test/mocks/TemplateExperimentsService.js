@@ -1,5 +1,6 @@
 class templateExperimentService {
   constructor() {}
+
   loadSharedExperiments() {
     return Promise.resolve([
       {
@@ -8,9 +9,15 @@ class templateExperimentService {
       }
     ]);
   }
+
+  getExperiments() {
+    return Promise.resolve();
+  }
+
   loadExperiments() {
     return Promise.resolve();
   }
+
   getExperimentFilePath() {
     return 'experiment1/test.png';
   }

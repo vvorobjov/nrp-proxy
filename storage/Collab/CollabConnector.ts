@@ -126,12 +126,10 @@ export default class CollabConnector {
               resolve(json);
             })
             .on('error', e => {
-              console.info('error on response');
               reject(e);
             });
         })
         .on('error', e => {
-          console.info('error start request');
           reject(e);
         });
 
@@ -142,26 +140,6 @@ export default class CollabConnector {
         console.error(e);
       });
       request.end();
-    });
-  }
-
-  postHTTPS(url, data, token, options, jsonType = false) {
-    const operation = () =>
-      this.requestHTTPS(
-        url,
-        {
-          method: 'POST',
-          uri: url,
-          body: data,
-          json: !!jsonType
-        },
-        token
-      );
-
-    return operation().catch(e => {
-      if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
-        return operation();
-      throw e;
     });
   }
 
@@ -189,7 +167,6 @@ export default class CollabConnector {
       json: true
     });
     return await this.requestHTTPS(url, options, token).catch(e => {
-      console.info(e);
       if (e.message && e.message === 'Error: ESOCKETTIMEDOUT')
         console.info('Error: ESOCKETTIMEDOUT');
       throw e;
@@ -276,8 +253,8 @@ export default class CollabConnector {
   }
 
   createFile(token, parent, name, contentType) {
-    console.info('creating ' + parent + '/' + name);
-    const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${name}/copy?to=${parent}&name=${name}`;
+    throw 'not implemented';
+    /* const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${name}/copy?to=${parent}&name=${name}`;
 
     return this.postHTTPS(
       BUCKET_FILE_URL,
@@ -288,12 +265,12 @@ export default class CollabConnector {
       },
       token,
       true
-    );
+    ); */
   }
 
   copyFile(token, filepath, destination, name, contentType) {
-    console.info('copying ' + filepath + name);
-    const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${filepath}/copy?to=${destination}&name=${name}`;
+    throw 'not implemented';
+    /* const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${filepath}/copy?to=${destination}&name=${name}`;
 
     return this.putHTTPS(
       BUCKET_FILE_URL,
@@ -305,7 +282,7 @@ export default class CollabConnector {
       token,
       undefined,
       true
-    );
+    ); */
   }
 
   copyFolder(token, parent, newExpName, experiment) {
@@ -320,28 +297,15 @@ export default class CollabConnector {
 
   async uploadContent(token, entityUuid, content) {
     const COLLAB_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${entityUuid}`;
-    const options = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Sec-Fetch-Dest': 'empty',
-      'Sec-Fetch-Mode': 'cors',
-      'Sec-Fetch-Site': 'cross-site',
-      Origin: 'https://localhost'
-    };
-
-    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token, options)
+    return await this.putHTTPS(COLLAB_FILE_URL, undefined, token,  {headers : {'content-type': 'application/json'}})
       .then((response: any) => {
-        console.info(response);
         const uploadUrl = JSON.parse(response.body).url;
-        console.info(uploadUrl);
         return uploadUrl;
       })
       .then(uploadUrl =>
-        this.putHTTPS(uploadUrl, content, undefined, options, true)
+        this.putHTTPS(uploadUrl, content, undefined, undefined, true)
       )
       .then(response => {
-        console.info('Upload response : ', response);
         return entityUuid;
       })
       .catch(error => console.error('Upload error : ', error));
@@ -372,6 +336,7 @@ export default class CollabConnector {
     }
 
     const newName = { rename: { target_name: targetName + '/' } };
+    console.info(RENAME_BUCKET_URL);
     return await this.patchHTTPS(
       RENAME_BUCKET_URL,
       JSON.stringify(newName),
@@ -383,22 +348,9 @@ export default class CollabConnector {
         }
       },
       true
-    ).then(response => console.info(response));
-  }
-
-  createBucketFile(token, parent, name, contentType) {
-    const BUCKET_FILE_URL = `${CollabConnector.URL_BUCKET_API}/${parent}/${name}/copy`;
-
-    return this.postHTTPS(
-      BUCKET_FILE_URL,
-      {
-        name,
-        parent,
-        content_type: contentType
-      },
-      token,
-      true
-    );
+    )
+    .then(response => console.info(response))
+    .catch(error => console.error('Rename error : ', error));;
   }
 
   bucketFolderContent(token, folder) {

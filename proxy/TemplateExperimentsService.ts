@@ -23,18 +23,19 @@
  * ---LICENSE-END**/
 'use strict';
 
+import { Storage as CollabStorage } from '../storage/Collab/Storage';
 import ConfigurationManager from '../utils/configurationManager';
 
 // mocked modules
 // tslint:disable: prefer-const variable-name
 let utils = require('../storage/FS/utils').default;
 let StorageRequestHandler = require('../storage/requestHandler').default;
-// tslint:enable: prefer-const variable-name
 
 const fs = require('fs');
 const q = require('q');
 const path = require('path');
-const readFile = q.denodeify(fs.readFile);
+let readFile = q.denodeify(fs.readFile);
+// tslint:enable: prefer-const variable-name
 
 ConfigurationManager.initialize();
 let storageRequestHandler;
@@ -42,33 +43,74 @@ let storageRequestHandler;
 // tslint:disable-next-line: prefer-const
 let glob = q.denodeify(require('glob'));
 
-export default class TemplatesExperimentsService {
+export default class TemplateExperimentsService {
   static get JSON_FILE_PATTERN() {
     return '*/*.json';
   }
 
-  private templatesPath: string;
-  private proxyConfig;
+  private templatesCollabPath: string = '';
+  private templatesFSPath: string = '';
+  private experiments: any[] | null;
+  private collabStorage: CollabStorage;
 
-  constructor(private config, templatesPath) {
-    this.proxyConfig = config;
-    this.templatesPath = path.resolve(templatesPath);
+  constructor(private config) {
+    this.experiments = null;
+    this.templatesFSPath = '';
+    try {
+      this.templatesCollabPath = this.config.templatesPath.Collab ? this.config.templatesPath.Collab : '';
+      this.templatesFSPath = this.config.templatesPath.FS ? this.config.templatesPath.FS : '';
+      console.log(
+        `Using ${this.config.authentication} authentication and ${this.templatesCollabPath}, ${this.templatesFSPath} as templates paths`
+      );
+    } catch (e) {
+      console.info('Wrong templates paths in configuration : ',e);
+    }
+
+    this.collabStorage = new CollabStorage(this.config);
+
     storageRequestHandler = new StorageRequestHandler(config);
   }
 
-  async loadExperiments() {
+  async getExperiments(authToken) {
+    if (this.experiments === null) {
+      this.experiments = await this.loadExperiments(authToken);
+    }
+    return this.experiments;
+  }
+
+  async loadExperiments(authToken) {
+    if (this.config.authentication === 'FS') {
+      console.info('Loading local experiments...');
+      return await this.loadExperimentsLocalFilesystem();
+    } else {
+      const experiments: string[] = [];
+      if (this.templatesFSPath !== '') {
+        console.info('Loading local experiments...');
+        const localExperiments = await this.loadExperimentsLocalFilesystem();
+        experiments.push(...localExperiments);
+      }
+      if (this.templatesCollabPath !== '') {
+        console.info('Loading collab experiments...');
+        const collabExperiments = await this.loadExperimentsCollab(authToken)
+        experiments.push(...collabExperiments);
+      }
+      return experiments;
+    }
+  }
+
+  async loadExperimentsLocalFilesystem() {
     let expConfigFilepath;
     expConfigFilepath = await glob(
       path.join(
-        this.templatesPath,
-        TemplatesExperimentsService.JSON_FILE_PATTERN
+        this.templatesFSPath,
+        TemplateExperimentsService.JSON_FILE_PATTERN
       )
     );
 
     return glob(
       path.join(
-        this.templatesPath,
-        TemplatesExperimentsService.JSON_FILE_PATTERN
+        this.templatesFSPath,
+        TemplateExperimentsService.JSON_FILE_PATTERN
       )
     ).then(experimentConfigFiles =>
       q.all(
@@ -77,6 +119,39 @@ export default class TemplatesExperimentsService {
         )
       )
     );
+  }
+
+  async loadExperimentsCollab(authToken) {
+    const templatesPathSplit = this.templatesCollabPath
+      .split('/')
+      .filter(element => element !== '');
+    const templateCollabName =
+      templatesPathSplit[templatesPathSplit.length - 1];
+    const collabConfig = await this.collabStorage.getBucketNrpExperimentsConfig(
+      templateCollabName,
+      authToken
+    );
+    let configFiles: any[] = [];
+    for (const experiment of collabConfig.experiments) {
+      const experimentConfigFiles = await this.collabStorage.getExperimentConfigFiles(
+        templateCollabName,
+        experiment.path,
+        authToken
+      );
+      configFiles.push(...experimentConfigFiles);
+    }
+    configFiles = await q.all(
+      configFiles.map(expConfigFile =>
+        this.buildExperiment(
+          expConfigFile.uuid,
+          undefined,
+          true,
+          true,
+          authToken
+        )
+      )
+    );
+    return configFiles;
   }
 
   loadSharedExperiments(req) {
@@ -102,7 +177,7 @@ export default class TemplatesExperimentsService {
   }
 
   getExperimentFilePath(experimentPath, experimentFile) {
-    return path.join(this.templatesPath, experimentPath, experimentFile);
+    return path.join(this.templatesFSPath, experimentPath, experimentFile);
   }
 
   getJsonProperty(prop, defaultValue?: string | undefined | number) {
@@ -112,17 +187,30 @@ export default class TemplatesExperimentsService {
     return exists ? prop : defaultValue ? defaultValue : undefined;
   }
 
-  async buildExperiment(fileName, expName = '', isExperimentshared = false) {
+  async buildExperiment(
+    fileName,
+    expName = '',
+    isExperimentShared = false,
+    isCollab = false,
+    authToken?
+  ) {
     let experimentContent;
 
     try {
-      experimentContent = await readFile(fileName, 'utf8');
+      experimentContent = isCollab
+        ? (await this.collabStorage.getFile(fileName, undefined, authToken, undefined))
+        .body
+        : await readFile(fileName, 'utf8');
 
       const experimentConfig = JSON.parse(experimentContent);
-      const fileConfigPath = isExperimentshared
+
+      const fileConfigPath = isCollab
+        ? fileName
+        : isExperimentShared
         ? path.relative(utils.storagePath, fileName)
-        : path.relative(this.templatesPath, fileName);
+        : path.relative(this.templatesFSPath, fileName);
       const expPath = path.dirname(fileConfigPath);
+      const suffix = authToken ? '[Collab]' : '[FS]';
 
       return {
         path: expPath,

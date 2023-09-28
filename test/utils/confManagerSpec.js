@@ -124,4 +124,17 @@ describe('Configuration Manager', () => {
     onChange('change');
     sinon.assert.calledOnce(logSpy);
   });
+
+  it('should be able to retrieve config states', () => {
+    let mockConfigFile = {
+      states: {
+        a: 'test-state-a'
+      }
+    };
+    rewiredManager.__set__({ configFile: mockConfigFile });
+    expect(rewiredManager.default.getState('a')).equals(
+      mockConfigFile.states.a
+    );
+    expect(typeof rewiredManager.default.getState('b')).equals('undefined');
+  });
 });

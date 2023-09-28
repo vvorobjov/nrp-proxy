@@ -52,7 +52,7 @@
     "mocha-jenkins-reporter": "^0.4.8",
     "nock": "^9.1.6",
     "prettier": "^1.16.4",
-    "sinon": "1.17.5",
+    "sinon": "^2.4.1",
     "ts-node": "^7.0.1",
     "tslint": "^6.1.3",
     "typescript": "3.5.2"

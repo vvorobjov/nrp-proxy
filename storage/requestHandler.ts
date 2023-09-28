@@ -53,6 +53,7 @@ const gdprService = new GDPR();
 export default class RequestHandler {
   private authenticator;
   private storage;
+  private collabStorage;
   private identity;
   private modelsService;
   private tokenIdentifierCache;
@@ -83,7 +84,10 @@ export default class RequestHandler {
         path.join(__dirname, this.config.authentication)
       );
 
-      const { Storage } = await import(path.join(storageBasePath, 'Storage'));
+      if (this.config.authentication === 'Collab') {
+        const { Storage } = await import(path.resolve(path.join(__dirname, 'Collab/Storage')));
+        this.collabStorage = new Storage(this.config);
+      }
       const { Authenticator } = await import(
         path.join(authenticationBasePath, 'Authenticator')
       );
@@ -91,7 +95,7 @@ export default class RequestHandler {
         authenticationBasePath,
         'Identity'
       ));
-
+      const { Storage } = await import(path.join(storageBasePath, 'Storage'));
       this.authenticator = new Authenticator(this.config);
       this.storage = new Storage(this.config);
       this.identity = new Identity(this.config);
@@ -125,7 +129,6 @@ export default class RequestHandler {
   async getUserIdentifier(token) {
     if (this.tokenIdentifierCache.has(token))
       return q.when(this.tokenIdentifierCache.get(token));
-
     const id = await this.identity.getUniqueIdentifier(token);
     this.tokenIdentifierCache.set(token, id);
     return id;
@@ -365,10 +368,17 @@ export default class RequestHandler {
   async cloneExperiment(token, expPath, contextId) {
     await this.authenticator.checkToken(token);
     const userId = await this.getUserIdentifier(token);
-    return new TemplateExperimentCloner(
-      this.storage,
-      this.config
-    ).cloneExperiment(token, userId, expPath, contextId, undefined, undefined);
+    if (this.config.authentication === 'Collab') {
+      return new TemplateExperimentCloner(
+        this.storage,
+        this.config
+      ).cloneExperiment(token, userId, expPath, contextId, undefined, this.collabStorage, undefined);
+    } else {
+      return new TemplateExperimentCloner(
+        this.storage,
+        this.config
+      ).cloneExperiment(token, userId, expPath, contextId, undefined, undefined, undefined);
+    }
   }
   /*shared models*/
   addUsertoSharingUserListinModel(modelType, modelId, userId, token) {
@@ -564,6 +574,7 @@ export default class RequestHandler {
       this.newExperimentPath,
       contextId,
       defaultName,
+      undefined,
       defaultMode
     );
   }

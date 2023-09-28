@@ -42,6 +42,7 @@ export class Identity extends BaseIdentity {
       token,
       undefined
     );
+
     const userInfo = JSON.parse(response.body, function(key, value) {
       if (key === 'name') {
         this.displayName = value;
@@ -50,7 +51,6 @@ export class Identity extends BaseIdentity {
         this.id = value;
       } else return value;
     });
-
     if (userId !== userInfo.id && userId !== 'me') return {};
     else return userInfo;
   }

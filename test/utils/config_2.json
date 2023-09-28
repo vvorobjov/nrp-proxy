@@ -10,7 +10,10 @@
   },
   "port": 8000,
   "modelsPath": "$HBP/Models",
-  "templatesPath": "$HBP/Experiments",
+  "templatesPath": {
+    "Collab": "test-nrp-access",
+    "FS": "$HBP/nrp-core/examples/templates"
+  },
   "servers": {
     "localhost": {
       "nrp-services": "http://localhost:8080",

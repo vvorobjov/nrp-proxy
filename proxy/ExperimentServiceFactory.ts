@@ -199,7 +199,7 @@ class TemplateExperimentService extends BaseExperimentService {
 
   async getExperimentFolder() {
     this.experimentFolder = path.dirname(
-      path.join(this.config.templatesPath, this.experimentId)
+      path.join(this.config.templatesPath.Collab, this.experimentId)
     );
 
     const experimentGlob = `${this.experimentFolder}/**/${this.experimentId}.json`;

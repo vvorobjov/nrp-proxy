@@ -646,6 +646,17 @@ export class Storage extends BaseStorage {
       });
   }
 
+  downloadExperimentFile(experiment, filePath, content, userId) {
+    return DB.instance.experiments
+      .findOne({experiment})
+      .then(existingExp => {
+        if (!(existingExp)) return q.reject('Experiment does not exist!');
+
+        return DB.instance.experiments
+          .then(() => this.calculateFilePath('', experiment))
+          .then(filePath => q.denodeify(fs.writeFile)(filePath, content))
+      });
+  }
   /*
   Updates JSON config attrbute
   */

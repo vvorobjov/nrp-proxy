@@ -1001,6 +1001,26 @@ describe('Collab Storage', () => {
     return CollabConnector.REQUEST_TIMEOUT.should.equal(30 * 1000);
   });
 
+  it('should catch timeout errors on PATCH and PUT requests', () => {
+    const errorMessage = 'Error: ESOCKETTIMEDOUT';
+    const fakeFolder = 'fakeFolder';
+    nock(CollabConnector.URL_BUCKET_API)
+      .put('/' + fakeFolder)
+      .replyWithError(200, errorMessage);
+    nock(CollabConnector.URL_BUCKET_API)
+      .patch('/' + fakeFolder + '/')
+      .reply(300, errorMessage);
+    CollabConnector.instance.renameBucketEntity(
+      fakeToken,
+      'fakeName',
+      fakeFolder,
+      undefined,
+      'folder'
+    ).should.be.rejected;
+    CollabConnector.instance.uploadContent(fakeToken, fakeFolder).should.be
+      .rejected;
+  });
+
   it('upload file should succeed with the file uuid', () => {
     const fakeUuid = 'fakeFolder/fakeName/';
     const fakeUrl = 'https://fake.url.upload/test/';
@@ -1067,9 +1087,45 @@ describe('Collab Storage', () => {
       .should.be.rejected;
   });
 
+  it('createFile should not be implemented', () => {
+    try {
+      expect(CollabConnector.instance.createFile()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('listUserModelsbyType should not be implemented', () => {
+    try {
+      expect(CollabConnector.instance.copyFile()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
   //Collab storage
 
   //unimplemented functions
+
+  it('getModelZip should not be implemented', async () => {
+    collabStorage.getModelZip().should.eventually.equal('not implemented');
+  });
+
+  it('listCustomModels should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.listCustomModels()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
+
+  it('createCustomModel should not be implemented', () => {
+    try {
+      expect(CollabStorage.prototype.createCustomModel()).to.throw();
+    } catch (error) {
+      expect(error).to.equal('not implemented');
+    }
+  });
 
   it('getStoragePath should not be implemented', () => {
     try {
@@ -1255,8 +1311,7 @@ describe('Collab Storage', () => {
     }
   });
 
-  //get files
-  it('should decorate an experiment configuration with an attribute', async () => {
+  it('should decorate an experiment configuration with an attribute', () => {
     var storage = new CollabStorage();
     //mock of the collab response
     const attribute = 'attribute';
@@ -1277,6 +1332,55 @@ describe('Collab Storage', () => {
     return JSON.parse(decoratedExperimentConfiguration).attribute.should.equal(
       value
     );
+  });
+
+  it('should not decorate an experiment configuration without the correct attribute', () => {
+    var storage = new CollabStorage();
+    //mock of the collab response
+    const attribute = 'attribute';
+    const value = 'value';
+    var experimentConfiguration = 'this is not a correct configuration';
+    const decoratedExperimentConfiguration = storage.decorateExpConfigurationWithAttribute(
+      attribute,
+      value,
+      experimentConfiguration
+    );
+    return decoratedExperimentConfiguration.should.equal(
+      experimentConfiguration
+    );
+  });
+
+  it('should get all simulation configurations from templates', async () => {
+    const folderContent = [
+      {
+        name: 'mosquitto.conf',
+        content_type: 'text/plain'
+      },
+      {
+        name: 'simulation_config.json',
+        content_type: 'application/json'
+      },
+      {
+        name: 'simulation_config.json_test',
+        content_type: 'application/octet-stream'
+      }
+    ];
+    var storage = new CollabStorage();
+    //mock of the collab response
+    const listFiles = sinon.stub(storage, 'listFiles').returns(folderContent);
+
+    const configs = await storage.getExperimentConfigFiles(
+      'fakeCollab',
+      'fakePath',
+      'fakeCollab'
+    );
+    expect(listFiles.callCount).to.equal(1);
+    expect(configs).to.deep.equal([
+      {
+        name: 'simulation_config.json',
+        content_type: 'application/json'
+      }
+    ]);
   });
 
   it('should copy a folder with succes', async () => {

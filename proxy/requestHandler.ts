@@ -71,22 +71,8 @@ function reloadConfiguration(config) {
 
   _.forEach(configuration.servers, (conf, id) => (conf.id = id));
 
-  templateExperimentsService = new TemplateExperimentsService(
-    config,
-    configuration.templatesPath
-  );
-  return templateExperimentsService.loadExperiments().then(experiments => {
-    experimentList = _(experiments)
-      .map(exp => [
-        exp.experimentId,
-        {
-          configuration: exp,
-          joinableServers: []
-        }
-      ])
-      .fromPairs()
-      .value();
-  });
+  templateExperimentsService = new TemplateExperimentsService(configuration);
+  return Promise.resolve(); // TODO: not very clean but otherwise results in change of signature+tests
 }
 
 const filterJoinableExperimentByContext = experiments => {
@@ -183,7 +169,24 @@ function getServersWithNoBackend() {
   return q.resolve(downServers);
 }
 
-function getExperiments() {
+async function getTemplateExperiments(token) {
+  if (JSON.stringify(experimentList) === JSON.stringify({})) {
+    experimentList = await templateExperimentsService
+      .getExperiments(token)
+      .then(experiments => {
+        return _(experiments)
+          .filter(exp => exp && exp.experimentId)
+          .map(exp => [
+            exp.experimentId,
+            {
+              configuration: exp,
+              joinableServers: []
+            }
+          ])
+          .fromPairs()
+          .value();
+      });
+  }
   return q.resolve(filterJoinableExperimentByContext(experimentList));
 }
 
@@ -232,7 +235,7 @@ export default {
   reloadConfiguration,
   initialize,
   getServer,
-  getExperiments,
+  getTemplateExperiments,
   getSharedExperiments,
   getExperimentImageFile,
   getAvailableServers,

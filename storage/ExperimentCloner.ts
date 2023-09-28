@@ -25,6 +25,8 @@
 
 import utils from './FS/utils';
 import * as storageConsts from './StorageConsts';
+import CollabConnector from './Collab/CollabConnector';
+import { readFileSync } from 'fs';
 
 const path = require('path');
 const q = require('q');
@@ -80,6 +82,7 @@ abstract class ExperimentCloner {
     templateConfPath,
     contextId,
     defaultName,
+    collabStorage,
     defaultMode
   ) {
     const expPath = await this.createUniqueExperimentId(
@@ -96,9 +99,9 @@ abstract class ExperimentCloner {
       contextId
     );
 
-    try {
+      try {
       this.templateFolder = path.dirname(
-        path.join(this.config.templatesPath, templateConfPath)
+        path.join(this.config.templatesPath.FS, templateConfPath)
       );
 
       // const proxyConfig = ConfigurationManager.loadConfigFile();
@@ -279,7 +282,6 @@ abstract class ExperimentCloner {
 
   async flattenExperiment(configPath, expPath, token, userId, defaultName) {
     // copies the experiment files into a a temporary flatten structure
-
     const fullExpPath = await this.getExperimentFileFullPath(
       configPath,
       token,
@@ -287,32 +289,33 @@ abstract class ExperimentCloner {
       defaultName
     );
     // TODO: detect source config more accurately
-    this.downloadFile(
+    await this.downloadFile(
       configPath.split('/')[1],
       this.templateFolder,
       storageConsts.defaultConfigName
     );
-
     // The parsed experiment JSON configuration
-    const experiment = await readFile(fullExpPath, 'utf8').then(expContent =>
-      JSON.parse(expContent)
-    );
+    const experiment = readFileSync(fullExpPath, 'utf8');
 
-    experiment.cloneDate = utils.getCurrentTimeAndDate();
-    experiment.SimulationName =
-      utils.getCurrentTimeAndDate() + ' ' + experiment.SimulationName;
+    const expContent = JSON.parse(experiment);
+    expContent.cloneDate = utils.getCurrentTimeAndDate();
+    expContent.SimulationName =
+      utils.getCurrentTimeAndDate() + ' ' + expContent.SimulationName;
 
     // TODO: [NRRPLT-8771] Provide sofisticated cloning with specifying the dependencies in the configuration JSON
     // Currently, the whole directory is cloned
     const experimentGlob = `${this.templateFolder}/**/*.!(json)`;
-    const experimentFiles = await glob(experimentGlob);
-    for (const f of experimentFiles) {
-      try {
-        this.downloadFile(path.relative(this.templateFolder, f));
-      } catch (err) {
-        console.error('Could not clone file ' + f.toString());
-      }
-    }
+
+    await glob(experimentGlob)
+    .then(async (experimentFiles) => {
+      q.all(experimentFiles.map(async (f) => {
+        try {
+          await this.downloadFile(path.relative(this.templateFolder, f));
+        } catch (err) {
+          console.error('Could not clone file ' + f.toString());
+        }
+      }))
+    });
 
     // // TODO clean this
     // //  if (await fs.exists(experiment.thumbnail)) {
@@ -342,12 +345,11 @@ abstract class ExperimentCloner {
 
     // this.readTransceiverFunctions(configPath, experiment);
 
-    return experiment;
+    return expContent;
   }
 
   async downloadFile(srcFile, srcDir = this.templateFolder, dstFile = srcFile) {
     const dstPath = path.join(this.tmpFolder.name.toString(), dstFile);
-
     this.downloadedFiles.push(
       fs
         .ensureDir(path.dirname(dstPath))
@@ -451,7 +453,147 @@ abstract class ExperimentCloner {
 
 export class TemplateExperimentCloner extends ExperimentCloner {
   getExperimentFileFullPath(expPath) {
-    return path.join(this.config.templatesPath, expPath);
+    // method only used in FS storage mode
+    return path.join(this.config.templatesPath.FS, expPath);
+  }
+
+  async downloadTemplateCollab(templatePath, token, collabStorage, experimentPath, userId) {
+    await collabStorage.listFiles(templatePath, token).then(async (expFiles) => {
+      expFiles.map(async (expFile) => {
+        const filename = expFile.name
+        try {
+          if (!(filename.startsWith('simulation_config'))) {
+            const expFile = path.join(templatePath, filename);
+            const fileContent = await CollabConnector.instance.getBucketFile(expFile, token);
+            const filePath = path.join(utils.storagePath, experimentPath,filename);
+            q.denodeify(fs.writeFile)(filePath, fileContent)
+        }
+      } catch (error) {
+        console.info(error);
+      }
+      })
+    });
+  }
+
+  async cloneExperiment(
+    token,
+    userId,
+    templateConfPath,
+    contextId,
+    defaultName,
+    collabStorage,
+    defaultMode
+  ) {
+    let expPath;
+    try {
+      if (collabStorage!== undefined) {
+        const dirname = path.dirname(templateConfPath).split('/')[1];
+        expPath = await this.storage.createUniqueExperimentId(
+          token,
+          userId,
+          dirname,
+          contextId
+        );
+        const { uuid: expUUID } = await this.storage.createExperiment(
+          expPath,
+          token,
+          userId,
+          contextId
+          );
+
+        this.templateFolder = path.dirname(templateConfPath);
+
+
+        await this.downloadTemplateCollab(this.templateFolder, token, collabStorage, expPath, userId);
+        const experiment = path.dirname(templateConfPath);
+        const experimentConfiguration = await collabStorage.getFile(templateConfPath, experiment,token, userId);
+
+        let newConfig = collabStorage.decorateExpConfigurationWithAttribute('cloneDate',
+          utils.getCurrentTimeAndDate(),
+          experimentConfiguration.body
+          );
+
+        const expName = JSON.parse(newConfig).SimulationName;
+        newConfig = collabStorage.decorateExpConfigurationWithAttribute('SimulationName',
+          utils.getCurrentTimeAndDate() + '_' + expName, newConfig)
+
+        // write updated config
+        this.storage.createOrUpdate(
+          storageConsts.defaultConfigName,
+          newConfig,
+          'application/json',
+          expPath,
+          token,
+          userId
+        );
+
+        return expPath;
+
+      } else {
+        // expUUID == expPath (dir name) in local storage
+        expPath = await this.createUniqueExperimentId(
+          token,
+          userId,
+          templateConfPath,
+          contextId
+        );
+
+        const { uuid: expUUID } = await this.storage.createExperiment(
+          expPath,
+          token,
+          userId,
+          contextId
+          );
+
+        this.templateFolder = path.dirname(
+          path.join(this.config.templatesPath.FS, templateConfPath)
+        );
+
+        // const proxyConfig = ConfigurationManager.loadConfigFile();
+        const newConfig = await this.flattenExperiment(
+          templateConfPath,
+          expPath,
+          token,
+          userId,
+          defaultName
+        );
+        const files = await this.readDownloadedFiles();
+        await this.uploadDownloadedFiles(files, expPath, token, userId);
+        await this.copyResourcesFolder(expPath, token, userId);
+        await this.copyAssetsFolder(expPath, token, userId);
+
+        // write updated config
+        console.info(JSON.stringify(newConfig, null, 4));
+        this.storage.createOrUpdate(
+          storageConsts.defaultConfigName,
+          JSON.stringify(newConfig, null, 4),
+          'application/json',
+          expPath,
+          token,
+          userId
+        );
+
+        return expPath;
+      }
+    }
+    catch (e) {
+      this.storage.deleteExperiment(expPath, expPath, token, userId);
+      if ((e instanceof TypeError) && (collabStorage!==undefined)) {
+        console.info('trying with local');
+        await this.cloneExperiment(
+          token,
+          userId,
+          templateConfPath,
+          contextId,
+          defaultName,
+          undefined,
+          defaultMode
+        )
+      }
+      else {
+        throw e;
+      }
+    }
   }
 }
 

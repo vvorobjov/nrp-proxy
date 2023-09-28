@@ -181,8 +181,10 @@ app.get('/maintenancemode', (_, res) => res.send({}));
 
 app.get('/experiments', (_req, res, next) => {
   proxyRequestHandler
-    .getExperiments()
-    .then(r => res.send(r))
+    .getTemplateExperiments(getAuthToken(_req))
+    .then(r => {
+      // console.info(r);
+      res.send(r)})
     .catch(next);
 });
 
@@ -274,7 +276,7 @@ app.get('/storage/experiments', async (req, res) => {
         id: exp.uuid,
         private: true
       }));
-
+    
     res.send(decoratedExperiments);
   } catch (err) {
     handleError(res, err);

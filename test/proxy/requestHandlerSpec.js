@@ -61,12 +61,14 @@ describe('requestHandler', function() {
       testConf.experimentListNoCTXID
     );
     return requestHandler
-      .getExperiments()
+      .getTemplateExperiments()
       .should.eventually.deep.equal(testConf.experimentListNoCTXID);
   });
 
   it('should return an empty experiment list', function() {
-    return requestHandler.getExperiments().should.eventually.deep.equal({});
+    return requestHandler
+      .getTemplateExperiments()
+      .should.eventually.deep.equal({});
   });
 
   it('should return a response indicating that the server was not found', function(done) {

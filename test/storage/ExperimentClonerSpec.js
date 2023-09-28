@@ -90,7 +90,10 @@ describe('Experiment cloner', () => {
   let config = {
     nrpVersion: '4.0.0',
     modelsPath: 'test/data/models',
-    templatesPath: 'test/data/experiments'
+    templatesPath: {
+      Collab: 'test-nrp-access',
+      FS: 'test/data/experiments'
+    }
   };
 
   const storageMock = new StorageMock(),
@@ -111,24 +114,28 @@ describe('Experiment cloner', () => {
     const res = await templateCloner.cloneExperiment(
       'faketoken',
       'fakeusrid',
-      'openAI_nest_py/simulation_config.json'
+      'openAI_nest_py/simulation_config.json',
+      '',
+      '',
+      undefined
     );
 
     expect(templateCreateUniqueExperimentId.callCount).to.equal(1);
     expect(createExperiment.callCount).to.equal(1);
     // we download the robot model, the env model, the brain
     // plus the .png and the .3ds files plus any tfs if they exist
-    expect(templateDownloadFile.callCount).to.equal(5);
-    expect(fsMock.copy.callCount).to.equal(5);
-    // we write the exc and bibi
     expect(fsMock.writeFileSync.callCount).to.equal(0);
-    //should read everything
-    expect(fsMock.readFileSync.callCount).to.equal(5);
 
     expect(createExperiment.firstCall.args[0]).to.equal('openAI_nest_py_0');
     expect(
       await templateCreateUniqueExperimentId.firstCall.returnValue
     ).to.equal('openAI_nest_py_0');
+
+    //should read everything
+    expect(fsMock.readFileSync.callCount).to.equal(5);
+    expect(fsMock.copy.callCount).to.equal(5);
+    expect(templateDownloadFile.callCount).to.equal(5);
+    // we write the exc and bibi
     expect(res).to.equal((await storageMock.createExperiment()).uuid);
   });
 });
