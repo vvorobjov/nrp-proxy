@@ -563,7 +563,6 @@ export class TemplateExperimentCloner extends ExperimentCloner {
         await this.copyAssetsFolder(expPath, token, userId);
 
         // write updated config
-        console.info(JSON.stringify(newConfig, null, 4));
         this.storage.createOrUpdate(
           storageConsts.defaultConfigName,
           JSON.stringify(newConfig, null, 4),

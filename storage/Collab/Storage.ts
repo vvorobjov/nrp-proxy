@@ -155,8 +155,6 @@ export class Storage extends BaseStorage {
     bucketExperimentConfig.map(exp => {
       if (!(exp.path === expName)) {
         newExperiments.push(exp);
-      } else {
-        console.info(exp.path);
       }
     });
 
@@ -200,7 +198,6 @@ export class Storage extends BaseStorage {
 
   createOrUpdate(filepath, fileContent, contentType, experiment, token) {
     const pathparts = filepath.split('/');
-    // console.info('createOrUpdate : ', typeof fileContent + ' | ' + experiment);
     return this.ensurePath(pathparts, experiment, contentType, token)
       .then(file =>
         CollabConnector.instance.uploadContent(token, file.uuid, fileContent)
@@ -268,7 +265,6 @@ export class Storage extends BaseStorage {
         );*/
       }
     }
-    // console.info(['listExperiments() - result:', result]);
     return result;
   }
 
@@ -302,7 +298,6 @@ export class Storage extends BaseStorage {
   }
 
   createExperiment(newExperiment, experiment, token, contextId) {
-    console.info(token);
     const parent = newExperiment.split('/')[0];
     const expName = newExperiment.split('/')[1];
     return CollabConnector.instance.createFolder(
@@ -354,7 +349,7 @@ export class Storage extends BaseStorage {
         null,
         true
       );
-      // console.info('configuration of the created exp : ', experimentConfiguration);
+
       let decoratedExpConf = this.decorateExpConfigurationWithAttribute(
         'cloneDate',
         utils.getCurrentTimeAndDate(),
@@ -365,7 +360,7 @@ export class Storage extends BaseStorage {
         expName,
         decoratedExpConf
       );
-      console.info('decoratedExpCOnf type : ', typeof decoratedExpConf);
+
       await this.createOrUpdate(
         'simulation_config.json',
         decoratedExpConf,
@@ -405,7 +400,6 @@ export class Storage extends BaseStorage {
     const parent = experimentPath.split('/')[0];
     const expName = experimentPath.split('/')[1];
 
-    console.info('renaming the experiment folder...');
     await q.when(experimentPath).then(uuid => {
       return (
         uuid &&
@@ -419,8 +413,6 @@ export class Storage extends BaseStorage {
       );
     });
 
-    console.info('rewritting the simulation_config.json...');
-
     const experimentConfiguration = await this.getFile(
       'simulation_config.json',
       experimentPath,
@@ -433,7 +425,7 @@ export class Storage extends BaseStorage {
       newName,
       experimentConfiguration.body
     );
-    console.info('decoratedExpCOnf type : ', typeof decoratedExpConf);
+
     await this.createOrUpdate(
       'simulation_config.json',
       decoratedExpConf,
@@ -441,8 +433,6 @@ export class Storage extends BaseStorage {
       experimentPath,
       token
     );
-
-    console.info('rewritting the nrp-experiments.json...');
 
     const newExperiments: string[] = [];
     const bucketExperimentConfig = await this.getBucketNrpExperimentsConfig(

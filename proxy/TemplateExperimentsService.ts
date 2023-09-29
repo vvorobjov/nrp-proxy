@@ -80,17 +80,14 @@ export default class TemplateExperimentsService {
 
   async loadExperiments(authToken) {
     if (this.config.authentication === 'FS') {
-      console.info('Loading local experiments...');
       return await this.loadExperimentsLocalFilesystem();
     } else {
       const experiments: string[] = [];
       if (this.templatesFSPath !== '') {
-        console.info('Loading local experiments...');
         const localExperiments = await this.loadExperimentsLocalFilesystem();
         experiments.push(...localExperiments);
       }
       if (this.templatesCollabPath !== '') {
-        console.info('Loading collab experiments...');
         const collabExperiments = await this.loadExperimentsCollab(authToken)
         experiments.push(...collabExperiments);
       }

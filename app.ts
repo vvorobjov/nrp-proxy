@@ -183,7 +183,6 @@ app.get('/experiments', (_req, res, next) => {
   proxyRequestHandler
     .getTemplateExperiments(getAuthToken(_req))
     .then(r => {
-      // console.info(r);
       res.send(r)})
     .catch(next);
 });

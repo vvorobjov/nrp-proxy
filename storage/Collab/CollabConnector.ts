@@ -182,7 +182,6 @@ export default class CollabConnector {
   }
 
   async deleteHTTPS(url, token, options) {
-    console.info('deleting exp : ', url);
     options = options ? options : {};
     _.extend(options, {
       method: 'DELETE'
@@ -193,22 +192,18 @@ export default class CollabConnector {
   }
 
   async getJSON(url, token) {
-    // console.info(['getJSON() - url', url]);
     try {
       const response: any = await this.getHTTPS(url, token, {
         headers: { Accept: 'application/json' }
       });
-      // console.info(response);
       if (
         response.headers['content-type'].startsWith(
           'application/xml;charset=UTF-8'
         )
       ) {
-        // console.info(response);
         return JSON.parse(response.body);
       }
       if (response.headers['content-type'].startsWith('application/json')) {
-        // console.info(response);
         return JSON.parse(response.body);
       } else {
         console.error(
@@ -232,13 +227,11 @@ export default class CollabConnector {
           undefined
         );
         const downloadUrl = JSON.parse(downloadResponse.body);
-        // console.info(['getBucketFile() - downloadResponse.body', downloadUrl.body]);
         const fileResponse: any = await this.getHTTPS(
           downloadUrl.url,
           undefined,
           options
         ); // passing auth token here leads to access denied ... ?
-        // console.info(['getBucketFile() - fileResponse', fileResponse]);
 
         if (options && options.encoding === null) {
           resolve({ headers: fileResponse.headers, body: fileResponse.body });
@@ -336,7 +329,6 @@ export default class CollabConnector {
     }
 
     const newName = { rename: { target_name: targetName + '/' } };
-    console.info(RENAME_BUCKET_URL);
     return await this.patchHTTPS(
       RENAME_BUCKET_URL,
       JSON.stringify(newName),
@@ -349,12 +341,10 @@ export default class CollabConnector {
       },
       true
     )
-    .then(response => console.info(response))
     .catch(error => console.error('Rename error : ', error));;
   }
 
   bucketFolderContent(token, folder) {
-    // console.info("bucketFolderContent ", folder);
     let folderContent;
     const indexFirstSlash = folder.indexOf('/');
     let bucketName;
@@ -374,7 +364,6 @@ export default class CollabConnector {
     if (typeof bucketFolderPath !== 'undefined') {
       urlBucketGET += '&prefix=' + bucketFolderPath + '/';
     }
-    // console.info(['bucketFolderContent() - urlBucketGET:', urlBucketGET]);
 
     return this.getJSON(urlBucketGET, token).then(bucketContent => {
       folderContent =
@@ -398,7 +387,6 @@ export default class CollabConnector {
             size: entry.bytes
           };
         });
-      // console.info(['bucketFolderContent() - folderContent', folderContent]);
 
       return folderContent;
     });
