@@ -258,7 +258,6 @@ app.get('/storage/experiments', async (req, res) => {
         .getConfig()
         .then(configuration => {
           exp.configuration = {
-            SimulationName: configuration.SimulationName,
             maturity: 'production',
             experimentId: path.join(exp.uuid, storageConsts.defaultConfigName),
             path: exp.uuid,
