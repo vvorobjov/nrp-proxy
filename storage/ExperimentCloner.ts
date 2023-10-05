@@ -578,7 +578,6 @@ export class TemplateExperimentCloner extends ExperimentCloner {
     catch (e) {
       this.storage.deleteExperiment(expPath, expPath, token, userId);
       if ((e instanceof TypeError) && (collabStorage!==undefined)) {
-        console.info('trying with local');
         await this.cloneExperiment(
           token,
           userId,

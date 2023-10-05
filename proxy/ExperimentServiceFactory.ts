@@ -38,7 +38,7 @@ export default class ExperimentServiceFactory {
     private storageRequestHandler,
     private config,
     private proxyRequestHandler
-  ) {}
+  ) { }
 
   createExperimentService(experimentId, contextId, template?) {
     if (template) {
@@ -70,20 +70,29 @@ const V4_FILE_TYPE = {
 };
 
 abstract class BaseExperimentService {
-  constructor(protected experimentId, protected contextId, protected config) {}
+  constructor(protected experimentId, protected contextId, protected config) { }
 
   async getSimConfig() {
+    let configFile;
     try {
-      const configFile = await this.getFile(
+      configFile = await this.getFile(
         storageConsts.defaultConfigName,
         V4_FILE_TYPE.JSON
       );
+    } catch (error) {
+      return {
+        SimulationName:
+          'Experiment is being cloned ...'
+      };
+    }
+
+    try {
       const config = JSON.parse(configFile.toString());
       if (config.cloneDate) {
         config.cloneDate = config.cloneDate.replace(/T/, ' ');
       }
       return config;
-    } catch {
+    } catch (error) {
       return {
         SimulationName:
           'Experiment with corrupted ' + storageConsts.defaultConfigName
