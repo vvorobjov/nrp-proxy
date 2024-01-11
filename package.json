@@ -50,7 +50,7 @@
     "lint-staged": "4.3.0",
     "mocha": "^6.2.3",
     "mocha-jenkins-reporter": "^0.4.8",
-    "nock": "^9.1.6",
+    "nock": "9.1.6",
     "prettier": "^1.16.4",
     "sinon": "^2.4.1",
     "ts-node": "^7.0.1",
