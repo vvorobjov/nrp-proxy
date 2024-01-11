@@ -1,0 +1,17 @@
+{
+  "image": "node:8",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "mhutchie.git-graph"
+      ]
+    }
+  },
+  "containerEnv": {
+    "STORAGE_PATH": "/nrpStorage"
+  },
+  "postCreateCommand": "npm install",
+  "forwardPorts": [
+    3000
+  ]
+}
