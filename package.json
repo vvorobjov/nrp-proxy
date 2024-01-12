@@ -4,7 +4,7 @@
   "description": "Keep an updated list of available and joinable servers for each experiment",
   "main": "src/app",
   "dependencies": {
-    "@types/express": "4.17.0",
+    "@types/express": "4.17.21",
     "@types/express-serve-static-core": "4.16.7",
     "@types/lodash": "4.14.186",
     "@types/node": "10.14.10",
