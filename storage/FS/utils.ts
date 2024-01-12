@@ -63,7 +63,8 @@ const getCurrentTimeAndDate = () => {
   const month = date.getMonth();
   const year = date.getFullYear();
   const dayWithYear = year + '-' + pad(month + 1) + '-' + pad(day);
-  const time = date.toLocaleTimeString();
+  const options = { hour12: false };
+  const time = date.toLocaleTimeString('en-US', options);
   return dayWithYear + 'T' + time;
 };
 

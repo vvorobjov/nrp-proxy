@@ -48,9 +48,9 @@ describe('Experiment importer', () => {
       userId,
       contextId
     );
-    createUniqueExperimentIdSpy.reset();
-    insertExperimentInDBSpy.reset();
-    extractZipSpy.reset();
+    createUniqueExperimentIdSpy.resetHistory();
+    insertExperimentInDBSpy.resetHistory();
+    extractZipSpy.resetHistory();
   });
 
   it(`should create a unique experiment ID`, () => {
