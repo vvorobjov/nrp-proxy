@@ -1,20 +1,76 @@
-# This is a sample build configuration for Docker.
-# Check our guides at https://confluence.atlassian.com/x/O1toN for more examples.
-# Only use spaces to indent your .yml configuration.
-# -----
-# You can specify a custom docker image from Docker Hub as your build environment.
-image: hbpneurorobotics/nrp_frontend:dev
+# Bitbucket Pipelines for nrp-proxy.
+#
+# Two-step pipeline (EBR2-35):
+#   1. test  — npm install, prettier check, mocha test suite (legacy step
+#              kept from the prior pipeline; runs in the existing test
+#              image so we don't need to bring our own toolchain).
+#   2. push  — build the in-repo Dockerfile and push to Docker Hub at
+#              hbpneurorobotics/nrp-proxy. Only runs on development /
+#              tags / manual triggers, never on speculative PR branches.
+#
+# Repository variables required (Pipelines → Repository variables,
+# mark Secured):
+#   DOCKERHUB_USER  — must be `hbpneurorobotics`.
+#   DOCKERHUB_TOKEN — Docker Hub PAT.
+#
+# Tag policy on push:
+#   push to development     → :development AND :revival-baseline
+#                              AND :sha-<short>
+#   tag push <name>         → :<name> AND :sha-<short>
+#   manual custom build     → :revival-baseline-manual AND :sha-<short>
 
-pipelines:
-  branches:
-    development:
-    - step:
-        name: Build
-        script: # Modify the commands below to build your repository.
-
+definitions:
+  services:
+    docker:
+      memory: 3072
+  steps:
+    - step: &test
+        name: Test (lint + mocha)
+        image: hbpneurorobotics/nrp_frontend:dev
+        script:
           - sudo apt-get update && sudo apt-get install -y virtualenv
           - source $HOME/.nvm/nvm.sh && nvm alias default 8 && nvm use default
           - npm install
           - echo "Checking for un-prettified file"
           - node_modules/prettier/bin-prettier.js --list-different "{**/,}*.{js,scss}"
           - npm test
+    - step: &build-and-push
+        name: Build and push nrp-proxy image
+        image: atlassian/default-image:4
+        services:
+          - docker
+        caches:
+          - docker
+        script:
+          - export IMAGE=hbpneurorobotics/nrp-proxy
+          - export SHORT_SHA="${BITBUCKET_COMMIT:0:12}"
+          - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+          - docker build -t "$IMAGE:sha-$SHORT_SHA" .
+          - |
+            if [ -n "$BITBUCKET_TAG" ]; then
+              docker tag "$IMAGE:sha-$SHORT_SHA" "$IMAGE:$BITBUCKET_TAG"
+              EXTRA_TAGS="$IMAGE:$BITBUCKET_TAG"
+            elif [ "$BITBUCKET_BRANCH" = "development" ]; then
+              docker tag "$IMAGE:sha-$SHORT_SHA" "$IMAGE:development"
+              docker tag "$IMAGE:sha-$SHORT_SHA" "$IMAGE:revival-baseline"
+              EXTRA_TAGS="$IMAGE:development $IMAGE:revival-baseline"
+            else
+              docker tag "$IMAGE:sha-$SHORT_SHA" "$IMAGE:revival-baseline-manual"
+              EXTRA_TAGS="$IMAGE:revival-baseline-manual"
+            fi
+          - docker push "$IMAGE:sha-$SHORT_SHA"
+          - for t in $EXTRA_TAGS; do docker push "$t"; done
+          - docker logout
+
+pipelines:
+  branches:
+    development:
+      - step: *test
+      - step: *build-and-push
+  tags:
+    "*":
+      - step: *test
+      - step: *build-and-push
+  custom:
+    build-baseline:
+      - step: *build-and-push
