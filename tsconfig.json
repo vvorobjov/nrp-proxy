@@ -16,10 +16,11 @@
     "noImplicitThis": true,
     "noUnusedLocals": false,
     "types": ["node", "mocha"],
-    "typeRoots": [],
+    "typeRoots": ["./node_modules/@types"],
     "paths": {
       "*": ["node_modules/@types/*", "src/types/*"]
-    }
+    },
+    "skipLibCheck": true
   },
   "include": ["**/*"],
   "exclude": ["dist/**/*"]
