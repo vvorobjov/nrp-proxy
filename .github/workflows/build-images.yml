@@ -1,0 +1,73 @@
+name: Build & push proxy image
+
+# Builds the in-repo Dockerfile and pushes hbpneurorobotics/nrp-proxy
+# (EBR2-95). CI lives on GitHub Actions, not Bitbucket Pipelines (public
+# GitHub repo = free unlimited standard-runner minutes). Bitbucket stays the
+# canonical repo for PRs + tickets; development/master are synced to GitHub,
+# and that synced push is what fires this workflow.
+#
+# Tag policy:
+#   pull_request        -> build only, NO push (validate)
+#   push to development  -> :latest + :development + :sha-<short>
+#   push to master       -> :stable + :master + :sha-<short>
+#
+# Actions secrets required (Settings -> Secrets and variables -> Actions):
+#   DOCKERHUB_USER   = hbpneurorobotics
+#   DOCKERHUB_TOKEN  = Docker Hub PAT with write scope
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [development, master]
+  pull_request:
+
+concurrency:
+  group: build-proxy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      IMAGE: ${{ secrets.DOCKERHUB_USER }}/nrp-proxy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          set -euxo pipefail
+          SHORT="sha-${GITHUB_SHA::12}"
+          docker build -t "${IMAGE}:${SHORT}" .
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag & push
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euxo pipefail
+          SHORT="sha-${GITHUB_SHA::12}"
+          SHA_TAG="${IMAGE}:${SHORT}"
+          case "${GITHUB_REF_NAME}" in
+            development) CHANNELS="latest development" ;;
+            master)      CHANNELS="stable master" ;;
+            *) echo "Ref '${GITHUB_REF_NAME}' is not a publish branch; skipping push."; exit 0 ;;
+          esac
+          docker push "${SHA_TAG}"
+          for c in ${CHANNELS}; do
+            docker tag "${SHA_TAG}" "${IMAGE}:${c}"
+            docker push "${IMAGE}:${c}"
+          done
+
+      - name: PR build summary
+        if: github.event_name == 'pull_request'
+        run: echo "PR build of ${IMAGE} succeeded; not pushing."
