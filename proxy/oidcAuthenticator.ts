@@ -23,7 +23,7 @@
  * ---LICENSE-END**/
 'use strict';
 
-const request = require('request');
+const axios = require('axios');
 const q = require('q');
 // workaround for https://github.com/nodejs/help/issues/1730
 require('tls').DEFAULT_ECDH_CURVE = 'auto';
@@ -59,74 +59,88 @@ const getToken = () => {
   }
 
   console.log('About to renew OIDC token...');
-  const options = {
-    method: 'post',
-    form: {
-      grant_type: 'client_credentials',
-      client_id: authConfig.clientId,
-      client_secret: authConfig.clientSecret
-    },
-    url: authConfig.url + CREATE_TOKEN_URL
-  };
-  console.log(options.url);
+  const url = authConfig.url + CREATE_TOKEN_URL;
+  const form = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: authConfig.clientId,
+    client_secret: authConfig.clientSecret
+  });
+  console.log(url);
 
   const deferred = q.defer();
 
   lastRetrievedToken = null;
-  request(options, (err, res, body) => {
-    if (err) {
-      deferred.reject(new Error(err));
-    } else if (res.statusCode < 200 || res.statusCode >= 300) {
-      deferred.reject(
-        new Error('Status code: ' + res.statusCode + '\n' + body)
-      );
-    } else {
+  axios({
+    method: 'post',
+    url,
+    data: form,
+    // keep the raw response string; the body is parsed explicitly below
+    transformResponse: [body => body]
+  })
+    .then(res => {
       try {
-        lastRetrievedToken = JSON.parse(body).access_token;
+        lastRetrievedToken = JSON.parse(res.data).access_token;
         lastRenewalTime = Date.now();
         deferred.resolve(lastRetrievedToken);
       } catch (e) {
-        deferred.reject(new Error(body));
+        deferred.reject(new Error(res.data));
       }
-    }
-  });
+    })
+    .catch(err => {
+      if (err.response) {
+        deferred.reject(
+          new Error(
+            'Status code: ' + err.response.status + '\n' + err.response.data
+          )
+        );
+      } else {
+        deferred.reject(new Error(err.message));
+      }
+    });
   return deferred.promise;
 };
 
 const introspectToken = token => {
   if (authConfig.deactivate) return q(false);
 
-  const options = {
-    method: 'post',
-    form: {
-      token,
-      client_id: authConfig.clientId,
-      client_secret: authConfig.clientSecret
-    },
-    url: authConfig.url + INTROSPECT_TOKEN_URL,
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
-  };
+  const url = authConfig.url + INTROSPECT_TOKEN_URL;
+  const form = new URLSearchParams({
+    token,
+    client_id: authConfig.clientId,
+    client_secret: authConfig.clientSecret
+  });
 
   const deferred = q.defer();
 
-  request(options, (err, res, body) => {
-    if (err) {
-      deferred.reject(new Error(err));
-    } else if (res.statusCode < 200 || res.statusCode >= 300) {
-      deferred.reject(
-        new Error('Status code: ' + res.statusCode + '\n' + body)
-      );
-    } else {
+  axios({
+    method: 'post',
+    url,
+    data: form,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    // keep the raw response string; the body is parsed explicitly below
+    transformResponse: [body => body]
+  })
+    .then(res => {
       try {
-        const response = JSON.parse(body);
+        const response = JSON.parse(res.data);
         deferred.resolve(response);
       } catch (e) {
-        deferred.reject(new Error(body));
+        deferred.reject(new Error(res.data));
       }
-    }
-  });
+    })
+    .catch(err => {
+      if (err.response) {
+        deferred.reject(
+          new Error(
+            'Status code: ' + err.response.status + '\n' + err.response.data
+          )
+        );
+      } else {
+        deferred.reject(new Error(err.message));
+      }
+    });
   return deferred.promise;
 };
 

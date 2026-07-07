@@ -30,9 +30,9 @@ import configurationManager from '../../utils/configurationManager';
 const _ = require('lodash');
 const https = require('https');
 
-// mocked in the tests
+// mocked in the tests; the HTTP transport itself uses the core `https` module
 // tslint:disable-next-line: prefer-const
-let request = require('request-promise');
+let request = require('axios');
 
 let config;
 

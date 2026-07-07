@@ -27,7 +27,7 @@ import { File } from './BaseStorage';
 import * as ExperimentCloner from './ExperimentCloner';
 import { ExperimentImporter } from './ExperimentImporter';
 import ModelsService from './ModelsService';
-const request = require('request-promise');
+const axios = require('axios');
 const _ = require('lodash');
 
 // test mocked
@@ -496,11 +496,14 @@ export default class RequestHandler {
 
   async get(extraOptions, url) {
     const requestOptions = {
-      resolveWithFullResponse: true,
-      timeout: '5000'
+      timeout: 5000,
+      // keep the raw response string so callers can JSON.parse the body
+      transformResponse: [body => body]
     };
     _.extend(requestOptions, { url, ...extraOptions });
-    return request(requestOptions);
+    const response = await axios(requestOptions);
+    // preserve the previous `resolveWithFullResponse` shape: expose `.body`
+    return { ...response, body: response.data };
   }
 
   async getKnowledgeGraphBrains(query, token) {

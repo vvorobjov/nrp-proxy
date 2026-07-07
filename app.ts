@@ -209,9 +209,11 @@ app.get('/serversWithNoBackend', (_req, res, next) => {
 });
 
 // storage API
-app.use(bodyParser.json({ limit: '2000mb' }));
-app.use(bodyParser.raw({ limit: '2000mb' }));
-app.use(bodyParser.text({ type: () => true, limit: '2000mb' }));
+// Casts required because the pinned @types/express-serve-static-core skews
+// against @types/connect's NextHandleFunction (see EBR2-57 / TS strict cleanup).
+app.use(bodyParser.json({ limit: '2000mb' }) as express.RequestHandler);
+app.use(bodyParser.raw({ limit: '2000mb' }) as express.RequestHandler);
+app.use(bodyParser.text({ type: () => true, limit: '2000mb' }) as express.RequestHandler);
 
 app.post('/authentication/authenticate', (req, res) => {
   storageRequestHandler

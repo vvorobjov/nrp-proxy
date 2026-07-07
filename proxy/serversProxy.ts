@@ -24,7 +24,7 @@
 
 'use strict';
 
-const request = require('request');
+const axios = require('axios');
 const q = require('q');
 const _ = require('lodash');
 const dateFormat = require('dateformat');
@@ -64,36 +64,40 @@ const setToken = token => {
 };
 
 const executeServerRequest = (url: string): Promise<any> => {
-  const options = {
+  const deferred = q.defer();
+
+  function requestFailed(error) {
+    console.error('Failed to execute request ' + url + '. ERROR: ' + error);
+    deferred.reject(error);
+  }
+
+  axios({
     method: 'GET',
     url,
     timeout: REQUEST_TIMEOUT,
-    headers: { Authorization: 'Bearer ' + authToken }
-  };
-
-  const deferred = q.defer();
-
-  request(options, (err, res, body) => {
-    function requestFailed(error) {
-      console.error(
-        'Failed to execute request ' + options.url + '. ERROR: ' + error
-      );
-      deferred.reject(error);
-    }
-
-    if (err) {
-      requestFailed(new Error(err));
-    } else if (res.statusCode < 200 || res.statusCode >= 300) {
-      requestFailed(new Error('Status code: ' + res.statusCode + '\n' + body));
-    } else {
+    headers: { Authorization: 'Bearer ' + authToken },
+    // keep the raw response string; the body is parsed explicitly below
+    transformResponse: [body => body]
+  })
+    .then(res => {
       try {
-        const bodyObj = JSON.parse(body);
+        const bodyObj = JSON.parse(res.data);
         deferred.resolve(bodyObj);
       } catch (e) {
         requestFailed(new Error(String(e)));
       }
-    }
-  });
+    })
+    .catch(err => {
+      if (err.response) {
+        requestFailed(
+          new Error(
+            'Status code: ' + err.response.status + '\n' + err.response.data
+          )
+        );
+      } else {
+        requestFailed(new Error(err.message));
+      }
+    });
   return deferred.promise;
 };
 
