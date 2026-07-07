@@ -228,16 +228,19 @@ describe('Storage request handler', () => {
   });
 
   it('should add a user into the shared users list', () => {
-    collectionMock.prototype.insert = sinon
+    collectionMock.prototype.findOne = sinon
       .stub()
-      .returns(Promise.resolve('userId'));
-    storageRequestHandler
+      .returns(Promise.resolve({ _id: 'fakeModelId' }));
+    collectionMock.prototype.update = sinon
+      .stub()
+      .returns(Promise.resolve('value'));
+    return storageRequestHandler
       .addUsertoSharingUserListinModel(
         'fakeModelType',
         'fakeModelType',
         'userId'
       )
-      .should.eventually.deep.equal(true);
+      .should.eventually.deep.equal('value');
   });
 
   it(`should get the list of shared userss by Model`, () => {
